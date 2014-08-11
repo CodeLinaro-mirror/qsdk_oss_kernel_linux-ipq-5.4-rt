@@ -1955,6 +1955,13 @@ int vprintk_store(int facility, int level,
 		lflags |= LOG_NEWLINE;
 	}
 
+#ifdef CONFIG_ARM
+	{
+		extern void printascii(char *);
+		printascii(textbuf);
+	}
+#endif
+
 	/* strip kernel syslog prefix and extract log level or control flags */
 	if (facility == 0) {
 		int kern_level;
