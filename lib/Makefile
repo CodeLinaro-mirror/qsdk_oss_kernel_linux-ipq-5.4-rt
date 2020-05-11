@@ -264,6 +264,10 @@ libfdt_files = fdt.o fdt_ro.o fdt_wip.o fdt_rw.o fdt_sw.o fdt_strerror.o \
 $(foreach file, $(libfdt_files), \
 	$(eval CFLAGS_$(file) = -I $(srctree)/scripts/dtc/libfdt))
 lib-$(CONFIG_LIBFDT) += $(libfdt_files)
+# The early kernel setup will attempt to read properties from the FDT which
+# may very well be in some memory area that is not kernel memory, leading
+# to problems when KASan tries to shadow these memory accesses.
+KASAN_SANITIZE_fdt.o := n
 
 lib-$(CONFIG_BOOT_CONFIG) += bootconfig.o
 
