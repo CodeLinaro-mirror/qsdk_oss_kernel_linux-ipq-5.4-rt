@@ -1269,6 +1269,7 @@ static inline void prepare_page_table(void)
 	 * KASan's shadow memory inserts itself between the TASK_SIZE
 	 * and MODULES_VADDR. Do not clear the KASan shadow memory mappings.
 	 */
+	pr_info("Clear PMDs from 0x00000000 to 0x%08lx\n", KASAN_SHADOW_START);
 	for (addr = 0; addr < KASAN_SHADOW_START; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 	/*
@@ -1277,6 +1278,8 @@ static inline void prepare_page_table(void)
 	 * are using a thumb-compiled kernel, there there will be 8MB more
 	 * to clear as KASan always offset to 16 MB below MODULES_VADDR.
 	 */
+	pr_info("Clear PMDs from 0x%08lx to 0x%08lx\n", KASAN_SHADOW_END,
+		MODULES_VADDR);
 	for (addr = KASAN_SHADOW_END; addr < MODULES_VADDR; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 #else
@@ -1288,6 +1291,7 @@ static inline void prepare_page_table(void)
 	/* The XIP kernel is mapped in the module area -- skip over it */
 	addr = ((unsigned long)_exiprom + PMD_SIZE - 1) & PMD_MASK;
 #endif
+	pr_info("Clear PMDs from 0x%08lx to 0x%08lx\n", addr, PAGE_OFFSET);
 	for ( ; addr < PAGE_OFFSET; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
 
@@ -1295,13 +1299,23 @@ static inline void prepare_page_table(void)
 	 * Find the end of the first block of lowmem.
 	 */
 	end = memblock.memory.regions[0].base + memblock.memory.regions[0].size;
-	if (end >= arm_lowmem_limit)
+	if (end >= arm_lowmem_limit) {
+		pr_info("Memblock end is above arm_lowmem_limit (0x%08x)\n",
+			arm_lowmem_limit);
 		end = arm_lowmem_limit;
+	}
+	pr_info("Memblock[0].base: 0x%08x size: 0x%08x, end: 0x%08x\n",
+		memblock.memory.regions[0].base,
+		memblock.memory.regions[0].size,
+		end);
 
 	/*
 	 * Clear out all the kernel space mappings, except for the first
 	 * memory bank, up to the vmalloc region.
 	 */
+	pr_info("Clear PMDs from 0x%08lx to 0x%08lx (lowmem)\n",
+		__phys_to_virt(end),
+		VMALLOC_START);
 	for (addr = __phys_to_virt(end);
 	     addr < VMALLOC_START; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));

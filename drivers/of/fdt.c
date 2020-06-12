@@ -1249,8 +1249,11 @@ void __init unflatten_and_copy_device_tree(void)
 		pr_warn("No valid device tree found, continuing without\n");
 		return;
 	}
+	pr_info("%s initial boot params at %08x\n",
+		__func__, (u32)initial_boot_params);
 
 	size = fdt_totalsize(initial_boot_params);
+	pr_info("%s: totalsize: %d\n", __func__, size);
 	dt = early_init_dt_alloc_memory_arch(size,
 					     roundup_pow_of_two(FDT_V17_SIZE));
 
