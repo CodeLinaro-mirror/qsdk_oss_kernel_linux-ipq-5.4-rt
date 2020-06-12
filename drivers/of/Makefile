@@ -15,4 +15,9 @@ obj-$(CONFIG_OF_RESOLVE)  += resolver.o
 obj-$(CONFIG_OF_OVERLAY) += overlay.o
 obj-$(CONFIG_OF_NUMA) += of_numa.o
 
+# Code in these two files will poke around in non-kernel
+# memory during early arch setup.
+KASAN_SANITIZE_fdt.o := n
+KASAN_SANITIZE_base.o := n
+
 obj-$(CONFIG_OF_UNITTEST) += unittest-data/
