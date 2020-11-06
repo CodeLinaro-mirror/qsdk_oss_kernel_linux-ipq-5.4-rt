@@ -285,12 +285,10 @@ int __ref kasan_populate_early_shadow(const void *shadow_start,
 
 static void kasan_free_pte(pte_t *pte_start, pmd_t *pmd)
 {
-	pte_t *pte;
 	int i;
 
 	for (i = 0; i < PTRS_PER_PTE; i++) {
-		pte = pte_start + i;
-		if (!pte_none(*pte))
+		if (!pte_none(pte_start[i]))
 			return;
 	}
 
@@ -300,12 +298,10 @@ static void kasan_free_pte(pte_t *pte_start, pmd_t *pmd)
 
 static void kasan_free_pmd(pmd_t *pmd_start, pud_t *pud)
 {
-	pmd_t *pmd;
 	int i;
 
 	for (i = 0; i < PTRS_PER_PMD; i++) {
-		pmd = pmd_start + i;
-		if (!pmd_none(*pmd))
+		if (!pmd_none(pmd_start[i]))
 			return;
 	}
 
@@ -315,12 +311,10 @@ static void kasan_free_pmd(pmd_t *pmd_start, pud_t *pud)
 
 static void kasan_free_pud(pud_t *pud_start, p4d_t *p4d)
 {
-	pud_t *pud;
 	int i;
 
 	for (i = 0; i < PTRS_PER_PUD; i++) {
-		pud = pud_start + i;
-		if (!pud_none(*pud))
+		if (!pud_none(pud_start[i]))
 			return;
 	}
 
@@ -330,12 +324,10 @@ static void kasan_free_pud(pud_t *pud_start, p4d_t *p4d)
 
 static void kasan_free_p4d(p4d_t *p4d_start, pgd_t *pgd)
 {
-	p4d_t *p4d;
 	int i;
 
 	for (i = 0; i < PTRS_PER_P4D; i++) {
-		p4d = p4d_start + i;
-		if (!p4d_none(*p4d))
+		if (!p4d_none(p4d_start[i]))
 			return;
 	}
 
