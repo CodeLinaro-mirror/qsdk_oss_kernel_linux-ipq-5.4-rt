@@ -93,14 +93,14 @@
 				bias-disable;
 			};
 
-			ziggy_pins: ziggy_pins {
+			QCC710_pins: QCC710_pins {
 				blsp1_uart4_pinmux {
 					pins = "gpio50", "gpio51", "gpio52", "gpio53";
 					function = "blsp4_uart";
 					drive-strength = <8>;
 					bias-disable;
 				};
-				ziggy_reset {
+				QCC710_reset {
 					pins = "gpio19";
 					function = "gpio";
 					drive-strength = <8>;
@@ -116,7 +116,7 @@
 		};
 
 		blsp1_uart4: serial@78b3000 {
-			pinctrl-0 = <&ziggy_pins>;
+			pinctrl-0 = <&QCC710_pins>;
 			pinctrl-names = "default";
 			status = "ok";
 		};
