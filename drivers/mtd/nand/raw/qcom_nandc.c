@@ -4035,6 +4035,7 @@ static const struct qcom_nandc_props ipq5018_nandc_props = {
 	.is_serial_training = true,
 	.quad_mode = true,
 	.page_scope = true,
+	.switch_layout = true,
 	.dev_cmd_reg_start = 0x7000,
 };
 
