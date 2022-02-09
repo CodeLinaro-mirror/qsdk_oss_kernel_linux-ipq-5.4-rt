@@ -1061,6 +1061,7 @@ int diag_remote_init(void)
 void diag_remote_exit(void)
 {
 	kfree(driver->hdlc_encode_buf);
+	driver->hdlc_encode_buf = NULL;
 }
 
 static int diag_send_raw_data_remote(int proc, void *buf, int len,
