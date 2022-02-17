@@ -207,6 +207,35 @@ static void ssr_notify_stop(struct rproc_subdev *subdev, bool crashed)
 	blocking_notifier_call_chain(&ssr_notifiers, 0, (void *)ssr->name);
 }
 
+char **qcom_get_ssr_subdev_name(struct device *dev, int *num_subdev)
+{
+	int tmp = 0;
+	char **subdev_name;
+	struct qcom_rproc_ssr *ssr;
+	struct rproc_subdev *subdev;
+	struct rproc *rproc = rproc_get_by_child(dev);
+
+	if (!rproc) {
+		pr_info("rproc null\n");
+		return NULL;
+	}
+
+	list_for_each_entry(subdev, &rproc->subdevs, node)
+		(*num_subdev)++;
+
+	subdev_name = kcalloc(*num_subdev, sizeof(char *), GFP_KERNEL);
+	if (!subdev_name) {
+		pr_info("subdev name alloc failed\n");
+		return NULL;
+	}
+
+	list_for_each_entry(subdev, &rproc->subdevs, node) {
+		ssr = to_ssr_subdev(subdev);
+		subdev_name[tmp++] = (char *)ssr->name;
+	}
+	return subdev_name;
+}
+
 /**
  * qcom_add_ssr_subdev() - register subdevice as restart notification source
  * @rproc:	rproc handle
