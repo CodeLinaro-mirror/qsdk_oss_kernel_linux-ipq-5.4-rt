@@ -138,6 +138,9 @@ int setup_kernel_qld_socket(struct tmc_drvdata *drvdata)
 static void __exit coresight_stream_fini(void)
 {
 	flush_work(&tmc_drvdata_stream->qld_stream_work);
+
+	kernel_sock_shutdown(tmc_drvdata_stream->qld_stream_sock, SHUT_RDWR);
+	sock_release(tmc_drvdata_stream->qld_stream_sock);
 }
 
 static int __init coresight_stream_init(void)
