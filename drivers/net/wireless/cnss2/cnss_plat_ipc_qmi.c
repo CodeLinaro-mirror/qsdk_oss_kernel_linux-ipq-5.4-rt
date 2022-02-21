@@ -319,7 +319,7 @@ int cnss_plat_ipc_qmi_file_download(char *file_name, char *buf, u32 *size)
 	struct cnss_plat_ipc_file_data *fd;
 	struct cnss_plat_data *plat_priv = NULL;
 
-	cnss_pr_dbg("%s: File name %s size %u\n", __func__, buf, *size);
+	cnss_pr_dbg("%s: File name %s size %u\n", __func__, file_name, *size);
 
 	if (!svc->client_connected || !file_name || !buf)
 		return -EINVAL;
