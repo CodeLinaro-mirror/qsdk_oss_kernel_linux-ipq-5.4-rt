@@ -509,7 +509,7 @@ static const char * const qdss_cti_trig_in_b1_groups[] = {
 	"gpio45",
 };
 static const char * const led0_groups[] = {
-	"gpio46", "gpio30",
+	"gpio46", "gpio30", "gpio10",
 };
 static const char * const led2_groups[] = {
 	"gpio30",
@@ -622,7 +622,7 @@ static const struct msm_pingroup ipq5018_groups[] = {
 	PINGROUP(7, sdc1_data, qspi_data, mac0, blsp1_spi1, btss, _, qdss_tracedata_a, _, _),
 	PINGROUP(8, sdc1_cmd, qspi_cs, mac1, btss, _, qdss_tracedata_a, _, _, _),
 	PINGROUP(9, sdc1_clk, qspi_clk, _, qdss_tracedata_a, _, _, _, _, _),
-	PINGROUP(10, blsp0_spi, blsp1_uart0, _, gcc_plltest, qdss_tracedata_a, _, _, _, _),
+	PINGROUP(10, blsp0_spi, blsp1_uart0, led0, gcc_plltest, qdss_tracedata_a, _, _, _, _),
 	PINGROUP(11, blsp0_spi, blsp1_uart0, _, gcc_tlmm, qdss_tracedata_a, _, _, _, _),
 	PINGROUP(12, blsp0_spi, blsp0_i2c, blsp1_uart0, _, gcc_plltest, qdss_tracedata_a, _, _, _),
 	PINGROUP(13, blsp0_spi, blsp0_i2c, blsp1_uart0, _, qdss_tracedata_a, _, _, _, _),
