@@ -102,8 +102,6 @@
 #define MEASURE_PERIOD          1
 #define SENSOR0_SHIFT           3
 
-static bool int_clr_deassert_quirk;
-
 static int get_temp_ipq5018(struct tsens_priv *tmdev, int id, int *temp);
 
 int code2degc_lut_degc[MAX_SENSOR][1024];
@@ -218,6 +216,9 @@ static void tsens_scheduler_fn(struct work_struct *work)
 		reg_thr = th_upper = th_lower = 0;
 
 		regmap_read(tmdev->tm_map, tmdev->sensor[i].status, &reg_val);
+		/* read the current value of status ctrl regiser */
+		regmap_read(tmdev->tm_map,
+			TSENS_TM_UPPER_LOWER_STATUS_CTRL(i), &reg_thr);
 
 		/* Check whether the temp is valid */
 		if (!(reg_val & TSENS_TM_SN_STATUS_VALID_BIT))
@@ -240,9 +241,11 @@ static void tsens_scheduler_fn(struct work_struct *work)
 			regmap_write(tmdev->tm_map, reg_addr, reg_thr);
 			/* Notify user space */
 			schedule_work(&tmdev->sensor[i].notify_work);
+			/* clear both clear interupt status bit */
+			reg_thr &= ~(TSENS_TM_LOWER_STATUS_CLEAR ||
+					TSENS_TM_UPPER_STATUS_CLEAR);
 
-			if (int_clr_deassert_quirk)
-				regmap_write(tmdev->tm_map, reg_addr, 0);
+			regmap_write(tmdev->tm_map, reg_addr, reg_thr);
 
 			if (!get_temp_ipq5018(tmdev, i, &temp))
 				pr_debug("Trigger (%d degrees) for sensor %d\n",
@@ -313,8 +316,6 @@ static int init_ipq5018(struct tsens_priv *tmdev)
 
 	regmap_write(tmdev->tm_map, TSENS_TM_INT_EN_ADDR, TSENS_TM_INT_EN);
 
-	int_clr_deassert_quirk = device_property_read_bool(tmdev->dev,
-				"tsens-up-low-int-clr-deassert-quirk");
 	/* Sync registers */
 	mb();
 
