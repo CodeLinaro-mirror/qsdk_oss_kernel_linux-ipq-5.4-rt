@@ -1158,14 +1158,38 @@ int __qti_qfprom_show_authenticate(struct device *dev, char *buf)
 	return ret;
 }
 
-int __qti_qfprom_write_version(struct device *dev, void *wrip, int size)
+int __qti_qfprom_write_version(struct device *dev, uint32_t sw_type,
+				uint32_t value, uint32_t qfprom_ret_ptr)
 {
-	if (!is_scm_armv8())
-		return  qcom_scm_call(dev, QTI_SCM_SVC_FUSE,
-						QTI_QFPROM_ROW_WRITE_CMD,
-						wrip, size, NULL, 0);
-	else
-		return -ENOTSUPP;
+	int ret;
+
+	if (!is_scm_armv8()) {
+		struct qfprom_write {
+			uint32_t sw_type;
+			uint32_t value;
+			uint32_t qfprom_ret_ptr;
+		} wrip;
+
+		wrip.sw_type = sw_type;
+		wrip.value = value;
+		wrip.qfprom_ret_ptr = qfprom_ret_ptr;
+
+		ret = qcom_scm_call(dev, QTI_SCM_SVC_FUSE,
+				      QTI_QFPROM_ROW_WRITE_CMD, &wrip,
+				      sizeof(wrip), NULL, 0);
+	} else {
+		__le32 scm_ret;
+		struct scm_desc desc = {0};
+
+		ret = qti_scm_call2(dev, SCM_SIP_FNID(QTI_SCM_SVC_FUSE,
+					QTI_QFPROM_ROW_WRITE_CMD), &desc);
+		scm_ret = desc.ret[0];
+
+		if (!ret)
+			return le32_to_cpu(scm_ret);
+	}
+
+	return ret;
 }
 
 int __qti_qfprom_read_version(struct device *dev, uint32_t sw_type,
