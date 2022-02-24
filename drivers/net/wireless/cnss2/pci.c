@@ -515,8 +515,11 @@ static int cnss_pci_check_link_status(struct cnss_pci_data *pci_priv)
 
 static void cnss_pci_select_window(struct cnss_pci_data *pci_priv, u32 addr)
 {
+	struct cnss_plat_data *plat_priv = pci_priv->plat_priv;
 	u32 window = (addr >> WINDOW_SHIFT) & WINDOW_VALUE_MASK;
 	u32 prev_window = 0, curr_window = 0, prev_cleared_window = 0;
+	volatile u32 write_val, read_val = 0;
+	int retry = 0;
 
 	prev_window = readl_relaxed(pci_priv->bar +
 					QCN9000_PCIE_REMAP_BAR_CTRL_OFFSET);
@@ -535,16 +538,21 @@ static void cnss_pci_select_window(struct cnss_pci_data *pci_priv, u32 addr)
 	if (curr_window == prev_window)
 		return;
 
-	writel_relaxed(WINDOW_ENABLE_BIT | curr_window,
-		       QCN9000_PCIE_REMAP_BAR_CTRL_OFFSET +
-		       pci_priv->bar);
+	write_val = WINDOW_ENABLE_BIT | curr_window;
+	writel_relaxed(write_val, pci_priv->bar +
+		       QCN9000_PCIE_REMAP_BAR_CTRL_OFFSET);
 
-	/* Introduce a delay of 10 mseconds due to emulation
-	 * Wait for the window configuration to reflect before
-	 * allowing further writes or reads
-	 */
-	if (pci_priv->device_id == QCN9224_DEVICE_ID)
-		mdelay(10);
+	read_val = readl_relaxed(pci_priv->bar +
+				 QCN9000_PCIE_REMAP_BAR_CTRL_OFFSET);
+
+	/* If value written is not yet reflected, wait till it is reflected */
+	while ((read_val != write_val) && (retry < 10)) {
+		mdelay(1);
+		read_val = readl_relaxed(pci_priv->bar +
+					 QCN9000_PCIE_REMAP_BAR_CTRL_OFFSET);
+		retry++;
+	}
+	cnss_pr_dbg("%s: retry count: %d", __func__, retry);
 }
 
 static int cnss_get_mhi_region_len(struct cnss_plat_data *plat_priv,
@@ -4992,10 +5000,6 @@ static void cnss_pci_disable_bus(struct cnss_pci_data *pci_priv)
 
 	/* Call global reset here */
 	cnss_pci_global_reset(pci_priv);
-
-	/* Introduce a wait for QCN9224 emulation delays */
-	if (pci_priv->device_id == QCN9224_DEVICE_ID)
-		msleep(2000);
 
 	mhi_set_mhi_state(pci_priv->mhi_ctrl, MHI_STATE_RESET);
 
