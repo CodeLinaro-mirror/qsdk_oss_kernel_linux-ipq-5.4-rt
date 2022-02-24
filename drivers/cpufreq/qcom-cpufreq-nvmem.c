@@ -36,6 +36,11 @@ enum _msm_id {
 	APQ8096V3 = 0x123ul,
 	MSM8996SG = 0x131ul,
 	APQ8096SG = 0x138ul,
+	IPQ6018V1 = 0x192ul,
+	IPQ6028V1 = 0x193ul,
+	IPQ6000V1 = 0x1a5ul,
+	IPQ6010V1 = 0x1a6ul,
+	IPQ6005V1 = 0x1c5ul,
 	IPQ9574V1 = 0x202ul,
 	IPQ9570V1 = 0x201ul,
 	IPQ9554V1 = 0x200ul,
@@ -47,6 +52,8 @@ enum _msm_id {
 enum _msm8996_version {
 	MSM8996_V3,
 	MSM8996_SG,
+	IPQ60XX_V1,
+	IPQ6000_V1,
 	IPQ95XX_V1,
 	NUM_OF_MSM8996_VERSIONS,
 };
@@ -90,6 +97,15 @@ static enum _msm8996_version qcom_cpufreq_get_msm_id(void)
 	case MSM8996SG:
 	case APQ8096SG:
 		version = MSM8996_SG;
+		break;
+	case IPQ6018V1:
+	case IPQ6028V1:
+	case IPQ6010V1:
+	case IPQ6005V1:
+		version = IPQ60XX_V1;
+		break;
+	case IPQ6000V1:
+		version = IPQ6000_V1;
 		break;
 	case IPQ9574V1:
 	case IPQ9570V1:
@@ -145,6 +161,22 @@ static int qcom_cpufreq_kryo_name_version(struct device *cpu_dev,
 		else
 			drv->versions = 1 << (unsigned int)(*speedbin);
 		break;
+	case IPQ60XX_V1:
+		/* Fuse Value    Freq    BIT to set
+		 * ---------------------------------
+		 *   2’b0     No Limit     BIT(0)
+		 *   2’b1     1.5 GHz      BIT(1)
+		 */
+		drv->versions = 1 << (unsigned int)(*speedbin);
+		break;
+	case IPQ6000_V1:
+		/**
+		 * IPQ60xx family of SoCs has only one bit in QFPROM to
+		 * limit the CPU frequency to 1.5GHz. IPQ6000 variant
+		 * is limited to 1.2GHz. So lets hard code the value.
+		 */
+		drv->versions = BIT(2);
+		break;
 	default:
 		BUG();
 		break;
@@ -182,7 +214,8 @@ static int qcom_cpufreq_probe(struct platform_device *pdev)
 	if (!np)
 		return -ENOENT;
 
-	ret = of_device_is_compatible(np, "operating-points-v2-kryo-cpu");
+	ret = of_device_is_compatible(np, "operating-points-v2-kryo-cpu") ||
+		of_device_is_compatible(np, "operating-points-v2-ipq6018");
 	if (!ret) {
 		of_node_put(np);
 		return -ENOENT;
@@ -332,6 +365,7 @@ static const struct of_device_id qcom_cpufreq_match_list[] __initconst = {
 	{ .compatible = "qcom,apq8096", .data = &match_data_kryo },
 	{ .compatible = "qcom,msm8996", .data = &match_data_kryo },
 	{ .compatible = "qcom,qcs404", .data = &match_data_qcs404 },
+	{ .compatible = "qcom,ipq6018", .data = &match_data_kryo },
 	{ .compatible = "qcom,ipq9574", .data = &match_data_kryo },
 	{},
 };

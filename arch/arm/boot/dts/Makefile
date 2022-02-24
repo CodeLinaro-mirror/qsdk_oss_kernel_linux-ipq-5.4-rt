@@ -863,6 +863,7 @@ dtb-$(CONFIG_ARCH_QCOM) += \
 	ipq5018-mp03.5-c2.dtb \
 	ipq5018-mp03.6-c1.dtb \
 	ipq5018-mp03.6-c2.dtb \
+	ipq5018-mp05.1.dtb \
 	ipq6018-cp01-c1.dtb \
 	ipq6018-cp01-c3.dtb \
 	ipq6018-cp01-c4.dtb \
@@ -901,6 +902,8 @@ dtb-$(CONFIG_ARCH_QCOM) += \
 	ipq9574-al02-c2.dtb \
 	ipq9574-al02-c3.dtb \
 	ipq9574-al02-c4.dtb \
+	ipq9574-al02-c5.dtb \
+	ipq9574-al02-c6.dtb \
 	ipq9574-db-al01-c1.dtb \
 	ipq9574-db-al01-c2.dtb \
 	ipq9574-db-al01-c3.dtb \

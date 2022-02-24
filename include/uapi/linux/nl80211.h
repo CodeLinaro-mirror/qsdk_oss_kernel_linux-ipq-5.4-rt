@@ -2507,6 +2507,11 @@ enum nl80211_commands {
  * @NL80211_ATTR_MLD_LINK_IDS: nested attribute to hold MLD link-ids.
  * @NL80211_ATTR_MLD_LINK_MACS: nested attribute to hold MLD mac addrs.
  *
+ * @NL80211_ATTR_SAE_PWE: Indicates the mechanism(s) allowed for SAE PWE
+ *	derivation in WPA3-Personal networks which are using SAE authentication.
+ *	This is a u8 attribute that encapsulates one of the values from
+ *	&enum nl80211_sae_pwe_mechanism.
+ *
  * @NUM_NL80211_ATTR: total number of nl80211_attrs available
  * @NL80211_ATTR_MAX: highest attribute number currently defined
  * @__NL80211_ATTR_AFTER_LAST: internal use
@@ -2984,7 +2989,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_SCAN_FREQ_KHZ,
 
 	NL80211_ATTR_HE_6GHZ_CAPABILITY,
-	NL80211_ATTR_SAE_PWE,
+
+	NL80211_ATTR_SAE_PWE = 299,
 
 	NL80211_ATTR_EHT_CAPABILITY = 350,
 	NL80211_ATTR_EHT_PUNCTURE_BITMAP,
@@ -6752,5 +6758,23 @@ enum nl80211_obss_pd_attributes {
 	NL80211_HE_OBSS_PD_ATTR_MAX = __NL80211_HE_OBSS_PD_ATTR_LAST - 1,
 };
 
+/**
+ * enum nl80211_sae_pwe_mechanism - The mechanism(s) allowed for SAE PWE
+ *     derivation. Applicable only when WPA3-Personal SAE authentication is
+ *     used.
+ *
+ * @NL80211_SAE_PWE_UNSPECIFIED: not specified, used internally to indicate that
+ *     attribute is not present from userspace.
+ * @NL80211_SAE_PWE_HUNT_AND_PECK: hunting-and-pecking loop only
+ * @NL80211_SAE_PWE_HASH_TO_ELEMENT: hash-to-element only
+ * @NL80211_SAE_PWE_BOTH: both hunting-and-pecking loop and hash-to-element
+ *     can be used.
+ */
+enum nl80211_sae_pwe_mechanism {
+       NL80211_SAE_PWE_UNSPECIFIED,
+       NL80211_SAE_PWE_HUNT_AND_PECK,
+       NL80211_SAE_PWE_HASH_TO_ELEMENT,
+       NL80211_SAE_PWE_BOTH,
+};
 
 #endif /* __LINUX_NL80211_H */

@@ -451,11 +451,13 @@ static void socket_open_client(struct diag_socket_info *info)
 	if (!info || info->port_type != PORT_TYPE_CLIENT)
 		return;
 
-	ret = sock_create(AF_QIPCRTR, SOCK_DGRAM, PF_QIPCRTR, &info->hdl);
-	if (ret < 0 || !info->hdl) {
-		pr_err("diag: In %s, socket not initialized for %s\n", __func__,
-		       info->name);
-		return;
+	if (!info->hdl) {
+		ret = sock_create(AF_QIPCRTR, SOCK_DGRAM, PF_QIPCRTR, &info->hdl);
+		if (ret < 0 || !info->hdl) {
+			pr_err("diag: In %s, socket not initialized for %s\n",
+					__func__, info->name);
+			return;
+		}
 	}
 
 	write_lock_bh(&info->hdl->sk->sk_callback_lock);
@@ -1226,6 +1228,7 @@ static void __diag_socket_exit(struct diag_socket_info *info)
 		sock_release(info->hdl);
 	info->hdl = NULL;
 	mutex_destroy(&info->socket_info_mutex);
+	wake_up_interruptible(&info->read_wait_q);
 	if (info->wq)
 		destroy_workqueue(info->wq);
 }
@@ -1233,12 +1236,28 @@ static void __diag_socket_exit(struct diag_socket_info *info)
 void diag_socket_exit(void)
 {
 	int i;
+	struct restart_notifier_block *nb;
 
 	if (cntl_qmi) {
 		qmi_handle_release(cntl_qmi);
 		kfree(cntl_qmi);
 	}
+
+	for (i = 0; i < ARRAY_SIZE(restart_notifiers); i++) {
+		if (!test_bit(i, &peripheral_mask))
+			continue;
+
+		nb = &restart_notifiers[i];
+		rproc_unregister_subsys_notifier(nb->name, &nb->nb, NULL);
+		DIAG_LOG(DIAG_DEBUG_PERIPHERALS,
+			 "%s: unregistering notifier for '%s\n",
+			 __func__, nb->name);
+	}
+
 	for (i = 0; i < NUM_PERIPHERALS; i++) {
+		if (!test_bit(i, &peripheral_mask))
+			continue;
+
 		__diag_socket_exit(&socket_cntl[i]);
 		__diag_socket_exit(&socket_data[i]);
 		__diag_socket_exit(&socket_cmd[i]);

@@ -33,6 +33,12 @@
 
 #define DIAG_USB_STRING_SZ	10
 #define DIAG_USB_MAX_SIZE	16384
+#ifndef CONFIG_DIAG_OVER_USB
+#define DIAG_LEGACY             "diag"
+#define DIAG_MDM		"diag_mdm"
+#define DIAG_QSC		"diag_qsc"
+#define DIAG_MDM2		"diag_mdm2"
+#endif
 
 struct diag_usb_info diag_usb[NUM_DIAG_USB_DEV] = {
 	{
@@ -95,6 +101,7 @@ struct diag_usb_info diag_usb[NUM_DIAG_USB_DEV] = {
 #endif
 };
 
+#ifdef CONFIG_DIAG_OVER_USB
 static int diag_usb_buf_tbl_add(struct diag_usb_info *usb_info,
 				unsigned char *buf, uint32_t len, int ctxt)
 {
@@ -746,4 +753,4 @@ void diag_usb_exit(int id)
 	kfree(ch->read_buf);
 	ch->read_buf = NULL;
 }
-
+#endif

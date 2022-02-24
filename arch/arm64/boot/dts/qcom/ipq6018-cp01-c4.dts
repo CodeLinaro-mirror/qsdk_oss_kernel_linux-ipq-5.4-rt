@@ -33,6 +33,8 @@
 		1800000  1100000
 	>;
 	clock-latency = <200000>;
+	/delete-property/ operating-points-v2;
+	/delete-property/ cpu-supply;
 };
 
 &CPU1 {
@@ -46,6 +48,8 @@
 		1800000  1100000
 	>;
 	clock-latency = <200000>;
+	/delete-property/ operating-points-v2;
+	/delete-property/ cpu-supply;
 };
 
 &CPU2 {
@@ -59,6 +63,8 @@
 		1800000  1100000
 	>;
 	clock-latency = <200000>;
+	/delete-property/ operating-points-v2;
+	/delete-property/ cpu-supply;
 };
 
 &CPU3 {
@@ -72,9 +78,13 @@
 		1800000  1100000
 	>;
 	clock-latency = <200000>;
+	/delete-property/ operating-points-v2;
+	/delete-property/ cpu-supply;
 };
 
 &tlmm {
+	gpio-reserved-ranges = <20 1>;
+
 	i2c_1_pins: i2c_1_pins {
 		mux {
 			pins = "gpio42", "gpio43";

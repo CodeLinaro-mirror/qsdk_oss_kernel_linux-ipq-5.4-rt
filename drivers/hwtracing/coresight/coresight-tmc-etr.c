@@ -1118,6 +1118,21 @@ static void __tmc_etr_disable_hw(struct tmc_drvdata *drvdata)
 
 void tmc_etr_disable_hw(struct tmc_drvdata *drvdata)
 {
+
+	/*
+	 * When the out_mode is q6mem_stream, TMC HW will be disabled if the
+	 * data is filled in the ETR memory and will be reenabled once processed.
+	 * In cases, like if the TMC HW is already disabled, we just return from here
+	 * without the proper cleanup. So caller will clean up the sysfs_buf
+	 * and same will be accessed when we try to enable the ETR, which will
+	 * cause the Use-After-Free scenarios.
+	 *
+	 * So if the mode is q6mem_stream, do the cleanup irrespective of the
+	 * TMC HW state.
+	 */
+	if (drvdata->out_mode != TMC_ETR_OUT_MODE_Q6MEM_STREAM && !drvdata->enable)
+		return;
+
 	__tmc_etr_disable_hw(drvdata);
 	/* Disable CATU device if this ETR is connected to one */
 	tmc_etr_disable_catu(drvdata);
@@ -1485,7 +1500,13 @@ static int tmc_enable_etr_sink_sysfs(struct coresight_device *csdev)
 	 * use the buffer allocated above. Otherwise reuse the existing buffer.
 	 */
 	sysfs_buf = READ_ONCE(drvdata->sysfs_buf);
-	if (!sysfs_buf || (new_buf && sysfs_buf->size != new_buf->size)) {
+	/*
+	 * Always use the new_buf, since for Q6MEM_STREAM, we use the SG with
+	 * data page size as 8K. In other modes, data page size will be 4K.
+	 * So if we use the existing sysfs_buf across the out_mode,
+	 * undefined behavior will be observed.
+	 */
+	if (new_buf) {
 		free_buf = sysfs_buf;
 		drvdata->sysfs_buf = new_buf;
 	}
@@ -2008,6 +2029,15 @@ static int _tmc_disable_etr_sink(struct coresight_device *csdev,
 		tmc_etr_free_sysfs_buf(drvdata->etr_buf);
 		drvdata->etr_buf = NULL;
 	}
+
+	/*
+	 * When doing the out_mode switch, new buffer will be allocated
+	 * and if there are any existing work is still being processed,
+	 * undefined behaviour will be observed. So make sure all the pending
+	 * work is flushed.
+	 */
+	if (drvdata->out_mode == TMC_ETR_OUT_MODE_Q6MEM_STREAM)
+		flush_work(&drvdata->qld_stream_work);
 out:
 	dev_info(&csdev->dev, "TMC-ETR disabled\n");
 	return 0;
