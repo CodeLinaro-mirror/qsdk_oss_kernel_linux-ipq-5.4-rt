@@ -166,6 +166,7 @@
 
 &pcie0 {
 	pcie0_rp {
+		reg = <0 0 0 0 0>;
 		status = "ok";
 		device_type = "pci";
 
