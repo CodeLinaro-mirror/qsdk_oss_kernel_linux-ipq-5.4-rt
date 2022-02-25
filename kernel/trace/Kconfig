@@ -489,7 +489,7 @@ config KPROBE_EVENTS
 config KPROBE_EVENTS_ON_NOTRACE
 	bool "Do NOT protect notrace function from kprobe events"
 	depends on KPROBE_EVENTS
-	depends on KPROBES_ON_FTRACE
+	depends on DYNAMIC_FTRACE
 	default n
 	help
 	  This is only for the developers who want to debug ftrace itself
@@ -807,6 +807,19 @@ config GCOV_PROFILE_FTRACE
 
 	  Note that on a kernel compiled with this config, ftrace will
 	  run significantly slower.
+
+config SRD_TRACE
+	bool "Record trace events in coherent memory"
+	depends on FTRACE
+	default n
+	help
+	  Normal tracing records the information in cacheable memory. In some
+	  scenarios where the system reboots unexpectedly, the cache is not
+	  flushed and the recorded information is lost. While doing the core
+	  dump analysis, the developer doesn't have the details about the
+	  functions that executed during the final moments before the reboot.
+	  With this option the information is recorded to coherent memory and
+	  the information is not lost even during an unexpected reboot.
 
 endif # FTRACE
 

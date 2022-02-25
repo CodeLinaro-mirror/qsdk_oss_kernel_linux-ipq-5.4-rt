@@ -1,4 +1,5 @@
 /* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +27,10 @@
  */
 #define CNSS_API_WITH_DEV
 
+#define CNSS_MAX_LINKS_PER_CHIP		2
+#define CNSS_MAX_MLO_CHIPS		3
+#define CNSS_MAX_MLO_GROUPS		1
+
 enum cnss_bus_width_type {
 	CNSS_BUS_WIDTH_NONE,
 	CNSS_BUS_WIDTH_IDLE,
@@ -33,6 +38,21 @@ enum cnss_bus_width_type {
 	CNSS_BUS_WIDTH_MEDIUM,
 	CNSS_BUS_WIDTH_HIGH,
 	CNSS_BUS_WIDTH_VERY_HIGH
+};
+
+enum cnss_notif_type {
+	CNSS_BEFORE_SHUTDOWN,
+	CNSS_AFTER_SHUTDOWN,
+	CNSS_BEFORE_POWERUP,
+	CNSS_AFTER_POWERUP,
+	CNSS_RAMDUMP_NOTIFICATION,
+	CNSS_POWERUP_FAILURE,
+	CNSS_PROXY_VOTE,
+	CNSS_PROXY_UNVOTE,
+	CNSS_SOC_RESET,
+	CNSS_PREPARE_FOR_FATAL_SHUTDOWN,
+	/* The below event should be the last event for all devices */
+	CNSS_NOTIF_TYPE_MAX
 };
 
 enum cnss_platform_cap_flag {
@@ -172,6 +192,22 @@ enum cnss_recovery_reason {
 	CNSS_REASON_LINK_DOWN,
 	CNSS_REASON_RDDM,
 	CNSS_REASON_TIMEOUT,
+};
+
+struct cnss_mlo_chip_info {
+	u8 group_id;
+	u8 soc_id;
+	u8 chip_id;
+	u8 num_local_links;
+	u8 hw_link_ids[CNSS_MAX_LINKS_PER_CHIP];
+	u8 valid_link_ids[CNSS_MAX_LINKS_PER_CHIP];
+};
+
+struct cnss_mlo_group_info {
+	u8 group_id;
+	u8 num_chips;
+	u16 max_num_peers;
+	struct cnss_mlo_chip_info chip_info[CNSS_MAX_MLO_CHIPS];
 };
 
 struct cnss_plat_data;
@@ -428,8 +464,39 @@ static inline int cnss_get_dev_link_ids(struct device *dev, u8 *link_ids,
 {
 	return -EINVAL;
 }
+static inline int cnss_wlan_register_driver_ops(struct cnss_wlan_driver *driver)
+{
+	return 0;
+}
+static inline int cnss_wlan_probe_driver(void)
+{
+	return 0;
+}
+static inline int cnss_set_bar_addr(struct device *dev, void __iomem *mem)
+{
+	return -EINVAL;
+}
+static inline void cnss_set_led_gpio(int led_gpio, unsigned int value,
+				     unsigned int flags)
+{
+	return;
+}
+static inline int cnss_set_mlo_config(struct cnss_mlo_group_info *group_info,
+				      int num_groups)
+{
+	return 0;
+}
+static inline void cnss_print_mlo_config(void)
+{
+}
+static bool cnss_get_enable_intx(struct device *dev)
+{
+	return false;
+}
 #else
 extern int cnss_wlan_register_driver(struct cnss_wlan_driver *driver);
+extern int cnss_wlan_register_driver_ops(struct cnss_wlan_driver *driver);
+extern int cnss_wlan_probe_driver(void);
 extern void cnss_wlan_unregister_driver(struct cnss_wlan_driver *driver);
 extern void cnss_device_crashed(struct device *dev);
 extern int cnss_pci_link_down(struct device *dev);
@@ -499,6 +566,7 @@ void cnss_pcie_remove_bus(void);
 void *cnss_get_pci_dev_by_device_id(int device_id);
 void *cnss_get_pci_dev_from_plat_dev(void *pdev);
 void *cnss_get_pci_dev_id_from_plat_dev(void *pdev);
+int cnss_dump_all_ce_reg(struct cnss_plat_data *plat_priv);
 extern unsigned int cnss_get_qmi_timeout(struct cnss_plat_data *plat_priv);
 extern int cnss_athdiag_read(struct device *dev, uint32_t offset,
 			     uint32_t mem_type, uint32_t data_len,
@@ -527,5 +595,11 @@ int cnss_get_num_mlo_capable_devices(unsigned int *device_id,
 int cnss_reg_read(struct device *dev, u32 addr, u32 *val);
 int cnss_reg_write(struct device *dev, u32 addr, u32 val);
 int cnss_get_dev_link_ids(struct device *dev, u8 *link_ids, int max_elements);
+int cnss_set_bar_addr(struct device *dev, void __iomem *mem);
+void cnss_set_led_gpio(int led_gpio, unsigned int value, unsigned int flags);
+int cnss_set_mlo_config(struct cnss_mlo_group_info *group_info, int num_groups);
+void cnss_print_mlo_config(void);
+extern bool cnss_get_enable_intx(struct device *dev);
+void *cnss_get_plat_dev_by_bus_dev(struct device *dev);
 #endif
 #endif /* _NET_CNSS2_H */

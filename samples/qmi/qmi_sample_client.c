@@ -779,9 +779,9 @@ static void volt_set_cb(struct qmi_handle *qmi, struct sockaddr_qrtr *sq,
 
 	if (resp->resp.result == QMI_RESULT_FAILURE_V01)
 		txn->result = -ENXIO;
-	else
-		pr_info("Voltage set requested from %d:%d handle[%p] is successful!\n",
-			qmi->sq.sq_port, qmi->sq.sq_node, qmi);
+
+	pr_info("Voltage set requested from %d:%d handle[%p] is successful!\n",
+		qmi->sq.sq_port, qmi->sq.sq_node, qmi);
 
 	complete(&txn->completion);
 }

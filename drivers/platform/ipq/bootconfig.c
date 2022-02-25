@@ -273,10 +273,15 @@ static int __init bootconfig_partition_init(void)
 	mtd = get_mtd_device_nm(ROOTFS_PARTITION);
 	if (IS_ERR(mtd))
 		flash_type_emmc = 1;
+	else
+		put_mtd_device(mtd);
+
 	mtd = get_mtd_device_nm(BOOTCONFIG_PARTITION);
 	if (!IS_ERR(mtd)) {
 
 		bootconfig1 = read_bootconfig_mtd(mtd, 0);
+		put_mtd_device(mtd);
+
 		mtd = get_mtd_device_nm(BOOTCONFIG_PARTITION1);
 		if (IS_ERR(mtd)) {
 			pr_alert("%s: " BOOTCONFIG_PARTITION1 " not found\n",
@@ -285,6 +290,7 @@ static int __init bootconfig_partition_init(void)
 		}
 
 		bootconfig2 = read_bootconfig_mtd(mtd, 0);
+		put_mtd_device(mtd);
 	}
 #ifdef CONFIG_MMC
 	else if (flash_type_emmc == 1) {
