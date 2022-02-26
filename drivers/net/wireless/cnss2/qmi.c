@@ -2298,6 +2298,7 @@ out:
 	qmi_record(plat_priv->wlfw_service_instance_id,
 		   QMI_WLFW_QDSS_TRACE_MODE_REQ_V01,
 		   ret, resp_error_msg);
+	cnss_pr_info("QDSS Started for %s", plat_priv->device_name);
 
 	kfree(resp);
 	kfree(req);
