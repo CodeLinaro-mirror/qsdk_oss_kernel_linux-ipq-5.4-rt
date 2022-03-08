@@ -46,6 +46,7 @@
 #define SW_TYPE_APDP				0x200
 
 static int gl_version_enable;
+static int version_commit_enable;
 static int fuse_blow_size_req;
 
 static ssize_t
@@ -73,31 +74,24 @@ qfprom_show_authenticate(struct device *dev,
 int write_version(struct device *dev, uint32_t type, uint32_t version)
 {
 	int ret;
-	struct qfprom_write {
-		uint32_t sw_type;
-		uint32_t value;
-		uint32_t qfprom_ret_ptr;
-	} wrip;
-
+	uint32_t qfprom_ret_ptr;
 	uint32_t *qfprom_api_status = kzalloc(sizeof(uint32_t), GFP_KERNEL);
 
 	if (!qfprom_api_status)
 		return -ENOMEM;
 
-	wrip.value = version;
-	wrip.sw_type = type;
-	wrip.qfprom_ret_ptr = dma_map_single(dev, qfprom_api_status,
+	qfprom_ret_ptr = dma_map_single(dev, qfprom_api_status,
 			sizeof(*qfprom_api_status), DMA_FROM_DEVICE);
 
-	ret = dma_mapping_error(dev, wrip.qfprom_ret_ptr);
+	ret = dma_mapping_error(dev, qfprom_ret_ptr);
 	if (ret) {
 		pr_err("DMA Mapping Error(api_status)\n");
 		goto err_write;
 	}
 
-	ret = qti_qfprom_write_version(&wrip, sizeof(wrip));
+	ret = qti_qfprom_write_version(type, version, qfprom_ret_ptr);
 
-	dma_unmap_single(dev, wrip.qfprom_ret_ptr,
+	dma_unmap_single(dev, qfprom_ret_ptr,
 			sizeof(*qfprom_api_status), DMA_FROM_DEVICE);
 
 	if(ret)
@@ -191,6 +185,11 @@ static ssize_t generic_version(struct device *dev, const char *buf,
 		if (ret)
 			goto err_generic;
 
+		/* Commit version is true if user input is greater than 0 */
+		if (*version <= 0) {
+			ret = -EINVAL;
+			goto err_generic;
+		}
 		ret = write_version(dev, sw_type, *version);
 		if (ret) {
 			pr_err("Error in writing version: %d\n", ret);
@@ -206,6 +205,7 @@ err_generic:
 	kfree(version);
 	return ret;
 }
+
 static ssize_t
 show_sbl_version(struct device *dev,
 			struct device_attribute *attr,
@@ -316,6 +316,14 @@ store_apdp_version(struct device *dev,
 			const char *buf, size_t count)
 {
 	return generic_version(dev, buf, SW_TYPE_APDP, 2, count);
+}
+
+static ssize_t
+store_version_commit(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	return generic_version(dev, buf, 0, 2, count);
 }
 
 static ssize_t
@@ -548,6 +556,8 @@ static struct device_attribute qfprom_attrs[] = {
 					store_devcfg_version),
 	__ATTR(apdp_version, 0644, show_apdp_version,
 					store_apdp_version),
+	__ATTR(version_commit, 0200, NULL,
+					store_version_commit),
 
 };
 
@@ -578,19 +588,30 @@ static int __init qfprom_create_files(int size, int16_t sw_bitmap)
 		return 0;
 
 	for (i = 1; i < size; i++) {
+		if(strncmp(qfprom_attrs[i].attr.name, "version_commit",
+			   strlen(qfprom_attrs[i].attr.name))) {
 			/*
-			 * Following is the BitMap adapted:
-			 * SBL:0 TZ:1 APPSBL:2 HLOS:3 RPM:4. New types should
-			 * be added at the end of "qfprom_attrs" variable.
-			 */
+			* Following is the BitMap adapted:
+			* SBL:0 TZ:1 APPSBL:2 HLOS:3 RPM:4. New types should
+			* be added at the end of "qfprom_attrs" variable.
+			*/
+
 			sw_bit = i - 1;
 			if (!(sw_bitmap & (1 << sw_bit)))
 				break;
-		err = device_create_file(&device_qfprom, &qfprom_attrs[i]);
-		if (err) {
-			pr_err("%s: device_create_file(%s)=%d\n",
-				__func__, qfprom_attrs[i].attr.name, err);
-			return err;
+			err = device_create_file(&device_qfprom, &qfprom_attrs[i]);
+			if (err) {
+				pr_err("%s: device_create_file(%s)=%d\n",
+					__func__, qfprom_attrs[i].attr.name, err);
+				return err;
+			}
+		} else if (version_commit_enable) {
+			err = device_create_file(&device_qfprom, &qfprom_attrs[i]);
+			if (err) {
+				pr_err("%s: device_create_file(%s)=%d\n",
+					__func__, qfprom_attrs[i].attr.name, err);
+				return err;
+			}
 		}
 	}
 
@@ -690,6 +711,9 @@ static int qfprom_probe(struct platform_device *pdev)
 	}
 
 	of_property_read_u32(np, "fuse-blow-size-required", &fuse_blow_size_req);
+	of_property_read_u32(np, "version-commit-enable", &version_commit_enable);
+	if (version_commit_enable)
+		pr_info("version commit support enabled\n");
 
 	/* sysfs entry for fusing QFPROM */
 	err = device_create_file(&device_qfprom, &sec_dat_attr);

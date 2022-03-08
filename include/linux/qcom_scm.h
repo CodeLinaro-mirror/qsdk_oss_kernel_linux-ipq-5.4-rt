@@ -200,7 +200,9 @@ extern int qcom_scm_iommu_secure_ptbl_init(u64 addr, u32 size, u32 spare);
 extern int qcom_scm_io_readl(phys_addr_t addr, unsigned int *val);
 extern int qcom_scm_io_writel(phys_addr_t addr, unsigned int val);
 extern int qti_qfprom_show_authenticate(void);
-extern int qti_qfprom_write_version(void *wrip, int size);
+extern int qti_qfprom_write_version(uint32_t sw_type,
+					uint32_t value,
+					uint32_t qfprom_ret_ptr);
 extern int qti_qfprom_read_version(uint32_t sw_type,
 					uint32_t value,
 					uint32_t qfprom_ret_ptr);

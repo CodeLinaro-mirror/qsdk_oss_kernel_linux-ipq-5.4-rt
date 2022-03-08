@@ -627,9 +627,12 @@ int qti_qfprom_show_authenticate(void)
 }
 EXPORT_SYMBOL(qti_qfprom_show_authenticate);
 
-int qti_qfprom_write_version(void *wrip, int size)
+int qti_qfprom_write_version(uint32_t sw_type,
+			uint32_t value, uint32_t qfprom_ret_ptr)
+
 {
-	return __qti_qfprom_write_version(__scm->dev, wrip, size);
+	return __qti_qfprom_write_version(__scm->dev, sw_type, value,
+						   qfprom_ret_ptr);
 }
 
 int qti_qfprom_read_version(uint32_t sw_type,
