@@ -121,6 +121,14 @@ void mhi_rddm_prepare(struct mhi_controller *mhi_cntrl,
 		bhi_vec->size = mhi_buf->len;
 	}
 
+	mhi_buf->dma_addr = dma_map_single(mhi_cntrl->cntrl_dev, mhi_buf->buf,
+			mhi_buf->len, DMA_TO_DEVICE);
+	if (dma_mapping_error(mhi_cntrl->cntrl_dev, mhi_buf->dma_addr)) {
+		dev_err(dev, "dma mapping failed, Address: %p and len: 0x%zx\n",
+				&mhi_buf->dma_addr, mhi_buf->len);
+		return;
+	}
+
 	dev_dbg(dev, "BHIe programming for RDDM\n");
 
 	mhi_write_reg(mhi_cntrl, base, BHIE_RXVECADDR_HIGH_OFFS,
@@ -152,6 +160,8 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 	int rddm_retry = rddm_timeout_us / delayus;
 	void __iomem *base = mhi_cntrl->bhie;
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
+	struct mhi_buf *mhi_buf = &mhi_cntrl->rddm_image->mhi_buf[
+		mhi_cntrl->rddm_image->entries - 1];
 	u32 val, i;
 	struct {
 		char *name;
@@ -228,10 +238,18 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 					 BHIE_RXVECSTATUS_STATUS_BMSK,
 					 BHIE_RXVECSTATUS_STATUS_SHFT,
 					 &rx_status);
-		if (ret)
+		if (ret) {
+			dma_unmap_single(mhi_cntrl->cntrl_dev,
+					mhi_buf->dma_addr, mhi_buf->len,
+					DMA_TO_DEVICE);
 			return -EIO;
+		}
 
 		if (rx_status == BHIE_RXVECSTATUS_STATUS_XFER_COMPL) {
+			dma_unmap_single(mhi_cntrl->cntrl_dev,
+					mhi_buf->dma_addr, mhi_buf->len,
+					DMA_TO_DEVICE);
+
 			get_crash_reason(mhi_cntrl);
 			return 0;
 		}
@@ -253,6 +271,9 @@ static int __mhi_download_rddm_in_panic(struct mhi_controller *mhi_cntrl)
 	}
 
 error_exit_rddm:
+	dma_unmap_single(mhi_cntrl->cntrl_dev, mhi_buf->dma_addr, mhi_buf->len,
+			DMA_TO_DEVICE);
+
 	dev_err(dev, "RDDM transfer failed. Current EE: %s\n",
 		TO_MHI_EXEC_STR(ee));
 
@@ -265,6 +286,7 @@ int mhi_download_rddm_image(struct mhi_controller *mhi_cntrl, bool in_panic)
 	void __iomem *base = mhi_cntrl->bhie;
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
 	u32 rx_status;
+	struct mhi_buf *mhi_buf = NULL;
 	rwlock_t *pm_lock = &mhi_cntrl->pm_lock;
 	u32 val, ret, i;
 	struct {
@@ -285,7 +307,7 @@ int mhi_download_rddm_image(struct mhi_controller *mhi_cntrl, bool in_panic)
 		ret = mhi_alloc_bhie_table(mhi_cntrl, &mhi_cntrl->rddm_image,
 				     mhi_cntrl->rddm_size, false);
 		if (ret) {
-			dev_err(dev, "Failed to allocale RDDM table memory\n");
+			dev_err(dev, "Failed to allocate RDDM table memory\n");
 			return ret;
 		}
 
@@ -306,6 +328,11 @@ int mhi_download_rddm_image(struct mhi_controller *mhi_cntrl, bool in_panic)
 					      BHIE_RXVECSTATUS_STATUS_SHFT,
 					      &rx_status) || rx_status,
 			   msecs_to_jiffies(mhi_cntrl->timeout_ms));
+
+	mhi_buf = &mhi_cntrl->rddm_image->mhi_buf[
+		mhi_cntrl->rddm_image->entries - 1];
+	dma_unmap_single(mhi_cntrl->cntrl_dev, mhi_buf->dma_addr, mhi_buf->len,
+			DMA_TO_DEVICE);
 
 	if (rx_status == BHIE_RXVECSTATUS_STATUS_XFER_COMPL) {
 		get_crash_reason(mhi_cntrl);
@@ -331,7 +358,7 @@ int mhi_download_rddm_image(struct mhi_controller *mhi_cntrl, bool in_panic)
 EXPORT_SYMBOL_GPL(mhi_download_rddm_image);
 
 static int mhi_fw_load_bhie(struct mhi_controller *mhi_cntrl,
-			    const struct mhi_buf *mhi_buf)
+			    struct mhi_buf *mhi_buf)
 {
 	void __iomem *base = mhi_cntrl->bhie;
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
@@ -354,6 +381,14 @@ static int mhi_fw_load_bhie(struct mhi_controller *mhi_cntrl,
 	read_lock_bh(pm_lock);
 	if (!MHI_REG_ACCESS_VALID(mhi_cntrl->pm_state)) {
 		read_unlock_bh(pm_lock);
+		return -EIO;
+	}
+
+	mhi_buf->dma_addr = dma_map_single(mhi_cntrl->cntrl_dev, mhi_buf->buf,
+			mhi_buf->len, DMA_TO_DEVICE);
+	if (dma_mapping_error(mhi_cntrl->cntrl_dev, mhi_buf->dma_addr)) {
+		dev_err(dev, "dma mapping failed, Address: %p and len: 0x%zx\n",
+				&mhi_buf->dma_addr, mhi_buf->len);
 		return -EIO;
 	}
 
@@ -382,6 +417,10 @@ static int mhi_fw_load_bhie(struct mhi_controller *mhi_cntrl,
 						   BHIE_TXVECSTATUS_STATUS_SHFT,
 						   &tx_status) || tx_status,
 				 msecs_to_jiffies(mhi_cntrl->timeout_ms));
+
+	dma_unmap_single(mhi_cntrl->cntrl_dev, mhi_buf->dma_addr, mhi_buf->len,
+			DMA_TO_DEVICE);
+
 	if (MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state) ||
 	    tx_status != BHIE_TXVECSTATUS_STATUS_XFER_COMPL) {
 		pr_err("Upper:0x%x Lower:0x%x len:0x%zx sequence:%u\n",
@@ -496,11 +535,14 @@ void mhi_free_bhie_table(struct mhi_controller *mhi_cntrl,
 		if (is_fbc && i == (image_info->entries - 2))
 			continue;
 
-		if (!is_fbc && mhi_cntrl->disable_rddm_prealloc)
-			mhi_free_coherent(mhi_cntrl, mhi_buf->len,
-					mhi_buf->buf,
-					mhi_buf->dma_addr);
-		else
+		if (i == (image_info->entries - 1))
+			kfree(mhi_buf->buf);
+		else if (!is_fbc && mhi_cntrl->disable_rddm_prealloc) {
+			dma_unmap_single(mhi_cntrl->cntrl_dev,
+					mhi_buf->dma_addr, mhi_buf->len,
+					DMA_FROM_DEVICE);
+			kfree(mhi_buf->buf);
+		} else
 			mhi_fw_free_coherent(mhi_cntrl, mhi_buf->len,
 					mhi_buf->buf,
 					mhi_buf->dma_addr);
@@ -562,6 +604,10 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 	int i;
 	struct image_info *img_info;
 	struct mhi_buf *mhi_buf;
+	/* Maksed __GFP_DIRECT_RECLAIM flag for non-interrupt context
+	   to avoid rcu context sleep issue in kmalloc during panic scenario */
+	gfp_t gfp = (in_interrupt() ? GFP_ATOMIC :
+		((GFP_KERNEL | __GFP_NORETRY) & ~__GFP_DIRECT_RECLAIM));
 
 	/* Allocate one extra entry for Dynamic Pageable in FBC */
 	if (is_fbc)
@@ -571,13 +617,13 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 
 	segments += DIV_ROUND_UP(alloc_size, seg_size) + 1;
 
-	img_info = kzalloc(sizeof(*img_info), GFP_KERNEL);
+	img_info = kzalloc(sizeof(*img_info), gfp);
 	if (!img_info)
 		return -ENOMEM;
 
 	/* Allocate memory for entries */
 	img_info->mhi_buf = kcalloc(segments, sizeof(*img_info->mhi_buf),
-				    GFP_KERNEL);
+				    gfp);
 	if (!img_info->mhi_buf)
 		goto error_alloc_mhi_buf;
 
@@ -596,20 +642,26 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 			mhi_buf->dma_addr = 0;
 		} else if (i == segments - 1) {
 			/* last entry is for vector table */
-
 			vec_size = sizeof(struct bhi_vec_entry) * i;
-			mhi_buf->buf = mhi_alloc_coherent(mhi_cntrl, vec_size,
-							  &mhi_buf->dma_addr,
-							  GFP_KERNEL);
+			mhi_buf->buf = kzalloc(vec_size, gfp);
 			if (!mhi_buf->buf)
 				goto error_alloc_segment;
 		} else {
-			if (!is_fbc && mhi_cntrl->disable_rddm_prealloc)
-				mhi_buf->buf = mhi_alloc_coherent(mhi_cntrl,
-							vec_size,
-							&mhi_buf->dma_addr,
-							GFP_KERNEL);
-			else
+			if (!is_fbc && mhi_cntrl->disable_rddm_prealloc) {
+				mhi_buf->buf = kmalloc(vec_size, gfp);
+				if (!mhi_buf->buf)
+					goto error_alloc_segment;
+
+				mhi_buf->dma_addr = dma_map_single(
+						mhi_cntrl->cntrl_dev,
+						mhi_buf->buf, vec_size,
+						DMA_FROM_DEVICE);
+				if (dma_mapping_error(mhi_cntrl->cntrl_dev,
+							mhi_buf->dma_addr)) {
+					kfree(mhi_buf->buf);
+					mhi_buf->buf = NULL;
+				}
+			} else
 				mhi_buf->buf = mhi_fw_alloc_coherent(mhi_cntrl,
 							vec_size,
 							&mhi_buf->dma_addr,
@@ -629,9 +681,16 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 	return 0;
 
 error_alloc_segment:
-	for (--i, --mhi_buf; i >= 0; i--, mhi_buf--)
-		mhi_fw_free_coherent(mhi_cntrl, mhi_buf->len, mhi_buf->buf,
-				  mhi_buf->dma_addr);
+	for (--i, --mhi_buf; i >= 0; i--, mhi_buf--) {
+		if (!is_fbc && mhi_cntrl->disable_rddm_prealloc) {
+			dma_unmap_single(mhi_cntrl->cntrl_dev,
+					mhi_buf->dma_addr, mhi_buf->len,
+					DMA_FROM_DEVICE);
+			kfree(mhi_buf->buf);
+		} else
+			mhi_fw_free_coherent(mhi_cntrl, mhi_buf->len,
+					mhi_buf->buf, mhi_buf->dma_addr);
+	}
 
 error_alloc_mhi_buf:
 	kfree(img_info);
