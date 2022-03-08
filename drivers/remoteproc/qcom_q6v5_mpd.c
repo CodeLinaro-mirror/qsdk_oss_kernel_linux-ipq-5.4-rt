@@ -1428,6 +1428,13 @@ int q6_wcss_register_dump_segments(struct rproc *rproc,
 									NULL);
 }
 
+static void q6_wcss_panic(struct rproc *rproc)
+{
+	struct q6_wcss *wcss = rproc->priv;
+
+	qcom_q6v5_panic_handler(&wcss->q6);
+}
+
 static const struct rproc_ops wcss_pcie_ipq5018_ops = {
 	.start = wcss_pcie_pd_start,
 	.stop = wcss_pcie_pd_stop,
@@ -1449,6 +1456,7 @@ static const struct rproc_ops q6_wcss_ipq5018_ops = {
 	.load = q6_wcss_load,
 	.get_boot_addr = rproc_elf_get_boot_addr,
 	.parse_fw = q6_wcss_register_dump_segments,
+	.report_panic = q6_wcss_panic,
 };
 
 static int q6_wcss_init_reset(struct q6_wcss *wcss,

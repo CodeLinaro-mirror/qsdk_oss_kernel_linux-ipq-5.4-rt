@@ -102,8 +102,6 @@
 #define MEASURE_PERIOD          1
 #define SENSOR0_SHIFT           3
 
-static bool int_clr_deassert_quirk;
-
 static int get_temp_ipq5018(struct tsens_priv *tmdev, int id, int *temp);
 
 int code2degc_lut_degc[MAX_SENSOR][1024];
@@ -136,7 +134,7 @@ int degc_to_code(int temp, int sensor)
 static int set_trip_temp(struct tsens_priv *tmdev, int sensor,
 					enum tsens_trip_type trip, int temp)
 {
-	u32 reg_th, th_hi, th_lo, reg_th_offset;
+	u32 reg_th, th_lo, th_hi, reg_th_offset, curr_temp, ret;
 
 	if (!tmdev)
 		return -EINVAL;
@@ -169,7 +167,25 @@ static int set_trip_temp(struct tsens_priv *tmdev, int sensor,
 	case TSENS_TRIP_STAGE1:
 		if (temp >= th_hi)
 			return -EINVAL;
-
+	/*
+	 * IPQ50XX tsens doesn't support mask interrupt features
+	 * so if lower threshold interrupt trigger value set above
+	 * the current temp, interrupt triggers continously
+	 * To avoid this condition, adding this check before updating
+	 * lower threshold interrupt trigger temp value.
+	 */
+		ret = get_temp_ipq5018(tmdev, sensor, &curr_temp);
+		if (ret){
+			return ret;
+		} else {
+			curr_temp = degc_to_code(curr_temp, sensor);
+			if (temp >= curr_temp) {
+				pr_debug("Skipping setting lower threshold"
+					"temp %d higher than current temp %d\n",
+					temp, curr_temp);
+				goto skip;
+			}
+		}
 		/* Don't change upper threshold */
 		reg_th &= TSENS_TM_UPPER_THRESHOLD_MASK;
 		reg_th |= temp;
@@ -184,7 +200,7 @@ static int set_trip_temp(struct tsens_priv *tmdev, int sensor,
 
 	/* Sync registers */
 	mb();
-
+skip:
 	return 0;
 }
 
@@ -218,6 +234,9 @@ static void tsens_scheduler_fn(struct work_struct *work)
 		reg_thr = th_upper = th_lower = 0;
 
 		regmap_read(tmdev->tm_map, tmdev->sensor[i].status, &reg_val);
+		/* read the current value of status ctrl regiser */
+		regmap_read(tmdev->tm_map,
+			TSENS_TM_UPPER_LOWER_STATUS_CTRL(i), &reg_thr);
 
 		/* Check whether the temp is valid */
 		if (!(reg_val & TSENS_TM_SN_STATUS_VALID_BIT))
@@ -241,8 +260,21 @@ static void tsens_scheduler_fn(struct work_struct *work)
 			/* Notify user space */
 			schedule_work(&tmdev->sensor[i].notify_work);
 
-			if (int_clr_deassert_quirk)
-				regmap_write(tmdev->tm_map, reg_addr, 0);
+			if (th_lower &&
+				((reg_thr & TSENS_TM_LOWER_THRESHOLD_MASK) >=
+				(reg_val & TSENS_TM_LOWER_THRESHOLD_MASK))){
+			/*
+			 * if lower threshold temp is higher than current temp
+			 * clearing lower threshold to avoid flooding of the
+			 * lower threshold interrupt.
+			 */
+				reg_thr &= ~(TSENS_TM_LOWER_THRESHOLD_MASK);
+			}
+			/* clear both clear interupt status bit */
+			reg_thr &= ~(TSENS_TM_LOWER_STATUS_CLEAR ||
+					TSENS_TM_UPPER_STATUS_CLEAR);
+
+			regmap_write(tmdev->tm_map, reg_addr, reg_thr);
 
 			if (!get_temp_ipq5018(tmdev, i, &temp))
 				pr_debug("Trigger (%d degrees) for sensor %d\n",
@@ -313,8 +345,6 @@ static int init_ipq5018(struct tsens_priv *tmdev)
 
 	regmap_write(tmdev->tm_map, TSENS_TM_INT_EN_ADDR, TSENS_TM_INT_EN);
 
-	int_clr_deassert_quirk = device_property_read_bool(tmdev->dev,
-				"tsens-up-low-int-clr-deassert-quirk");
 	/* Sync registers */
 	mb();
 

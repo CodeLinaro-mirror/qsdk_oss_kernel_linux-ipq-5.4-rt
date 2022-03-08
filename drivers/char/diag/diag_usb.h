@@ -74,8 +74,8 @@ struct diag_usb_info {
 	wait_queue_head_t wait_q;
 };
 
-#ifdef CONFIG_DIAG_OVER_USB
 extern struct diag_usb_info diag_usb[NUM_DIAG_USB_DEV];
+#ifdef CONFIG_DIAG_OVER_USB
 int diag_usb_register(int id, int ctxt, struct diag_mux_ops *ops);
 int diag_usb_queue_read(int id);
 int diag_usb_write(int id, unsigned char *buf, int len, int ctxt);
@@ -85,31 +85,31 @@ void diag_usb_connect_device(int id);
 void diag_usb_disconnect_device(int id);
 void diag_usb_exit(int id);
 #else
-int diag_usb_register(int id, int ctxt, struct diag_mux_ops *ops)
+static inline int diag_usb_register(int id, int ctxt, struct diag_mux_ops *ops)
 {
 	return 0;
 }
-int diag_usb_queue_read(int id)
+static inline int diag_usb_queue_read(int id)
 {
 	return 0;
 }
-int diag_usb_write(int id, unsigned char *buf, int len, int ctxt)
+static inline int diag_usb_write(int id, unsigned char *buf, int len, int ctxt)
 {
 	return 0;
 }
-void diag_usb_connect_all(void)
+static inline void diag_usb_connect_all(void)
 {
 }
-void diag_usb_disconnect_all(void)
+static inline void diag_usb_disconnect_all(void)
 {
 }
-void diag_usb_connect_device(int id)
+static inline void diag_usb_connect_device(int id)
 {
 }
-void diag_usb_disconnect_device(int id)
+static inline void diag_usb_disconnect_device(int id)
 {
 }
-void diag_usb_exit(int id)
+static inline void diag_usb_exit(int id)
 {
 }
 #endif

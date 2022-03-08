@@ -1193,6 +1193,7 @@ static struct clk_rcg2 adss_pwm_clk_src = {
 };
 
 static const struct freq_tbl ftbl_blsp1_qup_i2c_apps_clk_src[] = {
+	F(9600000, P_XO, 2.5, 0, 0),
 	F(24000000, P_XO, 1, 0, 0),
 	F(25000000, P_GPLL0_DIV2, 16, 0, 0),
 	F(50000000, P_GPLL0, 16, 0, 0),

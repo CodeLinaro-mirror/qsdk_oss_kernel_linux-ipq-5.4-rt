@@ -9,7 +9,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/clock/qca,apss-ipq5018.h>
 #include "ipq5018-memory.dtsi"
-
+#include <dt-bindings/input/input.h>
 
 / {
 	#address-cells = <2>;
@@ -85,6 +85,11 @@
 		method = "smc";
 	};
 
+	qseecom {
+		compatible = "ipq5018-qseecom";
+		memory-region = <&tzapp>;
+	};
+
 	firmware {
 		scm {
 			compatible = "qcom,scm";
@@ -116,6 +121,10 @@
 		qti,tz-diag-buf-size = <0x2000>;
 		qti,tz-ring-off = <7>;
 		qti,tz-log-pos-info-off = <455>;
+	};
+
+	srd_trace: srd_trace {
+		compatible = "srd";
 	};
 
 	soc: soc {
@@ -501,6 +510,16 @@
 			};
 		};
 
+		blsp1_uart2: serial@78b0000 {
+			compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
+			reg = <0x78b0000 0x200>;
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&gcc GCC_BLSP1_UART2_APPS_CLK>,
+					<&gcc GCC_BLSP1_AHB_CLK>;
+			clock-names = "core", "iface";
+			status = "disabled";
+		};
+
 		blsp1_uart1: serial@78af000 {
 			compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 			reg = <0x078af000 0x200>;
@@ -569,6 +588,19 @@
 			};
 		};
 
+		eud: qcom,msm-eud@58000 {
+			compatible = "qcom,msm-eud";
+			reg = <0x58000 0x1000>,
+			      <0x59000 0x2000>,
+			      <0x5a000 0x1000>;
+			reg-names = "eud_base",
+				    "eud_mode_mgr",
+				    "eud_mode_mgr2";
+			interrupts = <GIC_SPI 154 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "eud_irq";
+			status = "disabled";
+		};
+
 		intc: interrupt-controller@b000000 {
 			compatible = "qcom,msm-qgic2";
 			interrupt-controller;
@@ -598,7 +630,6 @@
 			interrupts = <GIC_SPI 3 IRQ_TYPE_EDGE_RISING>;
 			reg = <0x0b017000 0x40>;
 			clocks = <&sleep_clk>;
-			max-timeout-sec = <32>;
 		};
 
 		apcs_glb: mailbox@b111000 {
@@ -883,6 +914,7 @@
 				interrupts = <GIC_SPI 179 IRQ_TYPE_EDGE_RISING>;
 				qcom,remote-pid = <1>;
 				mboxes = <&apcs_glb 8>;
+				global_timer = <0x4A5000>;
 
 				qrtr_requests {
 					qcom,glink-channels = "IPCRTR";
@@ -950,6 +982,7 @@
 			<0 333 1>,
 			<0 334 1>,
 			<0 335 1>,
+			<0 342 1>,
 			<0 336 1>,
 			<0 337 1>,
 			<0 338 1>,
@@ -1002,6 +1035,7 @@
 			"host2tcl-input-ring3",
 			"host2tcl-input-ring2",
 			"host2tcl-input-ring1",
+			"wbm2host-tx-completions-ring4",
 			"wbm2host-tx-completions-ring3",
 			"wbm2host-tx-completions-ring2",
 			"wbm2host-tx-completions-ring1",
@@ -1039,6 +1073,13 @@
 			status = "disabled";
 		};
 
+		wifi5: wifi5@f00000 {
+			compatible  = "qcom,cnss-qcn9224";
+			qcom,wlan-ramdump-dynamic = <0x600000>;
+			qca,auto-restart;
+			status = "disabled";
+		};
+
 		wcss: wcss-smp2p {
 			compatible = "qcom,smp2p";
 			qcom,smem = <435>, <428>;
@@ -1050,6 +1091,7 @@
 
 			qcom,local-pid = <0>;
 			qcom,remote-pid = <1>;
+			global_timer = <0x4A5000>;
 
 			wcss_smp2p_out: master-kernel {
 				qcom,entry-name = "master-kernel";
@@ -1169,6 +1211,46 @@
 		acc1:clock-controller@b198000 {
 			compatible = "qcom,arm-cortex-acc";
 			reg = <0x0b198000 0x1000>;
+		};
+
+		lpass: lpass@0xA000000{
+			compatible = "qca,lpass-ipq5018";
+			reg =  <0xA000000 0x3BFFFF>;
+			clocks = <&gcc GCC_SNOC_LPASS_AXIM_CLK>,
+			<&gcc GCC_SNOC_LPASS_SWAY_CLK>,
+			<&gcc GCC_LPASS_CORE_AXIM_CLK>,
+			<&gcc GCC_LPASS_SWAY_CLK>;
+			clock-names = "snoc_axim", "snoc_sway", "axim", "sway";
+			resets = <&gcc GCC_LPASS_BCR>;
+			reset-names = "lpass";
+			status = "disabled";
+		};
+
+		pcm: pcm@0xA3C0000{
+			compatible = "qca,ipq5018-lpass-pcm";
+			reg =  <0xA3C0000 0x23014>;
+			interrupts = <0 27 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "out0";
+			capture_memory = "lpm";
+			playback_memory = "lpm";
+			voice_loopback = <0>;
+			status = "disabled";
+		};
+
+		pcm_lb: pcm_lb@0 {
+			compatible = "qca,ipq5018-pcm-lb";
+			status = "disabled";
+		};
+
+		pwm: pwm@0x1941010 {
+			compatible = "qti,ipq5018-pwm";
+			reg = <0x1941010 0x20>;
+			clocks = <&gcc GCC_ADSS_PWM_CLK>;
+			clock-names = "core";
+			src-freq = <100000000>;
+			pwm-base-index = <0>;
+			used-pwm-indices = <1>, <1>, <1>, <1>;
+			status = "disabled";
 		};
 	};
 

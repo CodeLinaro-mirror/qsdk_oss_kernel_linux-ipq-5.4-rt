@@ -22,7 +22,7 @@
 
 	soc {
 		pinctrl@1000000 {
-			/delete-node/ ziggy_pins;
+			/delete-node/ QCC710_pins;
 
 			sfp_pins: sfp_pinmux {
 				sfp_rx {

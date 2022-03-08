@@ -1794,6 +1794,16 @@ nodma:
 			dev_err(qup->dev, "Could not get iface clock\n");
 			return PTR_ERR(qup->pclk);
 		}
+
+		if (!of_property_read_u32(pdev->dev.of_node,
+					"qup-clock-frequency", &src_clk_freq)) {
+			ret = clk_set_rate(qup->clk, src_clk_freq);
+			if (ret) {
+				dev_err(qup->dev,
+					"Set qup clock frequency failed\n");
+				goto fail;
+			}
+		}
 		qup_i2c_enable_clocks(qup);
 		src_clk_freq = clk_get_rate(qup->clk);
 	}

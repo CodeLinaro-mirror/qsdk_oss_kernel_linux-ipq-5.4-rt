@@ -88,12 +88,35 @@ static const struct file_operations mini_dump_ops;
 static struct class *dump_class;
 int dump_major = 0;
 
+/* struct to store physical address and
+ *  size of crashdump segments for live minidump
+ *  capture
+ *
+ * @param:
+ *   node - struct obj for kernel list
+ *   addr - virtual address of dump segment
+ *   size - size of dump segemnt
+ */
 struct dump_segment {
     struct list_head node;
     unsigned long addr;
     size_t size;
 };
 
+/* struct to store metadata info for
+ *  preparing crashdump segemnts for
+ *  live minidump capture.
+ *
+ * @param:
+ *   total_size - total size of dumps
+ *   num_seg - total number of dump segments
+ *   flag - size of dump segment
+ *   type - array to store 'type' of dump segments
+ *   seg_size - array to store segment size of
+ *   dump segments
+ *   phy_addr - array to store physical address of
+ *   dump segments
+ */
 struct mini_hdr {
     int total_size;
     int num_seg;
@@ -103,6 +126,15 @@ struct mini_hdr {
     unsigned long *phy_addr;
 };
 
+/* struct to store device file info for /dev/minidump
+ *
+ *  @param:
+ *   name - name of device node
+ *   fops - struct obj for file operations
+ *   fmode - file modes
+ *   hdr - struct obj for metadata info
+ *   dump_segments - struct obj for dump segment list
+ */
 struct dumpdev {
     const char *name;
     const struct file_operations *fops;
@@ -144,9 +176,8 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 	struct dump_segment *segment = NULL;
 	int index = 0;
 
-	if (!tlv_msg.msg_buffer) {
+	if (!tlv_msg.msg_buffer)
 		return -ENOMEM;
-	}
 
 	minidump.hdr.seg_size = (unsigned int *)
 		kmalloc((sizeof(int) * minidump.hdr.num_seg), GFP_KERNEL);
@@ -155,9 +186,9 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 	minidump.hdr.type = (unsigned char *)
 		kmalloc((sizeof(unsigned char) * minidump.hdr.num_seg), GFP_KERNEL);
 
-	if (!minidump.hdr.seg_size || !minidump.hdr.phy_addr || !minidump.hdr.type) {
+	if (!minidump.hdr.seg_size || !minidump.hdr.phy_addr ||
+			!minidump.hdr.type)
 		return -ENOMEM;
-	}
 
 	INIT_LIST_HEAD(&minidump.dump_segments);
 	spin_lock_irqsave(&tlv_msg.spinlock, flags);
@@ -169,19 +200,26 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 		cur_node = list_entry(pos, struct minidump_metadata_list, list);
 
 		if (cur_node->va != INVALID) {
-			segment = (struct dump_segment *) kmalloc(sizeof(struct dump_segment),
-					GFP_KERNEL);
+			segment = (struct dump_segment *)
+				kmalloc(sizeof(struct dump_segment), GFP_KERNEL);
 			if (!segment) {
 				pr_err("\nMinidump: Unable to allocate memory for dump segment");
 				return -ENOMEM;
 			}
-			if ( (cur_node->type == CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD_INFO) ||
-				(cur_node->type == CTX_SAVE_LOG_DUMP_TYPE_WLAN_MMU_INFO) ||
-				(cur_node->type == CTX_SAVE_LOG_DUMP_TYPE_DMESG) ) {
-				segment->size = *(unsigned long *)(uintptr_t)
-					((unsigned long)__va(cur_node->size));
-			} else {
-				segment->size = cur_node->size;
+
+			switch (cur_node->type) {
+				case CTX_SAVE_LOG_DUMP_TYPE_DMESG:
+					segment->size = log_buf_len;
+					break;
+
+				case CTX_SAVE_LOG_DUMP_TYPE_WLAN_MMU_INFO:
+				case CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD_INFO:
+					segment->size = *(unsigned long *)(uintptr_t)
+						((unsigned long)__va(cur_node->size));
+					break;
+
+				default:
+					segment->size = cur_node->size;
 			}
 
 			segment->addr = cur_node->va;
@@ -190,7 +228,7 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 			minidump.hdr.seg_size[index] = segment->size;
 			minidump.hdr.phy_addr[index] = cur_node->pa;
 			minidump.hdr.type[index] = cur_node->type;
-			index ++;
+			index++;
 		}
 	}
 	spin_unlock_irqrestore(&tlv_msg.spinlock, flags);
@@ -208,9 +246,10 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 *
 * Return: 0
 */
-static int mini_dump_release(struct inode *inode, struct file *file) {
-int dump_minor_dev =  iminor(inode);
-int dump_major_dev = imajor(inode);
+static int mini_dump_release(struct inode *inode, struct file *file)
+{
+	int dump_minor_dev = iminor(inode);
+	int dump_major_dev = imajor(inode);
 
 	struct dump_segment *segment, *tmp;
 
@@ -227,6 +266,7 @@ int dump_major_dev = imajor(inode);
 
 	device_destroy(dump_class, MKDEV(dump_major_dev, dump_minor_dev));
 	class_destroy(dump_class);
+	unregister_chrdev(dump_major_dev, "minidump");
 
 	dump_major = 0;
 	dump_class = NULL;
@@ -243,8 +283,8 @@ int dump_major_dev = imajor(inode);
 * Return: 0
 */
 static ssize_t mini_dump_read(struct file *file, char __user *buf,
-    size_t count, loff_t *ppos) {
-
+    size_t count, loff_t *ppos)
+{
 	int ret = 0;
 	int seg_num = 0;
 	struct dumpdev *dfp = (struct dumpdev *) file->private_data;
@@ -286,7 +326,7 @@ static long mini_dump_ioctl(struct file *file, unsigned int ioctl_num,
 	int ret = 0;
 	struct dumpdev *dfp = (struct dumpdev *) file->private_data;
 
-	switch(ioctl_num) {
+	switch (ioctl_num) {
 		case MINIDUMP_IOCTL_PREPARE_HDR:
 			ret = copy_to_user((void __user *)arg,
 			(const void *)(uintptr_t)(&(dfp->hdr)), sizeof(dfp->hdr));
@@ -313,6 +353,7 @@ static long mini_dump_ioctl(struct file *file, unsigned int ioctl_num,
 	return ret;
 }
 
+/* file ops for /dev/minidump */
 static const struct file_operations mini_dump_ops = {
 	.open       =   mini_dump_open,
 	.read       =   mini_dump_read,
@@ -334,7 +375,7 @@ int do_minidump(void) {
     struct device *dump_dev = NULL;
 
 #ifdef CONFIG_QCA_MINIDUMP_DEBUG
-    int count =0;
+    int count = 0;
     struct minidump_metadata_list *cur_node;
     struct list_head *pos;
     unsigned long flags;
@@ -361,18 +402,18 @@ int do_minidump(void) {
         cur_node = list_entry(pos, struct minidump_metadata_list, list);
  if (cur_node->va != 0) {
             if (cur_node->name != NULL)
-                pr_info(" %s [%lx] ---> ",cur_node->name,cur_node->va);
+                pr_info(" %s [%lx] ---> ", cur_node->name, cur_node->va);
             else
-                pr_info(" un-named [%lx] ---> ",cur_node->va);
+                pr_info(" un-named [%lx] ---> ", cur_node->va);
         }
     }
     spin_unlock_irqrestore(&tlv_msg.spinlock, flags);
-    pr_err("\n Minidump: # nodes in the Metadata list = %d",count);
+    pr_err("\n Minidump: # nodes in the Metadata list = %d", count);
     pr_err("\n Minidump: Size of node in Metadata list = %ld\n",
     (unsigned long)sizeof(struct minidump_metadata_list));
 #endif
 
-    if(dump_class || dump_major) {
+    if (dump_class || dump_major) {
         device_destroy(dump_class, MKDEV(dump_major, 0));
         class_destroy(dump_class);
     }
@@ -391,7 +432,8 @@ int do_minidump(void) {
         goto class_failed;
     }
 
-    dump_dev = device_create(dump_class, NULL, MKDEV(dump_major, 0), NULL,minidump.name);
+    dump_dev = device_create(dump_class, NULL, MKDEV(dump_major, 0), NULL,
+		    minidump.name);
     if (IS_ERR(dump_dev)) {
         ret = PTR_ERR(dump_dev);
         pr_err("Unable to create a device err = %d\n", ret);
@@ -419,7 +461,8 @@ EXPORT_SYMBOL(do_minidump);
 *
 * Return: 0
 */
-static void sysrq_minidump_handler(int key)  {
+static void sysrq_minidump_handler(int key)
+{
     int ret =0;
     ret = do_minidump();
     if (ret)
@@ -427,6 +470,14 @@ static void sysrq_minidump_handler(int key)  {
 
 }
 
+/* sysrq_key_op struct for registering operation
+ * for a particular key.
+ *
+ * @param:
+ * .hander - the key handler function
+ * .help_msg - help_msg string
+ * .action_msg - action_msg string
+ */
 static struct sysrq_key_op sysrq_minidump_op = {
     .handler    = sysrq_minidump_handler,
     .help_msg   = "minidump(y)",
@@ -560,9 +611,9 @@ int minidump_remove_segments(const uint64_t virt_addr)
 			*(cur_node->tlv_offset) = CTX_SAVE_LOG_DUMP_TYPE_EMPTY;
 
 #ifdef CONFIG_QCA_MINIDUMP_DEBUG
-            if(cur_node->name!=NULL) {
-                kfree(cur_node->name);
-                cur_node->name = NULL;
+            if (cur_node->name != NULL) {
+		    kfree(cur_node->name);
+		    cur_node->name = NULL;
             }
 #endif
 
@@ -654,8 +705,9 @@ EXPORT_SYMBOL(minidump_remove_segments);
 *   due to an alloc failure or NULL address. Return -EINVAL if there is an attempt to
 *   add a duplicate entry
 */
-int minidump_traverse_metadata_list(const char *name, const unsigned long virt_addr, const unsigned long phy_addr,
-		unsigned char **tlv_offset, unsigned long size, unsigned char type)
+int minidump_traverse_metadata_list(const char *name, const unsigned long
+		virt_addr, const unsigned long phy_addr, unsigned
+		char **tlv_offset, unsigned long size, unsigned char type)
 {
 
 	unsigned long flags;
@@ -680,7 +732,8 @@ int minidump_traverse_metadata_list(const char *name, const unsigned long virt_a
 			spin_unlock_irqrestore(&tlv_msg.spinlock,
 					flags);
 #ifdef CONFIG_QCA_MINIDUMP_DEBUG
-	pr_debug("Minidump: TLV entry with this VA is already present %s %lx\n",name,virt_addr);
+	pr_debug("Minidump: TLV entry with this VA is already present %s %lx\n",
+			name, virt_addr);
 #endif
 			return -EINVAL;
 		}
@@ -736,8 +789,8 @@ int minidump_traverse_metadata_list(const char *name, const unsigned long virt_a
 		*/
 			minidump_meta_info.cur_mmuinfo_offset = cur_node->mmuinfo_offset;
 		} else {
-			if ( IS_ENABLED(CONFIG_ARM64) || ( (unsigned long)virt_addr < PAGE_OFFSET
-				|| (unsigned long)virt_addr >= (unsigned long)high_memory) )
+			if (IS_ENABLED(CONFIG_ARM64) || ((unsigned long)virt_addr < PAGE_OFFSET
+				|| (unsigned long)virt_addr >= (unsigned long)high_memory))
 				cur_node->mmuinfo_offset = minidump_meta_info.cur_mmuinfo_offset;
 		}
 
@@ -864,7 +917,7 @@ int minidump_fill_tlv_crashdump_buffer(const uint64_t start_addr, uint64_t size,
 }
 
 /*
-* Function: minidump_fill_segments
+* Function: minidump_fill_segments_internal
 *
 * Description: Add a dump segment as a TLV entry in the Metadata list
 * and global crashdump buffer. Store relevant VA and PA information in
@@ -878,7 +931,7 @@ int minidump_fill_tlv_crashdump_buffer(const uint64_t start_addr, uint64_t size,
 *
 * Return: 0 on success, -ENOMEM on failure
 */
-int minidump_fill_segments(const uint64_t start_addr, uint64_t size, minidump_tlv_type_t type, const char *name)
+int minidump_fill_segments_internal(const uint64_t start_addr, uint64_t size, minidump_tlv_type_t type, const char *name, int islowmem)
 {
 
 	int ret = 0;
@@ -892,14 +945,17 @@ int minidump_fill_segments(const uint64_t start_addr, uint64_t size, minidump_tl
 	* Calculate PA of Dump segment using relevant APIs for lowmem and highmem
 	* virtual address.
 	*/
-	if ((unsigned long)start_addr >= PAGE_OFFSET && (unsigned long) start_addr
-				< (unsigned long)high_memory) {
+	if (islowmem) {
 		phys_addr = (uint64_t)__pa(start_addr);
 	} else {
-		minidump_tlv_page = vmalloc_to_page((const void *)(uintptr_t)
-				(start_addr & (~(PAGE_SIZE - 1))));
-		phys_addr = page_to_phys(minidump_tlv_page) + offset_in_page(start_addr);
-		highmem = 1;
+		if (!is_vmalloc_or_module_addr((const void *)(uintptr_t)(start_addr & (~(PAGE_SIZE - 1))))) {
+			phys_addr = (uint64_t)__pa(start_addr);
+		} else {
+			minidump_tlv_page = vmalloc_to_page((const void *)(uintptr_t)
+					(start_addr & (~(PAGE_SIZE - 1))));
+			phys_addr = page_to_phys(minidump_tlv_page) + offset_in_page(start_addr);
+			highmem = 1;
+		}
 	}
 
 	replace = minidump_traverse_metadata_list(name, start_addr,(const unsigned long)phys_addr, &tlv_offset, size, (unsigned char)type);
@@ -925,7 +981,29 @@ int minidump_fill_segments(const uint64_t start_addr, uint64_t size, minidump_tl
 
 	return 0;
 }
+
+/*
+* Function: minidump_fill_segments
+*
+* Description: Add a dump segment as a TLV entry in the Metadata list
+* and global crashdump buffer. Store relevant VA and PA information in
+* MMU Metadata file. Also writes module information to Metadata text
+* file, which is useful for post processing of collected dumps.
+*
+* @param: [in] start_address - Virtual address of Dump segment
+*		[in] type - Type associated with the Dump segment
+*		[in] size - Size associated with the Dump segment
+*		[in] name - name associated with the Dump segment. Can be set to NULL.
+*
+* Return: 0 on success, -ENOMEM on failure
+*/
+
+int minidump_fill_segments(const uint64_t start_addr, uint64_t size, minidump_tlv_type_t type, const char *name)
+{
+	return minidump_fill_segments_internal(start_addr, size, type, name, 0);
+}
 EXPORT_SYMBOL(minidump_fill_segments);
+
 /*
 * Function: minidump_store_mmu_info
 * Description: Add virtual address and physical address
@@ -1118,38 +1196,38 @@ static int ctx_save_fill_log_dump_tlv(void)
 
 #ifdef CONFIG_QCA_MINIDUMP
 	minidump_get_log_buf_info(&log_buf_info.start, &log_buf_info.size);
-	ret_val = minidump_fill_segments(log_buf_info.start, log_buf_info.size,
-						CTX_SAVE_LOG_DUMP_TYPE_DMESG, "DMESG");
+	ret_val = minidump_fill_segments_internal(log_buf_info.start, log_buf_info.size,
+						CTX_SAVE_LOG_DUMP_TYPE_DMESG, "DMESG", 1);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d \n", ret_val);
 		return ret_val;
 	}
 
 	minidump_get_pgd_info(&pagetable_tlv_info.start, &pagetable_tlv_info.size);
-	ret_val = minidump_fill_segments(pagetable_tlv_info.start,
-				pagetable_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_LEVEL1_PT, "PGD");
+	ret_val = minidump_fill_segments_internal(pagetable_tlv_info.start,
+				pagetable_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_LEVEL1_PT, "PGD", 1);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d \n", ret_val);
 		return ret_val;
 	}
 
 	minidump_get_linux_buf_info(&linux_banner_info.start, &linux_banner_info.size);
-	ret_val = minidump_fill_segments(linux_banner_info.start, linux_banner_info.size,
-				CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL);
+	ret_val = minidump_fill_segments_internal(linux_banner_info.start, linux_banner_info.size,
+				CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL, 1);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d \n", ret_val);
 		return ret_val;
 	}
 
-	ret_val = minidump_fill_segments((uint64_t)(uintptr_t)minidump_meta_info.mod_log,(uint64_t)__pa(&minidump_meta_info.mod_log_len),
-					CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD_INFO, NULL);
+	ret_val = minidump_fill_segments_internal((uint64_t)(uintptr_t)minidump_meta_info.mod_log,(uint64_t)__pa(&minidump_meta_info.mod_log_len),
+					CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD_INFO, NULL, 1);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d \n", ret_val);
 		return ret_val;
 	}
 
-	ret_val = minidump_fill_segments((uint64_t)(uintptr_t)minidump_meta_info.mmu_log,(uint64_t)__pa(&minidump_meta_info.mmu_log_len),
-					CTX_SAVE_LOG_DUMP_TYPE_WLAN_MMU_INFO, NULL);
+	ret_val = minidump_fill_segments_internal((uint64_t)(uintptr_t)minidump_meta_info.mmu_log,(uint64_t)__pa(&minidump_meta_info.mmu_log_len),
+					CTX_SAVE_LOG_DUMP_TYPE_WLAN_MMU_INFO, NULL, 1);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d \n", ret_val);
 		return ret_val;
@@ -1191,8 +1269,8 @@ int minidump_dump_wlan_modules(void){
 	/*Dump list head*/
 	module_tlv_info.start = (uintptr_t)minidump_modules;
 	module_tlv_info.size = sizeof(struct module);
-	ret_val = minidump_fill_segments(module_tlv_info.start,
-		module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, "mod_list_head");
+	ret_val = minidump_fill_segments_internal(module_tlv_info.start,
+		module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, "mod_list_head", 0);
 	if (ret_val) {
 		pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 		return ret_val;
@@ -1221,8 +1299,8 @@ int minidump_dump_wlan_modules(void){
 			wlan_count++ ;
 			module_tlv_info.start = (uintptr_t)mod;
 			module_tlv_info.size = sizeof(struct module);
-			ret_val = minidump_fill_segments(module_tlv_info.start,
-				module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL);
+			ret_val = minidump_fill_segments_internal(module_tlv_info.start,
+				module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL, 0);
 			if (ret_val) {
 				pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 				return ret_val;
@@ -1230,8 +1308,8 @@ int minidump_dump_wlan_modules(void){
 
 			module_tlv_info.start = (unsigned long)mod->sect_attrs;
 			module_tlv_info.size = (unsigned long)(sizeof(struct module_sect_attrs) + ((sizeof(struct module_sect_attr))*(mod->sect_attrs->nsections)));
-			ret_val = minidump_fill_segments(module_tlv_info.start,
-				module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL);
+			ret_val = minidump_fill_segments_internal(module_tlv_info.start,
+				module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL, 0);
 			if (ret_val) {
 				pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 				return ret_val;
@@ -1250,9 +1328,9 @@ int minidump_dump_wlan_modules(void){
 						mod->name);
 #endif
 					/* Log .bss VA of module in buffer */
-					ret_val = minidump_fill_segments(module_tlv_info.start,
+					ret_val = minidump_fill_segments_internal(module_tlv_info.start,
 					module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD,
-						mod->name);
+						mod->name, 0);
 					if (ret_val) {
 						pr_err("Minidump: Crashdump buffer is full %d", ret_val);
 						return ret_val;
@@ -1264,8 +1342,8 @@ int minidump_dump_wlan_modules(void){
 			/* For all other modules dump module meta data*/
 			module_tlv_info.start = (unsigned long)mod;
 			module_tlv_info.size = sizeof(mod->list) + sizeof(mod->state) + sizeof(mod->name);
-			ret_val = minidump_fill_segments(module_tlv_info.start,
-				module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL);
+			ret_val = minidump_fill_segments_internal(module_tlv_info.start,
+				module_tlv_info.size, CTX_SAVE_LOG_DUMP_TYPE_WLAN_MOD, NULL, 0);
 			if (ret_val) {
 				pr_err("Minidump: Crashdump buffer is full %d\n", ret_val);
 				return ret_val;
@@ -1305,11 +1383,11 @@ static int wlan_modinfo_panic_handler(struct notifier_block *this,
 	list_for_each(pos, &metadata_list.list) {
 		count ++;
 		cur_node = list_entry(pos, struct minidump_metadata_list, list);
-		if( cur_node->va!=0 ) {
+		if (cur_node->va != 0) {
 			if (cur_node->name != NULL)
-				pr_info(" %s [%lx] ---> ",cur_node->name,cur_node->va);
+				pr_info(" %s [%lx] ---> ", cur_node->name, cur_node->va);
 			else
-				pr_info(" un-named [%lx] ---> ",cur_node->va);
+				pr_info(" un-named [%lx] ---> ", cur_node->va);
 		}
 	}
 	pr_err("\n Minidump: # nodes in the Metadata list = %d",count);

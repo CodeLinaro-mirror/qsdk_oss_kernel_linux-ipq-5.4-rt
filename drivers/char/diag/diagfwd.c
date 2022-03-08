@@ -1092,7 +1092,6 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 	}
 	mutex_unlock(&driver->cmd_reg_mutex);
 
-#if defined(CONFIG_DIAG_OVER_USB)
 	/* Check for the command/respond msg for the maximum packet length */
 	if ((len >= (4 * sizeof(uint8_t))) &&
 		(*buf == 0x4b) && (*(buf+1) == 0x12) &&
@@ -1307,7 +1306,6 @@ int diag_process_apps_pkt(unsigned char *buf, int len, int pid)
 		mutex_unlock(&driver->hdlc_disable_mutex);
 		return 0;
 	}
-#endif
 
 	/* We have now come to the end of the function. */
 	if (chk_apps_only())
@@ -1405,9 +1403,11 @@ static int diagfwd_mux_open(int id, int mode)
 	unsigned long flags;
 
 	switch (mode) {
+#ifdef CONFIG_DIAG_OVER_USB
 	case DIAG_USB_MODE:
 		driver->usb_connected = 1;
 		break;
+#endif
 	case DIAG_MEMORY_DEVICE_MODE:
 		break;
 	case DIAG_PCIE_MODE:
@@ -1441,9 +1441,11 @@ static int diagfwd_mux_close(int id, int mode)
 	uint8_t i;
 
 	switch (mode) {
+#ifdef CONFIG_DIAG_OVER_USB
 	case DIAG_USB_MODE:
 		driver->usb_connected = 0;
 		break;
+#endif
 	case DIAG_MEMORY_DEVICE_MODE:
 		break;
 	case DIAG_PCIE_MODE:

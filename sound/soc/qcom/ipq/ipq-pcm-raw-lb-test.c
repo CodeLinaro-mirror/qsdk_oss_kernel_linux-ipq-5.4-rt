@@ -187,9 +187,9 @@ uint32_t pcm_init(void)
 		cfg_params.slot_count = 16;
 		cfg_params.active_slot_count = 2;
 		cfg_params.tx_slots[0] = 0;
-		cfg_params.tx_slots[1] = 3;
+		cfg_params.tx_slots[1] = (ipq_hw == IPQ5018)? 1 : 3;
 		cfg_params.rx_slots[0] = 0;
-		cfg_params.rx_slots[1] = 3;
+		cfg_params.rx_slots[1] = (ipq_hw == IPQ5018)? 1 : 3;
 		ret = ipq_pcm_init(&cfg_params);
 		break;
 

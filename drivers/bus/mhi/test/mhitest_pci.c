@@ -25,6 +25,9 @@
 #define QCN90XX_QRTR_INSTANCE_ID_BASE		0x20
 #define QCN92XX_QRTR_INSTANCE_ID_BASE		0x30
 
+#define MHITEST_MHI_SEG_LEN			SZ_512K
+#define MHITEST_DUMP_DESC_TOLERANCE		64
+
 static struct mhi_channel_config mhitest_mhi_channels[] = {
 	{
 		.num = 0,
@@ -797,6 +800,22 @@ int mhitest_unregister_ramdump(struct mhitest_platform *mplat)
 	return 0;
 }
 
+static u32 mhitest_get_dump_desc_size(struct mhitest_platform *mplat)
+{
+	u32 descriptor_size = 0;
+	u32 segment_len = MHITEST_MHI_SEG_LEN;
+	u32 wlan_sram_size = mplat->mhitest_rdinfo.ramdump_size;
+
+	of_property_read_u32(mplat->pci_dev->dev.of_node, "qti,rddm-seg-len",
+			     &segment_len);
+
+	descriptor_size = (((wlan_sram_size / segment_len) +
+			    MHITEST_DUMP_DESC_TOLERANCE) *
+			    sizeof(struct mhitest_dump_seg));
+
+	return descriptor_size;
+}
+
 int mhitest_register_ramdump(struct mhitest_platform *mplat)
 {
 	struct mhitest_ramdump_info *mhitest_rdinfo;
@@ -821,7 +840,8 @@ int mhitest_register_ramdump(struct mhitest_platform *mplat)
 	if (ret == 0)
 		mhitest_rdinfo->ramdump_size = ramdump_size;
 
-	mhitest_rdinfo->dump_data_vaddr = kzalloc(0x1000, GFP_KERNEL);
+	mhitest_rdinfo->dump_data_vaddr = kzalloc(
+			mhitest_get_dump_desc_size(mplat), GFP_KERNEL);
 	if (!mhitest_rdinfo->dump_data_vaddr)
 		return -ENOMEM;
 
@@ -1146,12 +1166,19 @@ int mhitest_pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *id)
 }
 
 extern int debug_lvl;
-
+extern int domain;
 int mhitest_pci_probe2(struct pci_dev *pci_dev, const struct pci_device_id *id)
 {
 	struct mhitest_platform *mplat;
 	struct platform_device *plat_dev = get_plat_device();
 	int ret;
+
+	if ((domain != -1) && pci_domain_nr(pci_dev->bus) != domain) {
+		MHITEST_LOG("Skipping MHI Device on: %04x:%02x:%02x\n",
+				pci_domain_nr(pci_dev->bus),
+				pci_dev->bus->number, PCI_SLOT(pci_dev->devfn));
+		return 0;
+	}
 
 	MHITEST_EMERG("--->\n");
 	mplat = devm_kzalloc(&plat_dev->dev, sizeof(*mplat), GFP_KERNEL);
@@ -1206,6 +1233,12 @@ void mhitest_pci_remove(struct pci_dev *pci_dev)
 {
 	struct mhitest_platform *mplat;
 
+	if ((domain != -1) && pci_domain_nr(pci_dev->bus) != domain) {
+		MHITEST_LOG("Skipping MHI Device on: %04x:%02x:%02x\n",
+				pci_domain_nr(pci_dev->bus),
+				pci_dev->bus->number, PCI_SLOT(pci_dev->devfn));
+		return;
+	}
 	MHITEST_LOG("mhitest PCI removing\n");
 
 	mplat = get_mhitest_mplat_by_pcidev(pci_dev);

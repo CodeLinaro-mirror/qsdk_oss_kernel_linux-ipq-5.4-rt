@@ -848,15 +848,21 @@ cfg80211_chandef_dfs_cac_time(struct wiphy *wiphy,
 
 static bool cfg80211_secondary_chans_ok(struct wiphy *wiphy,
 					u32 center_freq, u32 bandwidth,
-					u32 prohibited_flags)
+					u32 prohibited_flags,
+					u32 puncture_bitmap)
 {
 	struct ieee80211_channel *c;
 	u32 freq, start_freq, end_freq;
+	u32 disabled_sub_chan = 0;
 
 	start_freq = cfg80211_get_start_freq(center_freq, bandwidth);
 	end_freq = cfg80211_get_end_freq(center_freq, bandwidth);
 
 	for (freq = start_freq; freq <= end_freq; freq += 20) {
+		disabled_sub_chan = (1 << (freq - start_freq)/20) & puncture_bitmap;
+		if (disabled_sub_chan) {
+			continue;
+		}
 		c = ieee80211_get_channel(wiphy, freq);
 		if (!c || c->flags & prohibited_flags)
 			return false;
@@ -999,6 +1005,8 @@ bool cfg80211_chandef_usable(struct wiphy *wiphy,
 	bool has_he = false;
 	bool has_eht = false;
 	int i =0;
+	u32 puncture_bitmap_cfreq1 = 0;
+	u32 puncture_bitmap_cfreq2 = 0;
 
 
 	if (WARN_ON(!cfg80211_chandef_valid(chandef)))
@@ -1122,15 +1130,19 @@ bool cfg80211_chandef_usable(struct wiphy *wiphy,
 	if (width < 20)
 		prohibited_flags |= IEEE80211_CHAN_NO_OFDM;
 
+	if (chandef->center_freq2)
+		puncture_bitmap_cfreq2 = chandef->puncture_bitmap;
+	else
+		puncture_bitmap_cfreq1 = chandef->puncture_bitmap;
 
 	if (!cfg80211_secondary_chans_ok(wiphy, chandef->center_freq1,
-					 width, prohibited_flags))
+					 width, prohibited_flags, puncture_bitmap_cfreq1))
 		return false;
 
 	if (!chandef->center_freq2)
 		return true;
 	return cfg80211_secondary_chans_ok(wiphy, chandef->center_freq2,
-					   width, prohibited_flags);
+					   width, prohibited_flags, puncture_bitmap_cfreq2);
 }
 EXPORT_SYMBOL(cfg80211_chandef_usable);
 

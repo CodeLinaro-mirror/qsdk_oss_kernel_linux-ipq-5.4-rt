@@ -3,7 +3,6 @@ menu "Diag Support"
 config DIAG_CHAR
 	tristate "DIAG CHAR Interface Core"
 	default n
-	depends on USB_CONFIGFS_F_DIAG || USB_FUNCTION_DIAG || USB_QCOM_MAEMO
 	depends on ARCH_QCOM
 	select CRC_CCITT
 	help
