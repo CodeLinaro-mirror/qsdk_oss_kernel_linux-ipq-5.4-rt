@@ -1970,9 +1970,23 @@ int cpr3_parse_closed_loop_voltage_adjustments(
 	int i, rc;
 	u32 *ro_all_scale;
 
-	char volt_adj[] = "qcom,cpr-closed-loop-voltage-adjustment";
-	char volt_fuse_adj[] = "qcom,cpr-closed-loop-voltage-fuse-adjustment";
+	char volt_adj[75];
+	char volt_fuse_adj[75];
 	char ro_scaling[] = "qcom,cpr-ro-scaling-factor";
+
+	if (vreg->part_type_supported) {
+		snprintf(volt_adj, sizeof(volt_adj),
+				"qcom,cpr-closed-loop-voltage-adjustment-%d",
+				vreg->part_type);
+		snprintf(volt_fuse_adj, sizeof(volt_fuse_adj),
+				"qcom,cpr-closed-loop-voltage-fuse-adjustment-%d",
+				vreg->part_type);
+	} else {
+		strlcpy(volt_adj, "qcom,cpr-closed-loop-voltage-adjustment",
+				sizeof(volt_adj));
+		strlcpy(volt_fuse_adj, "qcom,cpr-closed-loop-voltage-fuse-adjustment",
+				sizeof(volt_fuse_adj));
+	}
 
 	if (!of_find_property(vreg->of_node, volt_adj, NULL)
 	    && !of_find_property(vreg->of_node, volt_fuse_adj, NULL)
