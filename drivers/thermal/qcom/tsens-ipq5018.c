@@ -134,7 +134,7 @@ int degc_to_code(int temp, int sensor)
 static int set_trip_temp(struct tsens_priv *tmdev, int sensor,
 					enum tsens_trip_type trip, int temp)
 {
-	u32 reg_th, th_hi, th_lo, reg_th_offset;
+	u32 reg_th, th_lo, th_hi, reg_th_offset, curr_temp, ret;
 
 	if (!tmdev)
 		return -EINVAL;
@@ -167,7 +167,25 @@ static int set_trip_temp(struct tsens_priv *tmdev, int sensor,
 	case TSENS_TRIP_STAGE1:
 		if (temp >= th_hi)
 			return -EINVAL;
-
+	/*
+	 * IPQ50XX tsens doesn't support mask interrupt features
+	 * so if lower threshold interrupt trigger value set above
+	 * the current temp, interrupt triggers continously
+	 * To avoid this condition, adding this check before updating
+	 * lower threshold interrupt trigger temp value.
+	 */
+		ret = get_temp_ipq5018(tmdev, sensor, &curr_temp);
+		if (ret){
+			return ret;
+		} else {
+			curr_temp = degc_to_code(curr_temp, sensor);
+			if (temp >= curr_temp) {
+				pr_debug("Skipping setting lower threshold"
+					"temp %d higher than current temp %d\n",
+					temp, curr_temp);
+				goto skip;
+			}
+		}
 		/* Don't change upper threshold */
 		reg_th &= TSENS_TM_UPPER_THRESHOLD_MASK;
 		reg_th |= temp;
@@ -182,7 +200,7 @@ static int set_trip_temp(struct tsens_priv *tmdev, int sensor,
 
 	/* Sync registers */
 	mb();
-
+skip:
 	return 0;
 }
 
@@ -241,6 +259,17 @@ static void tsens_scheduler_fn(struct work_struct *work)
 			regmap_write(tmdev->tm_map, reg_addr, reg_thr);
 			/* Notify user space */
 			schedule_work(&tmdev->sensor[i].notify_work);
+
+			if (th_lower &&
+				((reg_thr & TSENS_TM_LOWER_THRESHOLD_MASK) >=
+				(reg_val & TSENS_TM_LOWER_THRESHOLD_MASK))){
+			/*
+			 * if lower threshold temp is higher than current temp
+			 * clearing lower threshold to avoid flooding of the
+			 * lower threshold interrupt.
+			 */
+				reg_thr &= ~(TSENS_TM_LOWER_THRESHOLD_MASK);
+			}
 			/* clear both clear interupt status bit */
 			reg_thr &= ~(TSENS_TM_LOWER_STATUS_CLEAR ||
 					TSENS_TM_UPPER_STATUS_CLEAR);
