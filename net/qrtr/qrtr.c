@@ -3,6 +3,7 @@
  * Copyright (c) 2015, Sony Mobile Communications Inc.
  * Copyright (c) 2013, 2018 The Linux Foundation. All rights reserved.
  */
+#include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/netlink.h>
 #include <linux/qrtr.h>
@@ -140,6 +141,9 @@ static DEFINE_MUTEX(qrtr_node_locking);
  * @qrtr_tx_lock: lock for qrtr_tx_flow inserts
  * @rx_queue: receive queue
  * @item: list item for broadcast list
+ * @kworker: worker thread for recv work
+ * @task: task to run the worker thread
+ * @read_data: scheduled work for recv work
  */
 struct qrtr_node {
 	struct mutex ep_lock;
@@ -155,6 +159,10 @@ struct qrtr_node {
 
 	struct sk_buff_head rx_queue;
 	struct list_head item;
+
+	struct kthread_worker kworker;
+	struct task_struct *task;
+	struct kthread_work read_data;
 
 	void *ilc;
 };
@@ -340,6 +348,9 @@ static void __qrtr_node_release(struct kref *kref)
 		radix_tree_delete(&node->qrtr_tx_flow, iter.index);
 	}
 	mutex_unlock(&node->qrtr_tx_lock);
+
+	kthread_flush_worker(&node->kworker);
+	kthread_stop(node->task);
 
 	skb_queue_purge(&node->rx_queue);
 	kfree(node);
@@ -798,9 +809,6 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 
 	qrtr_node_assign(node, cb->src_node);
 
-	if (cb->type != QRTR_TYPE_DATA)
-		qrtr_fwd_ctrl_pkt(skb);
-
 	if (cb->type == QRTR_TYPE_NEW_SERVER) {
 		/* Remote node endpoint can bridge other distant nodes */
 		const struct qrtr_ctrl_pkt *pkt = data + hdrlen;
@@ -808,15 +816,12 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 		qrtr_node_assign(node, le32_to_cpu(pkt->server.node));
 	}
 
-	if (cb->type == QRTR_TYPE_RESUME_TX) {
-		if (cb->dst_node != qrtr_local_nid) {
-			qrtr_fwd_pkt(skb, cb);
-			return 0;
-		}
-		qrtr_tx_resume(node, skb);
-	} else if (cb->dst_node != qrtr_local_nid &&
-		   cb->type == QRTR_TYPE_DATA) {
-		qrtr_fwd_pkt(skb, cb);
+	/* All control packets and non-local destined data packets should be
+	 * queued to the worker for forwarding handling.
+	 */
+	if (cb->type != QRTR_TYPE_DATA || cb->dst_node != qrtr_local_nid) {
+		skb_queue_tail(&node->rx_queue, skb);
+		kthread_queue_work(&node->kworker, &node->read_data);
 	} else {
 		/* Translate DEL_PROC to BYE for local enqueue */
 		if (cb->type == QRTR_TYPE_DEL_PROC) {
@@ -870,6 +875,48 @@ static struct sk_buff *qrtr_alloc_ctrl_packet(struct qrtr_ctrl_pkt **pkt,
 	return skb;
 }
 
+/* Handle not atomic operations for a received packet. */
+static void qrtr_node_rx_work(struct kthread_work *work)
+{
+	struct qrtr_node *node = container_of(work, struct qrtr_node,
+					      read_data);
+	struct sk_buff *skb;
+	char name[32] = {0,};
+
+	if (unlikely(!node->ilc)) {
+		snprintf(name, sizeof(name), "qrtr_%d", node->nid);
+		node->ilc = ipc_log_context_create(QRTR_LOG_PAGE_CNT, name, 0);
+	}
+
+	while ((skb = skb_dequeue(&node->rx_queue)) != NULL) {
+		struct qrtr_cb *cb = (struct qrtr_cb *)skb->cb;
+		struct qrtr_sock *ipc;
+
+		if (cb->type != QRTR_TYPE_DATA)
+			qrtr_fwd_ctrl_pkt(skb);
+
+		if (cb->type == QRTR_TYPE_RESUME_TX) {
+			if (cb->dst_node != qrtr_local_nid) {
+				qrtr_fwd_pkt(skb, cb);
+				continue;
+			}
+			qrtr_tx_resume(node, skb);
+		} else if (cb->dst_node != qrtr_local_nid &&
+			   cb->type == QRTR_TYPE_DATA) {
+			qrtr_fwd_pkt(skb, cb);
+		} else {
+			ipc = qrtr_port_lookup(cb->dst_port);
+			if (!ipc) {
+				kfree_skb(skb);
+			} else {
+				if (sock_queue_rcv_skb(&ipc->sk, skb))
+					kfree_skb(skb);
+				qrtr_port_put(ipc);
+			}
+		}
+	}
+}
+
 /**
  * qrtr_endpoint_register() - register a new endpoint
  * @ep: endpoint to register
@@ -895,6 +942,14 @@ int qrtr_endpoint_register(struct qrtr_endpoint *ep, unsigned int net_id)
 	node->nid = QRTR_EP_NID_AUTO;
 	node->ep = ep;
 	atomic_set(&node->hello_sent, 0);
+
+	kthread_init_work(&node->read_data, qrtr_node_rx_work);
+	kthread_init_worker(&node->kworker);
+	node->task = kthread_run(kthread_worker_fn, &node->kworker, "qrtr_rx");
+	if (IS_ERR(node->task)) {
+		kfree(node);
+		return -ENOMEM;
+	}
 
 	mutex_init(&node->qrtr_tx_lock);
 	INIT_RADIX_TREE(&node->qrtr_tx_flow, GFP_KERNEL);

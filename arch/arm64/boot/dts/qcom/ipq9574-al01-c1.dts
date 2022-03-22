@@ -256,7 +256,9 @@
 			status = "ok";
 			pinctrl-0 = <&qspi_nand_pins>;
 			pinctrl-names = "default";
-
+			qcom,io_macro_max_clk = <320000000>;
+			qcom,io_macro_clk_rates = <24000000 100000000 200000000 \
+						  320000000>;
 			nand@0 {
 				reg = <0>;
 				#address-cells = <1>;
@@ -327,7 +329,7 @@
 					reg = <0 0 0 0 0>;
 					qrtr_instance_id = <0x20>;
 #if defined(__CNSS2__)
-					memory-region = <&mhi_region0>;
+					memory-region = <0>,<&mhi_region0>;
 #endif
 				};
 			};
@@ -347,7 +349,7 @@
 					reg = <0 0 0 0 0>;
 					qrtr_instance_id = <0x21>;
 #if defined(__CNSS2__)
-					memory-region = <&mhi_region1>;
+					memory-region = <0>,<&mhi_region1>;
 #endif
 				};
 			};

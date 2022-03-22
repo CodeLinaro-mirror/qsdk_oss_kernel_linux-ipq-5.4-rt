@@ -340,7 +340,7 @@
 					qti,rddm-seg-len = <0x1000>;
 #if defined(__CNSS2__)
 #if !defined(__IPQ_MEM_PROFILE_256_MB__)
-					memory-region = <&mhi_region0>;
+					memory-region = <0>,<&mhi_region0>;
 #endif
 #endif
 				};
@@ -365,7 +365,7 @@
 					qti,rddm-seg-len = <0x1000>;
 #if defined(__CNSS2__)
 #if !defined(__IPQ_MEM_PROFILE_256_MB__)
-					memory-region = <&mhi_region1>;
+					memory-region = <0>,<&mhi_region1>;
 #endif
 #endif
 				};

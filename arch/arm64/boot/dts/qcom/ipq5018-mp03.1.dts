@@ -329,6 +329,9 @@
 		nand: qpic-nand@79b0000 {
 			pinctrl-0 = <&qspi_nand_pins>;
 			pinctrl-names = "default";
+			qcom,io_macro_max_clk = <320000000>;
+			qcom,io_macro_clk_rates = <24000000 100000000 200000000 \
+						   320000000>;
 			status = "ok";
 		};
 
@@ -748,7 +751,7 @@
 		#address-cells = <0x2>;
 		#size-cells = <0x2>;
 #if defined(__CNSS2__)
-		memory-region = <&mhi_region1>;
+		memory-region = <0>,<&mhi_region1>;
 #else
 		base-addr = <0x4CC00000>;
 		m3-dump-addr = <0x4E000000>;

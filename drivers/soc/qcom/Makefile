@@ -37,3 +37,4 @@ obj-$(CONFIG_IPQ_SUBSYSTEM_RESTART_TEST) += testssr.o
 bt_interface-y			:= bt_tty.o bt_ipc.o
 obj-$(CONFIG_QTI_BT_INTERFACE)	+= bt_interface.o
 obj-$(CONFIG_QTI_EUD) += eud.o
+obj-$(CONFIG_QTI_LICENSE_MANAGER) += license_manager.o

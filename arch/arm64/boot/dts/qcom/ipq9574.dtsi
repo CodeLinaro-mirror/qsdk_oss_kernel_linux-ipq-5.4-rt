@@ -323,6 +323,10 @@
 					<&gcc GCC_UNIPHY1_SYS_CLK>,
 					<&gcc GCC_UNIPHY2_AHB_CLK>,
 					<&gcc GCC_UNIPHY2_SYS_CLK>,
+					<&gcc GCC_NSSNOC_NSSCC_CLK>,
+					<&gcc GCC_NSSCC_CLK>,
+					<&gcc GCC_NSSNOC_SNOC_1_CLK>,
+					<&gcc GCC_NSSNOC_SNOC_CLK>,
 					<&nsscc NSS_CC_PORT1_MAC_CLK>,
 					<&nsscc NSS_CC_PORT2_MAC_CLK>,
 					<&nsscc NSS_CC_PORT3_MAC_CLK>,
@@ -371,6 +375,10 @@
 					"uniphy1_sys_clk",
 					"uniphy2_ahb_clk",
 					"uniphy2_sys_clk",
+					"gcc_nssnoc_nsscc_clk",
+					"gcc_nsscc_clk",
+					"gcc_nssnoc_snoc_1_clk",
+					"gcc_nssnoc_snoc_clk",
 					"port1_mac_clk",
 					"port2_mac_clk",
 					"port3_mac_clk",
@@ -1815,9 +1823,11 @@
 		q6v5_wcss: remoteproc@cd00000 {
 			compatible = "qcom,ipq9574-wcss-pil";
 			reg = <0x0cd00000 0x4040>,
-				<0x004ab000 0x20>;
+				<0x004ab000 0x20>,
+				<0xCB50000 0x8>;
 			reg-names = "qdsp6",
-				    "rmb";
+				    "rmb",
+				    "wcmn";
 			interrupts-extended = <&intc GIC_SPI 325 IRQ_TYPE_EDGE_RISING>,
 					      <&wcss_smp2p_in 0 0>,
 					      <&wcss_smp2p_in 1 0>,
@@ -2548,6 +2558,12 @@
 				"wbm2host-tx-completions-ring1",
 				"tcl2host-status-ring";
 			status = "disabled";
+			qcom,pta-num = <0>;
+			qcom,coex-mode = <0x2>;
+			qcom,bt-active-time = <0x12>;
+			qcom,bt-priority-time = <0x0c>;
+			qcom,coex-algo = <0x2>;
+			qcom,pta-priority = <0x80800505>;
 		};
 
 		wifi1: wifi1@f00000 {

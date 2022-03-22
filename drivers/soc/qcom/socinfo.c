@@ -115,6 +115,8 @@ struct socinfo {
 	__le32 foundry_id;
 	/* Version 10 */
 	__le32 serial_num;
+	__le32 oem_id;
+	__le32 prod_id;
 	/* Version 11 */
 	__le32 num_pmics;
 	__le32 pmic_array_offset;
@@ -223,6 +225,8 @@ static const struct soc_id soc_id[] = {
 	{ CPU_IPQ5018, "IPQ5018" },
 	{ CPU_IPQ5028, "IPQ5028" },
 	{ CPU_IPQ5000, "IPQ5000" },
+	{ CPU_IPQ5016, "IPQ5016" },
+	{ CPU_IPQ5019, "IPQ5019" },
 	{ CPU_IPQ0509, "IPQ0509" },
 	{ CPU_IPQ0518, "IPQ0518" },
 	{ CPU_IPQ9514, "IPQ9514" },
@@ -470,6 +474,16 @@ static int qcom_socinfo_probe(struct platform_device *pdev)
 		qs->attr.serial_number = devm_kasprintf(&pdev->dev, GFP_KERNEL,
 							"%u",
 							le32_to_cpu(info->serial_num));
+
+	if (offsetof(struct socinfo, oem_id) <= item_size)
+		qs->attr.oem_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
+							"%u",
+							le32_to_cpu(info->oem_id));
+
+	if (offsetof(struct socinfo, prod_id) <= item_size)
+		qs->attr.prod_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
+							"%u",
+							le32_to_cpu(info->prod_id));
 
 	qs->soc_dev = soc_device_register(&qs->attr);
 	if (IS_ERR(qs->soc_dev))

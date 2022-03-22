@@ -9334,9 +9334,10 @@ static int nl80211_crypto_settings(struct cfg80211_registered_device *rdev,
 					info->attrs[NL80211_ATTR_SAE_PWE]);
 	}
 
-	if (info->attrs[NL80211_ATTR_SAE_PWE])
+	if (info->attrs[NL80211_ATTR_SAE_PWE]) {
 		settings->sae_pwe =
 			nla_get_u8(info->attrs[NL80211_ATTR_SAE_PWE]);
+	}
 	else
 		settings->sae_pwe = NL80211_SAE_PWE_UNSPECIFIED;
 

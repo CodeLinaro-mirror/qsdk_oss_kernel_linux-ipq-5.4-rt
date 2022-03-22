@@ -190,6 +190,13 @@ config IPQ_GCC_5018
 	 i2c, USB, SD/eMMC, etc. Select this for the root clock
 	 of ipq5018.
 
+config IPQ_GCC_DEVSOC
+	tristate "DEVSOC Global Clock Controller"
+	help
+	 Support for global clock controller on DEVSOC devices.
+	 Say Y if you want to use peripheral devices such as UART, SPI,
+	 i2c, USB, SD/eMMC, etc.
+
 config MSM_GCC_8660
 	tristate "MSM8660 Global Clock Controller"
 	help

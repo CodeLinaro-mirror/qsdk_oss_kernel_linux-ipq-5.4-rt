@@ -252,6 +252,7 @@
 #define	AUTO_STS_VAL	0x000B000B
 #define	PAGE_SCOPE_READ	(1 << 23)
 #define	MAX_STATUS_REG	12
+#define IO_MACRO_50_MHZ	50000000
 
 #define nandc_set_read_loc_first(nandc, reg, cw_offset, read_size, is_last_read_loc)	\
 nandc_set_reg(nandc, reg,			\
@@ -3504,6 +3505,12 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 	struct nand_chip *chip = &host->chip;
 	int reg;
 
+	u32 max_iomacro_clk = 0;
+	struct device_node *np = nandc->dev->of_node;
+	int sz;
+	u32 *arr = NULL;
+	u32 len = 0;
+
 	/* Set feedback clk enable bit to do auto adjustment of phase
 	 * at lower frequency
 	 */
@@ -3513,7 +3520,7 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 			NAND_QSPI_MSTR_CONFIG);
 
 	/* Read the training offset patched from u-boot */
-	if (of_property_read_u32(nandc->dev->of_node, "qcom,training_offset",
+	if (of_property_read_u32(np, "qcom,training_offset",
 				&training_offset)) {
 		dev_err(nandc->dev, "Serial training partition not found");
 		ret = -EINVAL;
@@ -3587,18 +3594,47 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 	qspi_write_reg_bam(nandc, (nandc_read(nandc,
 			reg) & ~FEEDBACK_CLK_EN),
 			NAND_QSPI_MSTR_CONFIG);
-	phase = 1;
-	phase_cnt = 0;
 
-	/* set higest clock frequecy for io_macro i.e 320MHz so
-	 * on bus it will be 320/4 = 80MHz.
-	 */
+	/* Get max io macro clock from device tree, value should be
+	 * 200 MHz, 380 MHz, 400 MHz etc.
+	 * */
+	if (of_property_read_u32(np, "qcom,io_macro_max_clk",
+				&max_iomacro_clk)) {
+		dev_err(nandc->dev, "Error in reading max io macro clock from dts");
+		goto trng_err;
+	}
 
-	ret =  clk_set_rate(nandc->iomacro_clk, 320000000);
+	/* Read all supported io_macro clock frequency from dts */
+	if (!of_get_property(np, "qcom,io_macro_clk_rates", &len)) {
+		dev_err(nandc->dev, "Error in reading length of io_macro_clock\n");
+		goto trng_err;
+	}
+
+	sz = (len / sizeof(*arr));
+
+	arr = kzalloc(sz * sizeof(*arr), GFP_KERNEL);
+	if (!arr) {
+		dev_err(nandc->dev, "failed allocating memory for qcom,io_macro_clk_rates\n");
+		goto trng_err;
+	}
+
+	ret = of_property_read_u32_array(np, "qcom,io_macro_clk_rates", arr, sz);
+	if (ret < 0) {
+		dev_err(nandc->dev, "failed reading array qcom,io_macro_clk_rates %d\n", ret);
+		goto trng_err;
+	}
+
+	sz -= 1;
+
+iomacro_set_clk:
+	ret =  clk_set_rate(nandc->iomacro_clk, max_iomacro_clk);
 	if (ret) {
-		dev_err(nandc->dev,"Setting clk rate to 320000000 MHz failed");
+		dev_err(nandc->dev,"Setting clk rate to %d MHz failed", max_iomacro_clk);
 		goto mem_err;
 	}
+
+	phase = 1;
+	phase_cnt = 0;
 
 	do {
 		qspi_set_phase(nandc, phase);
@@ -3607,9 +3643,13 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 		memset(training_data, 0xff, mtd->writesize);
 		ret = qcom_nandc_read_page(chip, training_data, 0, page);
 		if (ret < 0) {
-			dev_err(nandc->dev, "Error in reading training data @ high freq");
-			ret = 0;
-			break;
+			dev_err(nandc->dev, "Error in reading training page at %d MHz",
+					max_iomacro_clk);
+			/* Fall back to next lower clock */
+			if (sz < 0)
+				goto default_freq;
+			max_iomacro_clk = arr[--sz];
+			goto iomacro_set_clk;
 		}
 		/* compare read training data with known pattern */
 		for (i = 0; i <  mtd->writesize; i += sizeof(qspi_training_block_64)) {
@@ -3627,15 +3667,24 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 
 	if (phase_cnt) {
 		phase = qspi_get_appropriate_phase(nandc, trained_phase, phase_cnt);
+		if (phase == 0) {
+			dev_err(nandc->dev, "No continous three phase found at %d MHz",
+					max_iomacro_clk);
+			if (sz < 0)
+				goto default_freq;
+			max_iomacro_clk = arr[--sz];
+			goto iomacro_set_clk;
+		}
 		qspi_set_phase(nandc, phase);
 	} else {
+default_freq:
 		dev_err(nandc->dev,"Serial training failed");
 		dev_err(nandc->dev, "Running @ low freq 50MHz");
 		/* Run @ lower frequency 50Mhz with feedback clk bit enabled  */
 		qspi_write_reg_bam(nandc, (nandc_read(nandc,
 			reg) | FEEDBACK_CLK_EN),
 			NAND_QSPI_MSTR_CONFIG);
-		ret =  clk_set_rate(nandc->iomacro_clk, 200000000);
+		ret =  clk_set_rate(nandc->iomacro_clk, IO_MACRO_50_MHZ);
 		if (ret) {
 			dev_err(nandc->dev,"Setting clk rate to 50000000 MHz failed");
 			goto mem_err;
@@ -3645,6 +3694,8 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 mem_err:
 	kfree(training_data);
 trng_err:
+	if (arr)
+		kfree(arr);
 	return ret;
 }
 

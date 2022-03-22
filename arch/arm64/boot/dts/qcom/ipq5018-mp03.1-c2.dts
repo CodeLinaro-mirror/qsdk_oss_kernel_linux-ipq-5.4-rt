@@ -260,7 +260,7 @@
 		#address-cells = <0x2>;
 		#size-cells = <0x2>;
 #if defined(__CNSS2__)
-		memory-region = <&mhi_region1>;
+		memory-region = <0>,<&mhi_region1>;
 #else
 		qrtr_node_id = <0x20>;
 		base-addr = <0x4CC00000>;

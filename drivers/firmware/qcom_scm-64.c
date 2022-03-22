@@ -644,9 +644,17 @@ int __qti_qfprom_show_authenticate(struct device *dev, char *buf)
 	return ret ? : res.a1;
 }
 
-int __qti_qfprom_write_version(struct device *dev, void *wrip, int size)
+int __qti_qfprom_write_version(struct device *dev, uint32_t sw_type,
+				uint32_t value, uint32_t qfprom_ret_ptr)
 {
-	return -ENOTSUPP;
+	int ret;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QTI_SCM_SVC_FUSE,
+			    QTI_QFPROM_ROW_WRITE_CMD, &desc, &res);
+
+	return ret ? : res.a1;
 }
 
 int __qti_qfprom_read_version(struct device *dev, uint32_t sw_type,
@@ -966,8 +974,8 @@ int __qti_scm_tls_hardening(struct device *dev, uint32_t req_addr,
 	return ret ? : res.a1;
 }
 
-int __qti_scm_aes(struct device *dev, uint32_t req_addr, uint32_t req_size,
-		  uint32_t resp_addr, uint32_t resp_size, u32 cmd_id)
+int __qti_scm_aes(struct device *dev, uint32_t req_addr,
+		  uint32_t req_size, u32 cmd_id)
 {
 	int ret = 0;
 	struct qcom_scm_desc desc = {0};

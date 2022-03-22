@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2013-2016, 2019-2020, The Linux Foundation. All rights reserved.
  *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
@@ -100,7 +102,19 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 	if (likely(skb)) {
 		struct skb_shared_info *shinfo;
 
-		/* We're about to write a large amount to the skb to
+		/*
+		 * SKBs in the recycler are from various unknown sources.
+		 * Their truesize is unknown. We should set truesize
+		 * as the needed buffer size before using it.
+		 * Change the skb end to keep it in sync with the truesize.
+		 */
+		skb->data = skb->head + NET_SKB_PAD;
+		skb_reset_tail_pointer(skb);
+		skb->truesize = SKB_TRUESIZE(SKB_DATA_ALIGN(length + NET_SKB_PAD));
+		skb->end = skb->tail + SKB_DATA_ALIGN(length);
+
+		/*
+		 * We're about to write a large amount to the skb to
 		 * zero most of the structure so prefetch the start
 		 * of the shinfo region now so it's in the D-cache
 		 * before we start to write that.
@@ -112,13 +126,9 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 		refcount_set(&skb->users, 1);
 		skb->mac_header = (typeof(skb->mac_header))~0U;
 		skb->transport_header = (typeof(skb->transport_header))~0U;
+		skb->dev = dev;
 		zero_struct(shinfo, offsetof(struct skb_shared_info, dataref));
 		atomic_set(&shinfo->dataref, 1);
-
-		skb->data = skb->head + NET_SKB_PAD;
-		skb_reset_tail_pointer(skb);
-
-		skb->dev = dev;
 	}
 
 	return skb;

@@ -800,7 +800,7 @@
 		#size-cells = <0x2>;
 #if defined(__CNSS2__)
 #if !defined(__IPQ_MEM_PROFILE_256_MB__)
-		memory-region = <&mhi_region0>;
+		memory-region = <0>,<&mhi_region0>;
 #endif
 #else
 #ifdef __IPQ_MEM_PROFILE_512_MB__

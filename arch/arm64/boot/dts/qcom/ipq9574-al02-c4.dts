@@ -250,6 +250,11 @@
 			phy-mode = "sgmii";
 		};
 
+		license_manager {
+			compatible = "qti,license-manager-service";
+			device-license-termination;
+		};
+
 		qpic_bam: dma@7984000 {
 			status = "ok";
 		};
@@ -338,12 +343,35 @@
 			pcie1_rp {
 				reg = <0 0 0 0 0>;
 
+#if defined(__CNSS2__)
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
 					qrtr_node_id = <0x31>;
-					memory-region = <&mhi_region0>;
+					memory-region = <0>,<&mhi_region0>;
 				};
+#else
+				wifi@1 {
+					reg = <0 0 0 0 0>;
 
+				       /* qcn9224 tgt-mem-mode=0 layout - 46MB
+					* refer ipq9574-wkk-default-memory.dtsi
+					* +=========+==============+=========+
+					* |  Region | Start Offset |   Size  |
+					* +---------+--------------+---------+
+					* | HREMOTE |  0x4DD00000  |   36MB  |
+					* +---------+--------------+---------+
+					* | M3 Dump |  0x50100000  |   1MB   |
+					* +---------+--------------+---------+
+					* |   ETR   |  0x50200000  |   1MB   |
+					* +---------+--------------+---------+
+					* |  Caldb  |  0x50300000  |   8MB   |
+					* +==================================+
+					*/
+					memory-region = <&qcn9224_pcie0>;
+					qcom,board_id = <0x01>;
+
+				};
+#endif
 			};
 		};
 
@@ -357,12 +385,34 @@
 			status = "ok";
 			pcie2_rp {
 				reg = <0 0 0 0 0>;
-
+#if defined(__CNSS2__)
 				qcom,mhi@2 {
 					reg = <0 0 0 0 0>;
 					qrtr_node_id = <0x32>;
-					memory-region = <&mhi_region1>;
+					memory-region = <0>,<&mhi_region1>;
 				};
+#else
+				wifi@2 {
+					reg = <0 0 0 0 0>;
+
+					/* qcn9224 tgt-mem-mode=0 layout - 46MB
+					* refer ipq9574-wkk-default-memory.dtsi
+					* +=========+==============+=========+
+					* |  Region | Start Offset |   Size  |
+					* +---------+--------------+---------+
+					* | HREMOTE |  0x50B00000  |   36MB  |
+					* +---------+--------------+---------+
+					* | M3 Dump |  0x52F00000  |   1MB   |
+					* +---------+--------------+---------+
+					* |   ETR   |  0x53000000  |   1MB   |
+					* +---------+--------------+---------+
+					* |  Caldb  |  0x53100000  |   8MB   |
+					* +==================================+
+					*/
+					memory-region = <&qcn9224_pcie1>;
+					qcom,board_id = <0x04>;
+				};
+#endif
 			};
 		};
 
@@ -377,11 +427,34 @@
 			pcie3_rp {
 				reg = <0 0 0 0 0>;
 
+#if defined(__CNSS2__)
 				qcom,mhi@3 {
 					reg = <0 0 0 0 0>;
 					qrtr_node_id = <0x33>;
-					memory-region = <&mhi_region2>;
+					memory-region = <0>,<&mhi_region2>;
 				};
+#else
+				wifi@3 {
+					reg = <0 0 0 0 0>;
+
+					/* qcn9224 tgt-mem-mode=0 layout - 46MB
+					 * refer ipq9574-wkk-default-memory.dtsi
+					 * +=========+==============+=========+
+					 * |  Region | Start Offset |   Size  |
+					 * +---------+--------------+---------+
+					 * | HREMOTE |  0x53900000  |   36MB  |
+					 * +---------+--------------+---------+
+					 * | M3 Dump |  0x55D00000  |   1MB   |
+					 * +---------+--------------+---------+
+					 * |   ETR   |  0x55E00000  |   1MB   |
+					 * +---------+--------------+---------+
+					 * |  Caldb  |  0x55F00000  |   8MB   |
+					 * +==================================+
+					 */
+					memory-region = <&qcn9224_pcie2>;
+					qcom,board_id = <0x02>;
+				};
+#endif
 			};
 		};
 

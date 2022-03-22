@@ -185,13 +185,13 @@
 		};
 
 		qpic_bam: dma@7984000{
-			status = "ok";
+			status = "disabled";
 		};
 
 		nand: qpic-nand@79b0000 {
 			pinctrl-0 = <&qspi_nand_pins>;
 			pinctrl-names = "default";
-			status = "ok";
+			status = "disabled";
 		};
 
 		spi_0: spi@78b5000 { /* BLSP1 QUP0 */

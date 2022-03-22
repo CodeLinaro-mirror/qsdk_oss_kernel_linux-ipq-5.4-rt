@@ -308,7 +308,7 @@
 		#address-cells = <0x2>;
 		#size-cells = <0x2>;
 #if defined(__CNSS2__)
-		memory-region = <&mhi_region1>;
+		memory-region = <0>,<&mhi_region1>;
 #endif
 	};
 };
@@ -323,7 +323,7 @@
 		#address-cells = <0x2>;
 		#size-cells = <0x2>;
 #if defined(__CNSS2__)
-		memory-region = <&mhi_region0>;
+		memory-region = <0>,<&mhi_region0>;
 #endif
 	};
 };

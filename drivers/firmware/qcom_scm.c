@@ -169,14 +169,11 @@ int qti_scm_register_log_buf(struct device *dev,
 }
 EXPORT_SYMBOL(qti_scm_register_log_buf);
 
-int qti_scm_aes(uint32_t req_addr, uint32_t req_size,
-		uint32_t resp_addr, uint32_t resp_size,
-		u32 cmd_id)
+int qti_scm_aes(uint32_t req_addr, uint32_t req_size, u32 cmd_id)
 {
 	int ret = 0;
 
-	ret = __qti_scm_aes(__scm->dev, req_addr, req_size,
-			    resp_addr, resp_size, cmd_id);
+	ret = __qti_scm_aes(__scm->dev, req_addr, req_size, cmd_id);
 
 	return ret;
 }
@@ -627,9 +624,12 @@ int qti_qfprom_show_authenticate(void)
 }
 EXPORT_SYMBOL(qti_qfprom_show_authenticate);
 
-int qti_qfprom_write_version(void *wrip, int size)
+int qti_qfprom_write_version(uint32_t sw_type,
+			uint32_t value, uint32_t qfprom_ret_ptr)
+
 {
-	return __qti_qfprom_write_version(__scm->dev, wrip, size);
+	return __qti_qfprom_write_version(__scm->dev, sw_type, value,
+						   qfprom_ret_ptr);
 }
 
 int qti_qfprom_read_version(uint32_t sw_type,

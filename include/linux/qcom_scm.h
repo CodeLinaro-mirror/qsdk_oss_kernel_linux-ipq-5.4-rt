@@ -200,7 +200,9 @@ extern int qcom_scm_iommu_secure_ptbl_init(u64 addr, u32 size, u32 spare);
 extern int qcom_scm_io_readl(phys_addr_t addr, unsigned int *val);
 extern int qcom_scm_io_writel(phys_addr_t addr, unsigned int val);
 extern int qti_qfprom_show_authenticate(void);
-extern int qti_qfprom_write_version(void *wrip, int size);
+extern int qti_qfprom_write_version(uint32_t sw_type,
+					uint32_t value,
+					uint32_t qfprom_ret_ptr);
 extern int qti_qfprom_read_version(uint32_t sw_type,
 					uint32_t value,
 					uint32_t qfprom_ret_ptr);
@@ -236,8 +238,7 @@ extern int qti_scm_register_log_buf(struct device *dev,
 extern int qti_scm_tls_hardening(uint32_t req_addr, uint32_t req_size,
 				 uint32_t resp_addr, uint32_t resp_size,
 				 u32 cmd_id);
-extern int qti_scm_aes(uint32_t req_addr, uint32_t req_size,
-		       uint32_t resp_addr, uint32_t resp_size, u32 cmd_id);
+extern int qti_scm_aes(uint32_t req_addr, uint32_t req_size, u32 cmd_id);
 extern int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg);
 extern int qti_scm_sdi(u32 svc_id, u32 cmd_id);
 extern int qti_scm_tz_log(void *ker_buf, u32 buf_len);

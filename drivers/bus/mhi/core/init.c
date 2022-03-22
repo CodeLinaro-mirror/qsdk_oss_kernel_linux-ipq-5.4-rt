@@ -968,7 +968,7 @@ int mhi_register_controller(struct mhi_controller *mhi_cntrl,
 	}
 
 	cma_node = of_parse_phandle(mhi_cntrl->cntrl_dev->of_node,
-				    "memory-region", 0);
+				    "memory-region", 1);
 
 	if (cma_node && !of_address_to_resource(cma_node, 0, &mhi_res)) {
 		cma_addr = mhi_res.start;

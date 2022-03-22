@@ -175,8 +175,9 @@ struct scm_desc {
 #define QTI_QFPROM_ROW_READ_CMD	0x8
 #define QTI_QFPROM_ROW_WRITE_CMD	0x9
 extern int __qti_qfprom_show_authenticate(struct device *dev, char *buf);
-extern int __qti_qfprom_write_version(struct device *dev, void *wrip,
-					int size);
+extern int __qti_qfprom_write_version(struct device *dev, uint32_t sw_type,
+					uint32_t value,
+					uint32_t qfprom_ret_ptr);
 extern int __qti_qfprom_read_version(struct device *dev, uint32_t sw_type,
 					uint32_t value,
 					uint32_t qfprom_ret_ptr);
@@ -294,8 +295,7 @@ extern int __qti_scm_tls_hardening(struct device *dev, uint32_t req_addr,
 				   uint32_t req_size, uint32_t resp_addr,
 				   uint32_t resp_size, u32 cmd_id);
 extern int __qti_scm_aes(struct device *dev, uint32_t req_addr,
-			 uint32_t req_size, uint32_t resp_addr,
-			 uint32_t resp_size, u32 cmd_id);
+			 uint32_t req_size, u32 cmd_id);
 
 #define QTI_SCM_SVC_RESETTYPE_CMD	0x18
 extern int  __qti_scm_set_resettype(struct device *dev, u32 reset_type);

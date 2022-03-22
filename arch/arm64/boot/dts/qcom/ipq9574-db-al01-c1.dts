@@ -278,7 +278,7 @@
 					reg = <0 0 0 0 0>;
 					qrtr_instance_id = <0x20>;
 #if defined(__CNSS2__)
-					memory-region = <&mhi_region0>;
+					memory-region = <0>,<&mhi_region0>;
 #endif
 				};
 			};
@@ -298,7 +298,7 @@
 					reg = <0 0 0 0 0>;
 					qrtr_instance_id = <0x21>;
 #if defined(__CNSS2__)
-					memory-region = <&mhi_region1>;
+					memory-region = <0>,<&mhi_region1>;
 #endif
 				};
 			};
