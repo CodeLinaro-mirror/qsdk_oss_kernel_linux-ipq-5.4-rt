@@ -55,8 +55,8 @@ static size_t glink_smem_rx_avail(struct qcom_glink_pipe *np)
 		pipe->native.length = len;
 	}
 
-	head = le32_to_cpu(*pipe->head);
-	tail = le32_to_cpu(*pipe->tail);
+	head = le32_to_cpu(readl(pipe->head));
+	tail = le32_to_cpu(readl(pipe->tail));
 
 	if (head < tail)
 		len = pipe->native.length - tail + head;
@@ -76,7 +76,7 @@ static void glink_smem_rx_peak(struct qcom_glink_pipe *np,
 	size_t len;
 	u32 tail;
 
-	tail = le32_to_cpu(*pipe->tail);
+	tail = le32_to_cpu(readl(pipe->tail));
 
 	if (WARN_ON_ONCE(tail > pipe->native.length))
 		return;
@@ -99,14 +99,14 @@ static void glink_smem_rx_advance(struct qcom_glink_pipe *np,
 	struct glink_smem_pipe *pipe = to_smem_pipe(np);
 	u32 tail;
 
-	tail = le32_to_cpu(*pipe->tail);
+	tail = le32_to_cpu(readl(pipe->tail));
 
 	tail += count;
 
 	if (tail >= pipe->native.length)
 		tail %= pipe->native.length;
 
-	*pipe->tail = cpu_to_le32(tail);
+	writel(cpu_to_le32(tail), pipe->tail);
 }
 
 static size_t glink_smem_tx_avail(struct qcom_glink_pipe *np)
@@ -116,8 +116,8 @@ static size_t glink_smem_tx_avail(struct qcom_glink_pipe *np)
 	u32 tail;
 	u32 avail;
 
-	head = le32_to_cpu(*pipe->head);
-	tail = le32_to_cpu(*pipe->tail);
+	head = le32_to_cpu(readl(pipe->head));
+	tail = le32_to_cpu(readl(pipe->tail));
 
 	if (tail <= head)
 		avail = pipe->native.length - head + tail;
@@ -165,7 +165,7 @@ static void glink_smem_tx_write(struct qcom_glink_pipe *glink_pipe,
 	struct glink_smem_pipe *pipe = to_smem_pipe(glink_pipe);
 	unsigned int head;
 
-	head = le32_to_cpu(*pipe->head);
+	head = le32_to_cpu(readl(pipe->head));
 
 	head = glink_smem_tx_write_one(pipe, head, hdr, hlen);
 	head = glink_smem_tx_write_one(pipe, head, data, dlen);
@@ -178,7 +178,7 @@ static void glink_smem_tx_write(struct qcom_glink_pipe *glink_pipe,
 	/* Ensure ordering of fifo and head update */
 	wmb();
 
-	*pipe->head = cpu_to_le32(head);
+	writel(cpu_to_le32(head), pipe->head);
 }
 
 static void qcom_glink_smem_release(struct device *dev)

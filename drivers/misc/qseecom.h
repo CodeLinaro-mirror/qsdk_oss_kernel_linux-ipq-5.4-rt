@@ -91,6 +91,7 @@
 #define RSA_KEY_MATERIAL_SIZE	((528 + 2 + 5 + 1 + 528 + 2) * sizeof(uint8_t))
 #define MAX_RSA_SIGN_DATA_SIZE	(2048 * sizeof(uint8_t))
 #define RSA_PARAM_LEN		(5 * sizeof(uint8_t))
+#define INVALID_AES_KEY_HANDLE_VAL	117
 
 #define QSEE_LOG_BUF_SIZE		0x1000
 
@@ -595,6 +596,10 @@ static ssize_t generate_key_blob(struct device *dev,
 static ssize_t show_aes_derive_key(struct device *dev,
 				struct device_attribute *attr, char *buf);
 
+static ssize_t store_aes_derive_key(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count);
+
 static ssize_t store_key(struct device *dev, struct device_attribute *attr,
 			const char *buf, size_t count);
 
@@ -748,6 +753,10 @@ static ssize_t show_qsee_app_id(struct device *dev,
 static ssize_t show_aes_derive_key_qtiapp(struct device *dev,
 				struct device_attribute *attr, char *buf);
 
+static ssize_t store_aes_derive_key_qtiapp(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count);
+
 static ssize_t store_aes_type_qtiapp(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t count);
@@ -846,7 +855,7 @@ static DEVICE_ATTR(fuse, 0644, NULL, store_fuse_input);
 static DEVICE_ATTR(misc, 0644, NULL, store_misc_input);
 static DEVICE_ATTR(qsee_app_id, 0644, show_qsee_app_id, NULL);
 
-static DEVICE_ATTR(derive_key_aes, 0644, show_aes_derive_key_qtiapp, NULL);
+static DEVICE_ATTR(derive_key_aes, 0644, show_aes_derive_key_qtiapp, store_aes_derive_key_qtiapp);
 static DEVICE_ATTR(encrypt_aes, 0644, show_aes_encrypted_data_qtiapp, store_aes_decrypted_data_qtiapp);
 static DEVICE_ATTR(decrypt_aes, 0644, show_aes_decrypted_data_qtiapp, store_aes_encrypted_data_qtiapp);
 static DEVICE_ATTR(ivdata_aes, 0644, NULL, store_iv_data_qtiapp);
@@ -874,7 +883,7 @@ static DEVICE_ATTR(blow, 0644, NULL, store_blow_fuse_write_qtiapp);
 /* Tz app device attrs ends here....*/
 
 static DEVICE_ATTR(generate, 0644, generate_key_blob, NULL);
-static DEVICE_ATTR(derive_aes_key, 0644, show_aes_derive_key, NULL);
+static DEVICE_ATTR(derive_aes_key, 0644, show_aes_derive_key, store_aes_derive_key);
 static DEVICE_ATTR(import, 0644, import_key_blob, store_key);
 static DEVICE_ATTR(key_blob, 0644, NULL, store_key_blob);
 static DEVICE_ATTR(seal, 0644, show_sealed_data, store_unsealed_data);

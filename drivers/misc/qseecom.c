@@ -171,6 +171,29 @@ show_qsee_app_log_buf(struct device *dev, struct device_attribute *attr,
 }
 
 /*
+ * store_aes_derive_key()
+ * Function to store aes derive key
+ */
+static ssize_t
+store_aes_derive_key(struct device *dev, struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	unsigned long long val;
+
+	if (kstrtoull(buf, 10, &val))
+		return -EINVAL;
+
+	*key_handle = val;
+	if (*key_handle == INVALID_AES_KEY_HANDLE_VAL) {
+		pr_info("Invalid aes key handle: %lu\n",
+			(unsigned long)*key_handle);
+		return -EINVAL;
+	}
+
+	return count;
+}
+
+/*
  * show_aes_derive_key()
  * Function to derive aes_key and get key_handle
  */
@@ -219,7 +242,7 @@ static ssize_t show_aes_derive_key(struct device *dev,
 		message = "AES Key derive failed\n\0";
 	}
 
-	pr_debug("key_handle is: %lu\n", (unsigned long)*key_handle);
+	pr_info("key_handle is: %lu\n", (unsigned long)*key_handle);
 
 	message_len = strlen(message) + 1;
 	memcpy(buf, message, message_len);
@@ -818,7 +841,7 @@ show_aes_v2_encrypted_data(struct device *dev, struct device_attribute *attr,
 		return -ENOMEM;
 
 	req_ptr->key_handle = (unsigned long)*key_handle;
-	pr_info("key_handle is: %lu", (unsigned long)req_ptr->key_handle);
+	pr_info("key_handle is: %lu\n", (unsigned long)req_ptr->key_handle);
 	req_ptr->v1.type = type;
 	req_ptr->v1.mode = mode;
 	req_ptr->v1.iv = (req_ptr->v1.mode == 0 ? 0 : (u64)dma_iv_data);
@@ -993,7 +1016,7 @@ show_aes_v2_decrypted_data(struct device *dev, struct device_attribute *attr, ch
 		return -ENOMEM;
 
 	req_ptr->key_handle = (unsigned long)*key_handle;
-	pr_info("key_handle is: %lu", (unsigned long)req_ptr->key_handle);
+	pr_info("key_handle is: %lu\n", (unsigned long)req_ptr->key_handle);
 	req_ptr->v1.type = type;
 	req_ptr->v1.mode = mode;
 	req_ptr->v1.encrypted_data = (u64)dma_sealed_data;
@@ -2392,6 +2415,29 @@ fn_exit:
 }
 
 /*
+ * store_aes_derive_key_qtiapp()
+ * Function to store aes derive key handle (in QTIAPP)
+ */
+static ssize_t
+store_aes_derive_key_qtiapp(struct device *dev, struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	unsigned long long val;
+
+	if (kstrtoull(buf, 10, &val))
+		return -EINVAL;
+
+	*aes_key_handle = val;
+	if (*aes_key_handle == INVALID_AES_KEY_HANDLE_VAL) {
+		pr_info("Invalid aes key handle: %lu\n",
+			(unsigned long)*aes_key_handle);
+		return -EINVAL;
+	}
+
+	return count;
+}
+
+/*
  * show_aes_derive_key()
  * Function to derive aes_key and get key_handle (in QTIAPP)
  */
@@ -2441,7 +2487,7 @@ static ssize_t show_aes_derive_key_qtiapp(struct device *dev,
 		message = "AES Key derive failed\n\0";
 	}
 
-	pr_debug("key_handle is: %lu\n", (unsigned long)*aes_key_handle);
+	pr_info("key_handle is: %lu\n", (unsigned long)*aes_key_handle);
 
 	message_len = strlen(message) + 1;
 	memcpy(buf, message, message_len);
@@ -2489,7 +2535,7 @@ show_aes_v2_decrypted_data_qtiapp(struct device *dev, struct device_attribute *a
 		return -ENOMEM;
 
 	req_ptr->key_handle = (unsigned long)*aes_key_handle;
-	pr_info("key_handle is: %lu", (unsigned long)req_ptr->key_handle);
+	pr_info("key_handle is: %lu\n", (unsigned long)req_ptr->key_handle);
 	req_ptr->v1.type = aes_type;
 	req_ptr->v1.mode = aes_mode;
 	req_ptr->v1.encrypted_data = (u64)dma_aes_sealed_buf;
@@ -2635,7 +2681,7 @@ show_aes_v2_encrypted_data_qtiapp(struct device *dev, struct device_attribute *a
 		return -ENOMEM;
 
 	req_ptr->key_handle = (unsigned long)*aes_key_handle;
-	pr_info("key_handle is: %lu", (unsigned long)req_ptr->key_handle);
+	pr_info("key_handle is: %lu\n", (unsigned long)req_ptr->key_handle);
 	req_ptr->v1.type = aes_type;
 	req_ptr->v1.mode = aes_mode;
 	req_ptr->v1.iv = (req_ptr->v1.mode == 0 ? 0 : (u64)dma_aes_ivdata);

@@ -960,7 +960,7 @@ int qti_scm_is_tz_log_encryption_supported(void)
 {
 	int ret;
 
-	ret = __qcom_scm_is_call_available(__scm->dev, QCOM_SCM_SVC_BOOT,
+	ret = __qcom_scm_is_call_available(__scm->dev, QTI_SVC_APP_MGR,
 					   QCOM_SCM_IS_TZ_LOG_ENCRYPTED);
 
 	return (ret == 1) ? 1 : 0;

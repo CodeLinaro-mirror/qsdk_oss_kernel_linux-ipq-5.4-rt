@@ -42,7 +42,7 @@
 			qcom,phy-mdio-addr = <4>;
 		};
 
-		mdio@90000 {
+		mdio:mdio@90000 {
 			/*gpio60 for manhattan reset*/
 			phy-reset-gpio = <&tlmm 60 0>;
 			phyaddr_fixup = <0xC90F018>;
@@ -88,7 +88,56 @@
 					};
 				};
 
+				led_source@0 {
+					source = <0>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@3 {
+					source = <3>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@6 {
+					source = <6>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@9 {
+					source = <9>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
 			};
+		};
+
+		nss-macsec0 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x1>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec1 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x2>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec2 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x3>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec3 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x4>;
+			mdiobus = <&mdio>;
 		};
 	};
 };

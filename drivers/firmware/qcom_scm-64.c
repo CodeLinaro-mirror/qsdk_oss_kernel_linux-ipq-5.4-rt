@@ -212,12 +212,18 @@ int __qcom_remove_xpu_scm_call_available(struct device *dev, u32 svc_id, u32 cmd
 int __qcom_scm_is_call_available(struct device *dev, u32 svc_id, u32 cmd_id)
 {
 	int ret;
+	int fn_id;
 	struct qcom_scm_desc desc = {0};
 	struct arm_smccc_res res;
 
+	fn_id = QCOM_SCM_FNID(svc_id, cmd_id);
+	if (cmd_id == QCOM_SCM_IS_TZ_LOG_ENCRYPTED)
+		fn_id |= (ARM_SMCCC_OWNER_TRUSTED_OS << ARM_SMCCC_OWNER_SHIFT);
+	else
+		fn_id |= (ARM_SMCCC_OWNER_SIP << ARM_SMCCC_OWNER_SHIFT);
+
 	desc.arginfo = QCOM_SCM_ARGS(1);
-	desc.args[0] = QCOM_SCM_FNID(svc_id, cmd_id) |
-			(ARM_SMCCC_OWNER_SIP << ARM_SMCCC_OWNER_SHIFT);
+	desc.args[0] = fn_id;
 
 	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_SVC_INFO,
 			    QCOM_IS_CALL_AVAIL_CMD, &desc, &res);
@@ -1167,7 +1173,7 @@ int __qti_scm_is_tz_log_encrypted(struct device *dev)
 	struct qcom_scm_desc desc = {0};
 
 	desc.arginfo = SCM_ARGS(0);
-	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_TRUSTED_OS, QCOM_SCM_SVC_BOOT,
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_TRUSTED_OS, QTI_SVC_APP_MGR,
 			    QCOM_SCM_IS_TZ_LOG_ENCRYPTED, &desc, &res);
 
 	return ret ? : res.a1;
@@ -1194,7 +1200,7 @@ int __qti_scm_get_encrypted_tz_log(struct device *dev, void *ker_buf,
 	desc.args[2] = log_id;
 	desc.arginfo = SCM_ARGS(3, QCOM_SCM_RW, QCOM_SCM_VAL, QCOM_SCM_VAL);
 
-	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_TRUSTED_OS, QCOM_SCM_SVC_BOOT,
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_TRUSTED_OS, QTI_SVC_APP_MGR,
 		            QCOM_SCM_GET_TZ_LOG_ENCRYPTED, &desc, &res);
 
 	dma_unmap_single(dev, log_buf, buf_len, DMA_FROM_DEVICE);

@@ -839,6 +839,7 @@ int __qcom_remove_xpu_scm_call_available(struct device *dev, u32 svc_id, u32 cmd
 int __qcom_scm_is_call_available(struct device *dev, u32 svc_id, u32 cmd_id)
 {
 	int ret;
+	int fn_id;
 
 	if (!is_scm_armv8()) {
 		__le32 svc_cmd = cpu_to_le32((svc_id << SCM_SVC_ID_SHIFT) |
@@ -855,7 +856,13 @@ int __qcom_scm_is_call_available(struct device *dev, u32 svc_id, u32 cmd_id)
 		__le32 scm_ret;
 		struct scm_desc desc = {0};
 
-		desc.args[0] = SCM_SIP_FNID(svc_id, cmd_id);
+		if (cmd_id == QCOM_SCM_IS_TZ_LOG_ENCRYPTED)
+			fn_id = QTI_SYSCALL_CREATE_SMC_ID(QTI_OWNER_QSEE_OS,
+							 svc_id, cmd_id);
+		else
+			fn_id = SCM_SIP_FNID(svc_id, cmd_id);
+
+		desc.args[0] = fn_id;
 		desc.arginfo = SCM_ARGS(1);
 		ret = qti_scm_call2(dev, SCM_SIP_FNID(QCOM_SCM_SVC_INFO,
 					QCOM_IS_CALL_AVAIL_CMD), &desc);
@@ -1823,13 +1830,16 @@ int __qti_scm_tcsr_reg_write(struct device *dev, u32 reg_addr, u32 value)
 int __qti_scm_is_tz_log_encrypted(struct device *dev)
 {
 	int ret;
+	int fn_id;
 	__le32 scm_ret;
 	struct scm_desc desc = {0};
 
 	desc.arginfo = SCM_ARGS(0);
 
-	ret = qti_scm_call2(dev, SCM_SIP_FNID(QCOM_SCM_SVC_BOOT,
-					QCOM_SCM_IS_TZ_LOG_ENCRYPTED), &desc);
+	fn_id = QTI_SYSCALL_CREATE_SMC_ID(QTI_OWNER_QSEE_OS,
+					 QTI_SVC_APP_MGR,
+					 QCOM_SCM_IS_TZ_LOG_ENCRYPTED);
+	ret = qti_scm_call2(dev, fn_id, &desc);
 	scm_ret = desc.ret[0];
 
 	if (!ret)
@@ -1843,6 +1853,7 @@ int __qti_scm_get_encrypted_tz_log(struct device *dev, void *ker_buf, u32 buf_le
 	struct scm_desc desc = {0};
 	dma_addr_t log_buf;
 	int ret;
+	int fn_id;
 
 	log_buf = dma_map_single(dev, ker_buf, buf_len, DMA_FROM_DEVICE);
 	ret = dma_mapping_error(dev, log_buf);
@@ -1857,8 +1868,10 @@ int __qti_scm_get_encrypted_tz_log(struct device *dev, void *ker_buf, u32 buf_le
 	desc.args[2] = log_id;
 	desc.arginfo = SCM_ARGS(3, QCOM_SCM_RW, QCOM_SCM_VAL, QCOM_SCM_VAL);
 
-	ret = qti_scm_call2(dev, SCM_SIP_FNID(QCOM_SCM_SVC_BOOT,
-					QCOM_SCM_GET_TZ_LOG_ENCRYPTED), &desc);
+	fn_id = QTI_SYSCALL_CREATE_SMC_ID(QTI_OWNER_QSEE_OS,
+					 QTI_SVC_APP_MGR,
+					 QCOM_SCM_GET_TZ_LOG_ENCRYPTED);
+	ret = qti_scm_call2(dev, fn_id, &desc);
 
 	dma_unmap_single(dev, log_buf, buf_len, DMA_FROM_DEVICE);
 
