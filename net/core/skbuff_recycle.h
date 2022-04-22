@@ -140,11 +140,11 @@ static inline bool consume_skb_can_recycle(const struct sk_buff *skb,
 		return false;
 
 	min_skb_size = SKB_DATA_ALIGN(min_skb_size + NET_SKB_PAD);
-	if (unlikely(SKB_WITH_OVERHEAD(ksize(skb->head)) < min_skb_size))
+	if (unlikely(skb_end_pointer(skb) - skb->head < min_skb_size))
 		return false;
 
 	max_skb_size = SKB_DATA_ALIGN(max_skb_size + NET_SKB_PAD);
-	if (unlikely(SKB_WITH_OVERHEAD(ksize(skb->head)) > max_skb_size))
+	if (unlikely(skb_end_pointer(skb) - skb->head > max_skb_size))
 		return false;
 
 	if (unlikely(skb_cloned(skb)))
