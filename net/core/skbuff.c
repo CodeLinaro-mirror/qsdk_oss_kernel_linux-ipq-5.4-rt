@@ -1825,7 +1825,7 @@ int pskb_expand_head(struct sk_buff *skb, int nhead, int ntail,
 	 * when skb is orphaned (not attached to a socket).
 	 */
 	if (!skb->sk || skb->destructor == sock_edemux)
-		skb->truesize += size - osize;
+		skb->truesize = SKB_TRUESIZE(size);
 
 	return 0;
 
