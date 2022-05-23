@@ -142,6 +142,13 @@
 				bias-disable;
 			};
 
+			spi_1_pins: spi-1-pins {
+				pins = "gpio61", "gpio62", "gpio63", "gpio64";
+				function = "blsp1_spi";
+				drive-strength = <8>;
+				bias-disable;
+			};
+
 			i2c_3_pins: i2c-3-pins {
 				pins = "gpio15", "gpio16";
 				function = "blsp3_i2c";
@@ -161,6 +168,35 @@
 					function = "mdio";
 					drive-strength = <8>;
 					bias-pull-up;
+				};
+			};
+			audio_pins: audio_pinmux {
+				mux_1 {
+					pins = "gpio41";
+					function = "audio_pri";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+				mux_2 {
+					pins = "gpio40";
+					function = "audio_pri";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+				mux_3 {
+					pins = "gpio42";
+					function = "audio_pri";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+				mux_4 {
+					pins = "gpio43";
+					function = "audio_pri";
+					drive-strength = <16>;
+					bias-pull-down;
 				};
 			};
 
@@ -226,6 +262,12 @@
 			pinctrl-0 = <&QCC710_pins &pta_QCC710>;
 			pinctrl-names = "default";
 			status = "ok";
+		};
+
+		pcm: pcm@0xA3C0000{
+			pinctrl-0 = <&audio_pins>;
+			pinctrl-names = "default";
+			status = "disabled";
 		};
 
 		gpio_keys {
@@ -358,6 +400,13 @@
 				reg = <0>;
 				spi-max-frequency = <50000000>;
 			};
+		};
+
+		spi_1: spi@78b6000 {
+			status = "ok";
+			pinctrl-0 = <&spi_1_pins>;
+			pinctrl-names = "default";
+			cs-select = <0>;
 		};
 
 		eud: qcom,msm-eud {
