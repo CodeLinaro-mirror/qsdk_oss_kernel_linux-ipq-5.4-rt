@@ -148,8 +148,7 @@
 &wifi4 {
 	/* QCN9224 split-radio 2.4G + 5G *(Low) */
 	hremote_node = <&qcn9224_pcie0>;
-	board_id = <0x10>;
-	firmware_name = "amss_dualmac.bin";
+	board_id = <0x1010>;
 	status = "ok";
 };
 
@@ -160,8 +159,7 @@
 &wifi6 {
 	/* QCN9224 split-radio 5G (High) + 6G */
 	hremote_node = <&qcn9224_pcie2>;
-	board_id = <0x0e>;
-	firmware_name = "amss_dualmac.bin";
+	board_id = <0x100e>;
 	status = "ok";
 };
 

@@ -746,8 +746,7 @@
 	qrtr_node_id = <0x30>;
 	hremote_node = <&qcn9224_pcie0>;
 	caldb-size = <0x800000>;
-	board_id = <0x06>;
-	firmware_name = "amss_dualmac.bin";
+	board_id = <0x1006>;
 	status = "ok";
 #endif
 };

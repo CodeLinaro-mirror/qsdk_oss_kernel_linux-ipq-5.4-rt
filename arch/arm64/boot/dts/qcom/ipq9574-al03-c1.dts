@@ -555,8 +555,7 @@
 
 &wifi4 {
 	hremote_node = <&qcn9224_pcie0>;
-	board_id = <0x03>;
-	firmware_name = "amss_dualmac.bin";
+	board_id = <0x1003>;
 	status = "ok";
 };
 
