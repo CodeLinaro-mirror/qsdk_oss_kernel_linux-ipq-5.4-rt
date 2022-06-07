@@ -52,20 +52,29 @@
 #define REG_SIZE		4
 
 /* macro for mht chipset start */
-#define EPHY_CFG		0xC90F018
-#define GEPHY0_TX_CBCR		0xC800058
-#define SRDS0_SYS_CBCR		0xC8001A8
-#define SRDS1_SYS_CBCR		0xC8001AC
-#define EPHY0_SYS_CBCR		0xC8001B0
-#define EPHY1_SYS_CBCR		0xC8001B4
-#define EPHY2_SYS_CBCR		0xC8001B8
-#define EPHY3_SYS_CBCR		0xC8001BC
-#define GCC_GEPHY_MISC		0xC800304
-#define PHY_ADDR_LENGTH		5
-#define PHY_ADDR_NUM		4
-#define UNIPHY_ADDR_NUM		3
-#define MII_HIGH_ADDR_PREFIX	0x18
-#define MII_LOW_ADDR_PREFIX	0x10
+#define EPHY_CFG				0xC90F018
+#define GEPHY0_TX_CBCR				0xC800058
+#define SRDS0_SYS_CBCR				0xC8001A8
+#define SRDS1_SYS_CBCR				0xC8001AC
+#define EPHY0_SYS_CBCR				0xC8001B0
+#define EPHY1_SYS_CBCR				0xC8001B4
+#define EPHY2_SYS_CBCR				0xC8001B8
+#define EPHY3_SYS_CBCR				0xC8001BC
+#define GCC_GEPHY_MISC				0xC800304
+#define QFPROM_RAW_PTE_ROW2_MSB		0xC900014
+#define QFPROM_RAW_CALIBRATION_ROW4_LSB 	0xC900048
+#define QFPROM_RAW_CALIBRATION_ROW7_LSB 	0xC900060
+#define QFPROM_RAW_CALIBRATION_ROW8_LSB 	0xC900068
+#define QFPROM_RAW_CALIBRATION_ROW6_MSB 	0xC90005C
+#define PHY_DEBUG_PORT_ADDR			0x1d
+#define PHY_DEBUG_PORT_DATA			0x1e
+#define PHY_LDO_EFUSE_REG			0x180
+#define PHY_ICC_EFUSE_REG			0x280
+#define PHY_ADDR_LENGTH			5
+#define PHY_ADDR_NUM				4
+#define UNIPHY_ADDR_NUM			3
+#define MII_HIGH_ADDR_PREFIX			0x18
+#define MII_LOW_ADDR_PREFIX			0x10
 static DEFINE_MUTEX(switch_mdio_lock);
 /* macro for mht chipset end */
 
@@ -347,6 +356,62 @@ static inline void qca_mht_clk_reset(struct mii_bus *mii_bus, u32 reg)
 	qca_mii_write(mii_bus, reg, val);
 }
 
+static u16
+qca_phy_debug_read(struct mii_bus *mii_bus, u32 phy_addr, u32 reg_id)
+{
+	qca_mdio_write(mii_bus, phy_addr, PHY_DEBUG_PORT_ADDR, reg_id);
+
+	return qca_mdio_read(mii_bus, phy_addr, PHY_DEBUG_PORT_DATA);
+}
+
+static void
+qca_phy_debug_write(struct mii_bus *mii_bus, u32 phy_addr, u32 reg_id, u16 reg_val)
+{
+
+	qca_mdio_write(mii_bus, phy_addr, PHY_DEBUG_PORT_ADDR, reg_id);
+
+	qca_mdio_write(mii_bus, phy_addr, PHY_DEBUG_PORT_DATA, reg_val);
+}
+
+static void
+qca_mht_efuse_loading(struct mii_bus *mii_bus, u8 ethphy)
+{
+	u32 val = 0, ldo_efuse = 0, icc_efuse = 0, phy_addr = 0;
+	u16 reg_val = 0;
+
+	phy_addr = qca_mii_read(mii_bus, EPHY_CFG) >> (ethphy * PHY_ADDR_LENGTH)
+		& GENMASK(4, 0);
+	switch(ethphy) {
+		case 0:
+			val = qca_mii_read(mii_bus, QFPROM_RAW_CALIBRATION_ROW4_LSB);
+			ldo_efuse = (val & GENMASK(21, 18)) >> 18;
+			icc_efuse = (val & GENMASK(26, 22)) >> 22;
+			break;
+		case 1:
+			val = qca_mii_read(mii_bus, QFPROM_RAW_CALIBRATION_ROW7_LSB);
+			ldo_efuse = (val & GENMASK(26, 23)) >> 23;
+			icc_efuse = (val & GENMASK(31, 27)) >> 27;
+			break;
+		case 2:
+			val = qca_mii_read(mii_bus, QFPROM_RAW_CALIBRATION_ROW8_LSB);
+			ldo_efuse = (val & GENMASK(26, 23)) >> 23;
+			icc_efuse = (val & GENMASK(31, 27)) >> 27;
+			break;
+		case 3:
+			val = qca_mii_read(mii_bus, QFPROM_RAW_CALIBRATION_ROW6_MSB);
+			ldo_efuse = (val & GENMASK(17, 14)) >> 14;
+			icc_efuse = (val & GENMASK(22, 18)) >> 18;
+			break;
+	}
+	reg_val = qca_phy_debug_read(mii_bus, phy_addr, PHY_LDO_EFUSE_REG);
+	reg_val = reg_val & ~GENMASK(7, 4) | ldo_efuse << 4;
+	qca_phy_debug_write(mii_bus, phy_addr, PHY_LDO_EFUSE_REG, reg_val);
+
+	reg_val = qca_phy_debug_read(mii_bus, phy_addr, PHY_ICC_EFUSE_REG);
+	reg_val = reg_val & ~GENMASK(4, 0) | icc_efuse;
+	qca_phy_debug_write(mii_bus, phy_addr, PHY_ICC_EFUSE_REG, reg_val);
+}
+
 static void qca_mht_clock_init(struct mii_bus *mii_bus)
 {
 	u32 val = 0;
@@ -383,7 +448,13 @@ static void qca_mht_clock_init(struct mii_bus *mii_bus)
 	val = qca_mii_read(mii_bus, GCC_GEPHY_MISC);
 	val &= ~GENMASK(4, 0);
 	qca_mii_write(mii_bus, GCC_GEPHY_MISC, val);
-
+	/*for ES chips, need to load efuse manually*/
+	val = qca_mii_read(mii_bus, QFPROM_RAW_PTE_ROW2_MSB);
+	val = (val & GENMASK(23, 16)) >> 16;
+	if(val == 1 || val == 2) {
+		for(i = 0; i < 4; i++)
+			qca_mht_efuse_loading(mii_bus, i);
+	}
 	/* Enable efuse loading into analog circuit */
 	val = qca_mii_read(mii_bus, EPHY_CFG);
 	/* BIT20 for PHY0 and PHY1, BIT21 for PHY2 and PHY3 */
