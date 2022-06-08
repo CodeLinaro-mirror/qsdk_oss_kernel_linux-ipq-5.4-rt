@@ -859,14 +859,16 @@ void br_dev_update_stats(struct net_device *dev,
 		return;
 
 	br = netdev_priv(dev);
-	stats = per_cpu_ptr(br->stats, 0);
+	stats = this_cpu_ptr(br->stats);
 
+	local_bh_disable();
 	u64_stats_update_begin(&stats->syncp);
 	stats->rx_packets += nlstats->rx_packets;
 	stats->rx_bytes += nlstats->rx_bytes;
 	stats->tx_packets += nlstats->tx_packets;
 	stats->tx_bytes += nlstats->tx_bytes;
 	u64_stats_update_end(&stats->syncp);
+	local_bh_enable();
 }
 EXPORT_SYMBOL_GPL(br_dev_update_stats);
 
