@@ -9,6 +9,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-devsoc.h>
 #include <dt-bindings/reset/qcom,gcc-devsoc.h>
+#include <dt-bindings/gpio/gpio.h>
 
 
 / {
@@ -113,6 +114,39 @@
 			clocks = <&gcc GCC_PRNG_AHB_CLK>;
 			clock-names = "km_clk_src";
 			qcom,no-qrng-config;
+		};
+
+		pcie_x1phy: phy@4b0000{
+			compatible = "qca,uni-pcie-phy-gen3";
+			reg = <0x4b0000 0x800>;
+			phy-type = "gen3";
+			#phy-cells = <0>;
+			clocks = <&gcc GCC_PCIE3X1_0_PIPE_CLK>;
+			clock-names = "pipe_clk";
+
+			resets = <&gcc GCC_PCIE3X1_0_PHY_BCR>,
+				<&gcc GCC_PCIE3X1_0_PHY_PHY_BCR>;
+			reset-names = "phy",
+					"phy_phy";
+			mode-fixed = <2>; /* TBD */
+			status = "disabled";
+		};
+
+		pcie_x2_x1_1_phy: phy@4b1000{
+			compatible = "qca,uni-pcie-phy-gen3";
+			reg = <0x4b1000 0x1000>;
+			phy-type = "gen3";
+			#phy-cells = <0>;
+			clocks = <&gcc GCC_PCIE3X2_PIPE_CLK>;
+			clock-names = "pipe_clk";
+
+			resets = <&gcc GCC_PCIE3X2_PHY_BCR>,
+				<&gcc GCC_PCIE3X2PHY_PHY_BCR>;
+			reset-names = "phy",
+					"phy_phy";
+			mode-fixed = <2>; /* TBD */
+			x2 = <1>;
+			status = "disabled";
 		};
 
 		intc: interrupt-controller@b000000 {
@@ -420,10 +454,375 @@
 				dr_mode = "host";
 			};
 		};
+
+		/* 1L controller with 2L/2x1L Flexible PHY 2nd lane */
+		pcie2_x1_1: pcie@10000000 {
+			compatible = "qti,pcie-ipq9574";
+			reg =  <0x10000000 0xf1d
+				0x10000F20 0xa8
+				0x10001000 0x1000
+				0xf0000 0x3000
+				0x10100000 0x1000>;
+			reg-names = "dbi", "elbi", "atu", "parf", "config";
+			device_type = "pci";
+			linux,pci-domain = <0>;
+			bus-range = <0x00 0xff>;
+			num-lanes = <1>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+
+			ranges = <0x81000000 0 0x10200000 0x10200000
+				  0 0x00100000   /* downstream I/O */
+				  0x82000000 0 0x10300000 0x10300000
+				  0 0x7d00000>; /* non-prefetchable memory */
+
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &intc 0 399
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_a */
+					<0 0 0 2 &intc 0 400
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_b */
+					<0 0 0 3 &intc 0 401
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_c */
+					<0 0 0 4 &intc 0 402
+					 IRQ_TYPE_LEVEL_HIGH>; /* int_d */
+
+			interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "global_irq";
+
+			clocks = <&gcc GCC_PCIE3X1_1_AXI_M_CLK>,
+				 <&gcc GCC_PCIE3X1_1_AXI_S_CLK>,
+				 <&gcc GCC_PCIE3X1_1_AHB_CLK>,
+				 <&gcc GCC_PCIE3X1_1_AUX_CLK>,
+				 <&gcc GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK>;
+
+			clock-names = "axi_m",
+				      "axi_s",
+				      "ahb",
+				      "aux",
+				      "axi_bridge";
+
+			resets = <&gcc GCC_PCIE3X1_1_PIPE_ARES>,
+				 <&gcc GCC_PCIE3X1_1_CORE_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_1_AXI_M_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_1_AXI_S_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_1_AXI_M_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_1_AXI_S_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_1_AHB_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_1_AUX_CLK_ARES>;
+
+			reset-names = "pipe",
+				      "sticky",
+				      "axi_m",
+				      "axi_s",
+				      "axi_m_sticky",
+				      "axi_s_sticky",
+				      "ahb",
+				      "aux";
+
+			msi-parent = <&v2m0>;
+			status = "disabled";
+
+			pcie_x1_1_rp: pcie_x1_1_rp {
+				reg = <0 0 0 0 0>;
+			};
+		};
+
+		/* 2L controller with 2L/2x1L Flexible PHY.
+		 * Connected to the 1st lane of the Flexible PHY in 1L mode
+		 */
+		pcie1_x2: pcie@18000000 {
+			compatible = "qti,pcie-ipq9574";
+			reg =  <0x18000000 0xf1d
+				0x18000F20 0xa8
+				0x18001000 0x1000
+				0x88000 0x3000
+				0x18100000 0x1000>;
+			reg-names = "dbi", "elbi", "atu", "parf", "config";
+			device_type = "pci";
+			linux,pci-domain = <1>;
+			bus-range = <0x00 0xff>;
+			num-lanes = <2>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+			slv-addr-space-sz = <0x8000000>;
+
+			ranges = <0x81000000 0 0x18200000 0x18200000
+				  0 0x00100000   /* downstream I/O */
+				  0x82000000 0 0x18300000 0x18300000
+				  0 0x7d00000>; /* non-prefetchable memory */
+
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &intc 0 412
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_a */
+					<0 0 0 2 &intc 0 413
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_b */
+					<0 0 0 3 &intc 0 414
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_c */
+					<0 0 0 4 &intc 0 415
+					 IRQ_TYPE_LEVEL_HIGH>; /* int_d */
+
+			interrupts = <GIC_SPI 411 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "global_irq";
+
+			clocks = <&gcc GCC_PCIE3X2_AXI_M_CLK>,
+				 <&gcc GCC_PCIE3X2_AXI_S_CLK>,
+				 <&gcc GCC_PCIE3X2_AHB_CLK>,
+				 <&gcc GCC_PCIE3X2_AUX_CLK>,
+				 <&gcc GCC_PCIE3X2_AXI_S_BRIDGE_CLK>;
+
+			clock-names = "axi_m",
+				      "axi_s",
+				      "ahb",
+				      "aux",
+				      "axi_bridge";
+
+			resets = <&gcc GCC_PCIE3X2_PIPE_ARES>,
+				 <&gcc GCC_PCIE3X2_CORE_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X2_AXI_M_CLK_ARES>,
+				 <&gcc GCC_PCIE3X2_AXI_S_CLK_ARES>,
+				 <&gcc GCC_PCIE3X2_AXI_M_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X2_AXI_S_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X2_AHB_CLK_ARES>,
+				 <&gcc GCC_PCIE3X2_AUX_CLK_ARES>;
+
+			reset-names = "pipe",
+				      "sticky",
+				      "axi_m",
+				      "axi_s",
+				      "axi_m_sticky",
+				      "axi_s_sticky",
+				      "ahb",
+				      "aux";
+
+			msi-parent = <&v2m0>;
+			status = "disabled";
+
+			pcie_x2_rp: pcie_x2_rp {
+				reg = <0 0 0 0 0>;
+			};
+		};
+
+		/* 1L controller with USB/PCIe combo PHY */
+		pcie0_x1_0: pcie@20000000 {
+			compatible = "qti,pcie-ipq9574";
+			reg =  <0x20000000 0xf1d
+				0x20000F20 0xa8
+				0x20001000 0x1000
+				0x80000 0x3000
+				0x20100000 0x1000>;
+			reg-names = "dbi", "elbi", "atu", "parf", "config";
+			device_type = "pci";
+			linux,pci-domain = <0>;
+			bus-range = <0x00 0xff>;
+			num-lanes = <1>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+
+			ranges = <0x81000000 0 0x20200000 0x20200000
+				  0 0x00100000   /* downstream I/O */
+				  0x82000000 0 0x20300000 0x20300000
+				  0 0xfd00000>; /* non-prefetchable memory */
+
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &intc 0 35
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_a */
+					<0 0 0 2 &intc 0 36
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_b */
+					<0 0 0 3 &intc 0 37
+					 IRQ_TYPE_LEVEL_HIGH>, /* int_c */
+					<0 0 0 4 &intc 0 38
+					 IRQ_TYPE_LEVEL_HIGH>; /* int_d */
+
+			interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "global_irq";
+
+			clocks = <&gcc GCC_PCIE3X1_0_AXI_M_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AHB_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AUX_CLK>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>;
+
+			clock-names = "axi_m",
+				      "axi_s",
+				      "ahb",
+				      "aux",
+				      "axi_bridge";
+
+			resets = <&gcc GCC_PCIE3X1_0_PIPE_ARES>,
+				 <&gcc GCC_PCIE3X1_0_CORE_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_M_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_M_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AXI_S_STICKY_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AHB_CLK_ARES>,
+				 <&gcc GCC_PCIE3X1_0_AUX_CLK_ARES>;
+
+			reset-names = "pipe",
+				      "sticky",
+				      "axi_m",
+				      "axi_s",
+				      "axi_m_sticky",
+				      "axi_s_sticky",
+				      "ahb",
+				      "aux";
+
+			msi-parent = <&v2m0>;
+			status = "disabled";
+
+			pcie_x1_0_rp: pcie_x1_0_rp {
+				reg = <0 0 0 0 0>;
+			};
+		};
+
+		apcs_glb: mailbox@b111000 {
+			compatible = "qcom,devsoc-apcs-apps-global";
+			reg = <0x0b111000 0x6000>;
+			#clock-cells = <1>;
+			#mbox-cells = <1>;
+		};
+
+		wcss: wcss-smp2p {
+			compatible = "qcom,smp2p";
+			qcom,smem = <435>, <428>;
+
+			interrupt-parent = <&intc>;
+			interrupts = <GIC_SPI 418 IRQ_TYPE_EDGE_RISING>;
+
+			mboxes = <&apcs_glb 9>;
+
+			qcom,local-pid = <0>;
+			qcom,remote-pid = <1>;
+
+			wcss_smp2p_out: master-kernel {
+				qcom,entry-name = "master-kernel";
+				qcom,smp2p-feature-ssr-ack;
+				#qcom,smem-state-cells = <1>;
+			};
+
+			wcss_smp2p_in: slave-kernel {
+				qcom,entry-name = "slave-kernel";
+				interrupt-controller;
+				#interrupt-cells = <2>;
+			};
+		};
+
+		tcsr_q6_block: syscon@1945000 {
+			compatible = "syscon";
+			reg = <0x1945000 0xE000>;
+		};
+
+		q6v5_wcss: remoteproc@d100000 {
+			compatible = "qcom,devsoc-q6-mpd";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges;
+			reg = <0x0d100000 0x4040>,
+				<0x1938000 0x8>,
+				<0x193d204 0x4>,
+				<0x1825000 0x90b8>,
+				<0x4a1000 0x4>;
+			reg-names = "qdsp6",
+					"tcsr-msip",
+					"tcsr-q6",
+					"ce_ahb",
+					"qtimer";
+
+			interrupts-extended = <&intc GIC_SPI 421 IRQ_TYPE_EDGE_RISING>,
+					      <&wcss_smp2p_in 0 0>,
+					      <&wcss_smp2p_in 1 0>,
+					      <&wcss_smp2p_in 2 0>,
+					      <&wcss_smp2p_in 3 0>;
+			interrupt-names = "wdog",
+					  "fatal",
+					  "ready",
+					  "handover",
+					  "stop-ack";
+
+			resets = <&gcc GCC_WCSSAON_ARES>,
+				 <&gcc GCC_WCSS_BCR>,
+				 <&gcc GCC_WCSS_Q6_BCR>;
+
+			reset-names = "wcss_aon_reset",
+				      "wcss_reset",
+				      "wcss_q6_reset";
+
+			clocks =  <&gcc GCC_Q6_TSCTR_1TO2_CLK>,
+					<&gcc GCC_Q6SS_TRIG_CLK>,
+					<&gcc GCC_Q6_AXIS_CLK>,
+					<&gcc GCC_Q6_AHB_S_CLK>,
+					<&gcc GCC_Q6SS_ATBM_CLK>,
+					<&gcc GCC_Q6_AHB_CLK>,
+					<&gcc GCC_Q6_AXIM_CLK>,
+					<&gcc GCC_Q6SS_PCLKDBG_CLK>,
+					<&gcc GCC_WCSS_DBG_IFC_APB_BDG_CLK>,
+					<&gcc GCC_WCSS_DBG_IFC_NTS_CLK>,
+					<&gcc GCC_WCSS_AXIS_CLK>,
+					<&gcc GCC_WCSS_DBG_IFC_ATB_CLK>,
+					<&gcc GCC_WCSS_ECAHB_CLK>,
+					<&gcc GCC_WCSS_DBG_IFC_ATB_BDG_CLK>,
+					<&gcc GCC_WCSS_DBG_IFC_APB_CLK>,
+					<&gcc GCC_WCSS_AXIM_CLK>,
+					<&gcc GCC_WCSS_DBG_IFC_NTS_BDG_CLK>,
+					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>;
+
+			clock-names = "q6_tsctr_1to2_clk",
+					"q6ss_trig_clk",
+					"q6_axis_clk",
+					"q6_ahb_s",
+					"q6ss_atbm_clk",
+					"q6_ahb",
+					"q6_axim",
+					"q6ss_pclkdbg_clk",
+					"dbg-apb-bdg",
+					"dbg-nts",
+					"wcss_axi_s_clk",
+					"dbg-atb",
+					"wcss_ecahb",
+					"dbg-atb-bdg",
+					"dbg-apb",
+					"wcss_axi_m_clk",
+					"dbg-nts-bdg",
+					"sys_noc_wcss_ahb";
+
+			qcom,halt-regs = <&tcsr_q6_block 0xa000 0xd000 0x0>;
+
+			qcom,smem-states = <&wcss_smp2p_out 0>,
+					   <&wcss_smp2p_out 1>;
+			qcom,smem-state-names = "shutdown",
+						"stop";
+			memory-region = <&q6_region>;
+			qcom,rproc = <&q6v5_wcss>;
+			glink-edge {
+				interrupts = <GIC_SPI 417 IRQ_TYPE_EDGE_RISING>;
+				qcom,remote-pid = <1>;
+				mboxes = <&apcs_glb 8>;
+
+				qrtr_requests {
+					qcom,glink-channels = "IPCRTR";
+				};
+			};
+
+			q6_wcss_pd1: remoteproc_pd1 {
+				compatible = "qcom,devsoc-wcss-ahb-mpd";
+				reg = <0x004ab000 0x20>;
+				reg-names = "rmb";
+				qcom,halt-regs = <&tcsr_q6_block 0xa000 0xd000 0x0>;
+			};
+		};
 	};
 
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
 	};
+
+	qti,sps {
+		compatible = "qti,msm-sps-4k";
+		qti,pipe-attr-ee;
+	};
 };
+
+#include "devsoc-coresight.dtsi"

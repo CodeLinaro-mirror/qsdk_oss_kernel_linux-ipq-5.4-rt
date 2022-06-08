@@ -17,6 +17,10 @@
 	compatible = "qcom,ipq9574-ap-al02-c9", "qcom,ipq9574-al02", "qcom,ipq9574";
 	interrupt-parent = <&intc>;
 
+	aliases {
+                /delete-property/ethernet5;
+        };
+
 	soc {
 		pcie0_x1: pci@28000000 {
 			status = "ok";
@@ -45,6 +49,43 @@
 
 		pcie3_phy: phy@f4000 {
 			status = "disabled";
+		};
+
+		dp5 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <6>;
+			reg = <0x3a514000 0x4000>;
+			qcom,mactype = <1>;
+			qcom,link-poll = <1>;
+			local-mac-address = [000000000000];
+			qcom,phy-mdio-addr = <0>;
+			phy-mode = "sgmii";
+                };
+
+		/delete-node/dp6;
+
+		mdio@90000 {
+			phy4: ethernet-phy@4 {
+				reg = <0>;
+			};
+			/delete-node/ ethernet-phy@5;
+		};
+
+		ess-instance {
+			ess-switch@3a000000 {
+				switch_lan_bmp = <0x1e>; /* lan port bitmap */
+				switch_wan_bmp = <0x40>; /* wan port bitmap */
+				switch_mac_mode1 = <0xff>; /* mac mode for uniphy instance1*/
+				qcom,port_phyinfo {
+					port@4 {
+						port_id = <6>;
+						phy_address = <0>;
+					};
+
+					/delete-node/port@5;
+				};
+			};
 		};
 	};
 };

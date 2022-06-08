@@ -151,9 +151,9 @@ show_qsee_app_log_buf(struct device *dev, struct device_attribute *attr,
 		if (g_qsee_log->log_pos.wrap != 0) {
 			memcpy(buf, g_qsee_log->log_buf +
 			      g_qsee_log->log_pos.offset, QSEE_LOG_BUF_SIZE -
-			      g_qsee_log->log_pos.offset - 64);
+			      g_qsee_log->log_pos.offset - 4);
 			count = QSEE_LOG_BUF_SIZE -
-				g_qsee_log->log_pos.offset - 64;
+				g_qsee_log->log_pos.offset - 4;
 			memcpy(buf + count, g_qsee_log->log_buf,
 			      g_qsee_log->log_pos.offset);
 			count = count + g_qsee_log->log_pos.offset;
