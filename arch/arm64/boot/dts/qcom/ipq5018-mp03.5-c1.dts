@@ -761,15 +761,14 @@
 	qcom,tgt-mem-mode = <1>;
 #endif
 	qcom,board_id = <0x23>;
-	qcom,bdf-addr = <0x4C400000 0x4C400000 0x4C400000 0x0 0x0>;
 #ifdef __CNSS2__
+	qcom,bdf-addr = <0x4C400000 0x4C400000 0x4C400000 0x0 0x0>;
 	qcom,caldb-addr = <0x4D300000 0x4D300000 0 0 0>;
-#else
-	qcom,caldb-addr = <0x4D300000>;
-	m3-dump-addr = <0x4D100000>;
-#endif
 	qcom,caldb-size = <0x200000>;
 	mem-region = <&q6_ipq5018_data>;
+#else
+	memory-region = <&q6_ipq5018_data>;
+#endif
 	status = "ok";
 };
 
@@ -784,15 +783,14 @@
 	qcom,tgt-mem-mode = <1>;
 #endif
 	qcom,board_id = <0x60>;
-	qcom,bdf-addr = <0x4D500000 0x4D500000 0x4D300000 0x0 0x0>;
 #ifdef __CNSS2__
+	qcom,bdf-addr = <0x4D500000 0x4D500000 0x4D300000 0x0 0x0>;
 	qcom,caldb-addr = <0x4E400000 0x4E400000 0 0 0>;
-#else
-	qcom,caldb-addr = <0x4E400000>;
-	m3-dump-addr = <0x4E200000>;
-#endif
 	qcom,caldb-size = <0x500000>;
 	mem-region = <&q6_qcn6122_data1>;
+#else
+	memory-region = <&q6_qcn6122_data1>;
+#endif
 	status = "ok";
 };
 
@@ -807,15 +805,14 @@
 	qcom,tgt-mem-mode = <1>;
 #endif
 	qcom,board_id = <0xb0>;
-	qcom,bdf-addr = <0x4E900000 0x4E900000 0x4E200000 0x0 0x0>;
 #ifdef __CNSS2__
+	qcom,bdf-addr = <0x4E900000 0x4E900000 0x4E200000 0x0 0x0>;
 	qcom,caldb-addr = <0x4F800000 0x4F800000 0 0 0>;
-#else
-	qcom,caldb-addr = <0x4F800000>;
-	m3-dump-addr = <0x4F600000>;
-#endif
 	qcom,caldb-size = <0x500000>;
 	mem-region = <&q6_qcn6122_data2>;
+#else
+	memory-region = <&q6_qcn6122_data2>;
+#endif
 	status = "ok";
 };
 

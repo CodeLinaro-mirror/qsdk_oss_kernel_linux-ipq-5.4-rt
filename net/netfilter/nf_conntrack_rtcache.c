@@ -114,8 +114,6 @@ static void nf_conn_rtcache_dst_set(int pf,
 static void nf_conn_rtcache_dst_obsolete(struct nf_conn_rtcache *rtc,
 					 enum ip_conntrack_dir dir)
 {
-	struct dst_entry *old;
-
 	pr_debug("Invalidate iif %d for dir %d on cache %p\n",
 		 rtc->cached_dst[dir].iif, dir, rtc);
 

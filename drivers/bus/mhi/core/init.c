@@ -11,6 +11,7 @@
 #include <linux/idr.h>
 #include <linux/interrupt.h>
 #include <linux/of_address.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/list.h>
 #include <linux/mhi.h>
 #include <linux/mod_devicetable.h>
@@ -857,7 +858,7 @@ int mhi_register_controller(struct mhi_controller *mhi_cntrl,
 	struct mhi_chan *mhi_chan;
 	struct mhi_cmd *mhi_cmd;
 	struct mhi_device *mhi_dev;
-	struct resource mhi_res;
+	struct reserved_mem *mhi_rmem = NULL;
 	struct device_node *cma_node;
 	phys_addr_t cma_addr;
 	size_t cma_size;
@@ -988,14 +989,26 @@ int mhi_register_controller(struct mhi_controller *mhi_cntrl,
 	cma_node = of_parse_phandle(mhi_cntrl->cntrl_dev->of_node,
 				    "memory-region", 1);
 
-	if (cma_node && !of_address_to_resource(cma_node, 0, &mhi_res)) {
-		cma_addr = mhi_res.start;
-		cma_size = resource_size(&mhi_res);
+	if (cma_node) {
+		mhi_rmem = of_reserved_mem_lookup(cma_node);
 
-		ret = dma_declare_coherent_memory(&mhi_dev->dev, cma_addr,
-						  cma_addr, cma_size);
-		if (ret)
-			dev_info(mhi_cntrl->cntrl_dev, "Failed to declare dma coherent memory");
+		of_node_put(cma_node);
+
+		if (mhi_rmem) {
+			cma_addr = mhi_rmem->base;
+			cma_size = mhi_rmem->size;
+
+			ret = dma_declare_coherent_memory(&mhi_dev->dev,
+							  cma_addr,
+							  cma_addr, cma_size);
+			if (ret)
+				dev_err(mhi_cntrl->cntrl_dev, "Failed to declare dma coherent memory");
+			else
+				dev_info(mhi_cntrl->cntrl_dev, "DMA Memory initialized at %pa size 0x%zx",
+					 &cma_addr, cma_size);
+		} else {
+			dev_err(mhi_cntrl->cntrl_dev, "Failed to get DMA reserved memory");
+		}
 	} else {
 		dev_err(mhi_cntrl->cntrl_dev, "mhi coherent pool is not reserved");
 	}

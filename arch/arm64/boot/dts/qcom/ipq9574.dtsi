@@ -3,6 +3,7 @@
  * IPQ9574 SoC device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -225,8 +226,14 @@
 
 		reg_update: reg_update@400000 {
 			compatible = "ipq,reg_update";
-			reg = <0x00400000 0x6148>;
-			reg-names = "memnoc";
+			reg = <0x00400000 0x6148>,<0x39D00020 0x10>;
+			reg-names = "memnoc","ubicore";
+			clocks = <&nsscc NSS_CC_NSS_CSR_CLK>,
+				 <&nsscc NSS_CC_NSSNOC_NSS_CSR_CLK>;
+			clock-names = "nss-csr-clk", "nss-nssnoc-csr-clk";
+			assigned-clocks = <&nsscc NSS_CC_NSS_CSR_CLK>,
+					  <&nsscc NSS_CC_NSSNOC_NSS_CSR_CLK>;
+			assigned-clock-rates = <100000000>,<100000000>;
 			status = "ok";
 		};
 
@@ -1199,6 +1206,10 @@
 				      "nss-nssnoc-mem-noc-1-clk", "nss-nssnoc-memnoc-clk", "nss-nssnoc-nsscc-clk",
 				      "nss-nssnoc-pcnoc-1-clk", "nss-nssnoc-qosgen-ref-clk", "nss-nssnoc-snoc-1-clk",
 				      "nss-nssnoc-snoc-clk", "nss-nssnoc-timeout-ref-clk", "nss-nssnoc-xo-dcd-clk";
+		};
+
+		nss-ppe {
+			compatible = "qcom,nss-ppe";
 		};
 
 		qcom,test@0 {
@@ -2611,24 +2622,28 @@
 			qca,auto-restart;
 			status = "disabled";
 #ifdef __IPQ_MEM_PROFILE_512_MB__
-			/* qcn9224 tgt-mem-mode=1 layout - 38MB
+			/* qcn9224 tgt-mem-mode=1 layout - 47MB
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4DD00000  |   20MB  |
+			 * | HREMOTE |  0x4CF00000  |   29MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x4F100000  |   1MB   |
+			 * | M3 Dump |  0x4EC00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x4F200000  |   1MB   |
+			 * |   ETR   |  0x4ED00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x4F300000  |   8MB   |
+			 * |  Caldb  |  0x4EE00000  |   8MB   |
+			 * +---------+--------------+---------+
+			 * |Pageable |  0x4F600000  |   8MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4DD00000>;
-			m3-dump-addr = <0x4F100000>;
-			etr-addr = <0x4F200000>;
-			caldb-addr = <0x4F300000>;
-			hremote-size = <0x1400000>;
+			base-addr = <0x4CF00000>;
+			m3-dump-addr = <0x4EC00000>;
+			etr-addr = <0x4ED00000>;
+			caldb-addr = <0x4EE00000>;
+			pageable-addr = <0x4F600000>;
+			hremote-size = <0x1D00000>;
+			pageable-size = <0x800000>;
 			tgt-mem-mode = <0x1>;
 #else
 			/* qcn9224 tgt-mem-mode=0 layout - 58MB
@@ -2877,24 +2892,28 @@
 			qca,auto-restart;
 			status = "disabled";
 #ifdef __IPQ_MEM_PROFILE_512_MB__
-			/* qcn9224 tgt-mem-mode=1 layout - 38MB
+			/* qcn9224 tgt-mem-mode=1 layout - 47MB
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4DD00000  |   20MB  |
+			 * | HREMOTE |  0x50C00000  |   29MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x4F100000  |   1MB   |
+			 * | M3 Dump |  0x52900000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x4F200000  |   1MB   |
+			 * |   ETR   |  0x52A00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x4F300000  |   8MB   |
+			 * |  Caldb  |  0x52B00000  |   8MB   |
+			 * +---------+--------------+---------+
+			 * |Pageable |  0x53300000  |   8MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4DD00000>;
-			m3-dump-addr = <0x4F100000>;
-			etr-addr = <0x4F200000>;
-			caldb-addr = <0x4F300000>;
-			hremote-size = <0x1400000>;
+			base-addr = <0x50C00000>;
+			m3-dump-addr = <0x52900000>;
+			etr-addr = <0x52A00000>;
+			caldb-addr = <0x52B00000>;
+			pageable-addr = <0x53300000>;
+			hremote-size = <0x1D00000>;
+			pageable-size = <0x800000>;
 			tgt-mem-mode = <0x1>;
 #else
 			/* qcn9224 tgt-mem-mode=0 layout - 58MB
@@ -3142,24 +3161,28 @@
 			qca,auto-restart;
 			status = "disabled";
 #ifdef __IPQ_MEM_PROFILE_512_MB__
-			/* qcn9224 tgt-mem-mode=1 layout - 38MB
+			/* qcn9224 tgt-mem-mode=1 layout - 47MB
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x50300000  |   20MB  |
+			 * | HREMOTE |  0x54900000  |   29MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x51700000  |   1MB   |
+			 * | M3 Dump |  0x56600000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x51800000  |   1MB   |
+			 * |   ETR   |  0x56700000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x51900000  |   8MB   |
+			 * |  Caldb  |  0x56800000  |   8MB   |
+			 * +---------+--------------+---------+
+			 * |Pageable |  0x57000000  |   8MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x50300000>;
-			m3-dump-addr = <0x51700000>;
-			etr-addr = <0x51800000>;
-			caldb-addr = <0x51900000>;
-			hremote-size = <0x1400000>;
+			base-addr = <0x54900000>;
+			m3-dump-addr = <0x56600000>;
+			etr-addr = <0x56700000>;
+			caldb-addr = <0x56800000>;
+			pageable-addr = <0x57000000>;
+			hremote-size = <0x1D00000>;
+			pageable-size = <0x800000>;
 			tgt-mem-mode = <0x1>;
 #else
 			/* qcn9224 tgt-mem-mode=0 layout - 58MB
@@ -3407,24 +3430,28 @@
 			qca,auto-restart;
 			status = "disabled";
 #ifdef __IPQ_MEM_PROFILE_512_MB__
-			/* qcn9224 tgt-mem-mode=1 layout - 38MB
+			/* qcn9224 tgt-mem-mode=1 layout - 47MB
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4DD00000  |   20MB  |
+			 * | HREMOTE |  0x58600000  |   29MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x4F100000  |   1MB   |
+			 * | M3 Dump |  0x5A300000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x4F200000  |   1MB   |
+			 * |   ETR   |  0x5A400000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x4F300000  |   8MB   |
+			 * |  Caldb  |  0x5A500000  |   8MB   |
+			 * +---------+--------------+---------+
+			 * |Pageable |  0x5AD00000  |   8MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4DD00000>;
-			m3-dump-addr = <0x4F100000>;
-			etr-addr = <0x4F200000>;
-			caldb-addr = <0x4F300000>;
-			hremote-size = <0x1400000>;
+			base-addr = <0x58600000>;
+			m3-dump-addr = <0x5A300000>;
+			etr-addr = <0x5A400000>;
+			caldb-addr = <0x5A500000>;
+			pageable-addr = <0x5AD00000>;
+			hremote-size = <0x1D00000>;
+			pageable-size = <0x800000>;
 			tgt-mem-mode = <0x1>;
 #else
 			/* qcn9224 tgt-mem-mode=0 layout - 58MB

@@ -1693,7 +1693,8 @@ static void pre_command(struct qcom_nand_host *host, int command)
 	clear_read_regs(nandc);
 
 	if (command == NAND_CMD_RESET || command == NAND_CMD_READID ||
-	    command == NAND_CMD_PARAM || command == NAND_CMD_ERASE1)
+	    command == NAND_CMD_PARAM || command == NAND_CMD_ERASE1 ||
+	    command == NAND_CMD_READID_SERIAL)
 		clear_bam_transaction(nandc);
 }
 
@@ -3335,11 +3336,15 @@ static int qcom_serial_get_feature(struct qcom_nand_controller *nandc,
 				command);
 		return ret;
 	}
+
+	nandc_read_buffer_sync(nandc, true);
+
 	/* read_reg_dma will read data in to nandc->reg_read_buf
 	 * so after issueing command in read_reg_dma function read reg_read_buf
 	 * buffer
 	 */
-	ret = *(__le32 *)nandc->reg_read_buf;
+	ret = le32_to_cpu(*(__le32 *)nandc->reg_read_buf);
+
 	return ret;
 }
 

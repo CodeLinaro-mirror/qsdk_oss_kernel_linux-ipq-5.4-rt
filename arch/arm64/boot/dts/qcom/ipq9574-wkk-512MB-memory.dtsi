@@ -58,39 +58,39 @@
 	 * | caldb  |  0x4CA00000  |           5MB           |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  Wkk0  |  0x4CF00000  |          46MB           |
+	 * |  Wkk0  |  0x4CF00000  |          47MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  MHI0  |  0x4F700000  |          26MB           |
+	 * |  MHI0  |  0x4FE00000  |          14MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  Wkk1  |  0x51100000  |          46MB           |
+	 * |  Wkk1  |  0x50C00000  |          47MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  MHI1  |  0x53900000  |          26MB           |
+	 * |  MHI1  |  0x53B00000  |          14MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  WKK2  |  0x55300000  |          46MB           |
+	 * |  WKK2  |  0x54900000  |          47MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  MHI2  |  0x57B00000  |          26MB           |
+	 * |  MHI2  |  0x57800000  |          14MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  WKK3  |  0x59500000  |          46MB           |
+	 * |  WKK3  |  0x58600000  |          47MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  MHI3  |  0x5BD00000  |          26MB           |
+	 * |  MHI3  |  0x5B500000  |          14MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  MLO   |  0x5D700000  |          17MB           |
+	 * |  MLO   |    DYNAMIC   | Depending on the Config |
 	 * |        |              |                         |
 	 * +=================================================+
 	 * |                                                 |
@@ -164,59 +164,59 @@
 
 		qcn9224_pcie0: qcn9224_pcie0@4cf00000 {
 			no-map;
-			reg = <0x0 0x4CF00000 0x0 0x02800000>;
+			reg = <0x0 0x4CF00000 0x0 0x02F00000>;
 			status = "disabled";
 		};
 
-		mhi_region0: dma_pool0@4f700000 {
+		mhi_region0: dma_pool0@4fe00000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x0 0x4F700000 0x0 0x01A00000>;
+			reg = <0x0 0x4FE00000 0x0 0x00E00000>;
 			status = "disabled";
 		};
 
-		qcn9224_pcie1: qcn9224_pcie1@51100000 {
+		qcn9224_pcie1: qcn9224_pcie1@50C00000 {
 			no-map;
-			reg = <0x0 0x51100000 0x0 0x02800000>;
+			reg = <0x0 0x50C00000 0x0 0x02F00000>;
 			status = "disabled";
 		};
 
-		mhi_region1: dma_pool1@53900000 {
+		mhi_region1: dma_pool1@53B00000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x0 0x53900000 0x0 0x01A00000>;
+			reg = <0x0 0x53B00000 0x0 0x00E00000>;
 			status = "disabled";
 		};
 
-		qcn9224_pcie2: qcn9224_pcie2@55300000 {
+		qcn9224_pcie2: qcn9224_pcie2@54900000 {
 			no-map;
-			reg = <0x0 0x55300000 0x0 0x02800000>;
+			reg = <0x0 0x54900000 0x0 0x02F00000>;
 			status = "disabled";
 		};
 
-		mhi_region2: dma_pool2@57B00000 {
+		mhi_region2: dma_pool2@57800000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x0 0x57B00000 0x0 0x01A00000>;
+			reg = <0x0 0x57800000 0x0 0x00E00000>;
 			status = "disabled";
 		};
 
-		qcn9224_pcie3: qcn9224_pcie3@59500000 {
+		qcn9224_pcie3: qcn9224_pcie3@58600000 {
 			no-map;
-			reg = <0x0 0x59500000 0x0 0x02800000>;
+			reg = <0x0 0x58600000 0x0 0x02F00000>;
 			status = "disabled";
 		};
 
-		mhi_region3: dma_pool3@5bd00000 {
+		mhi_region3: dma_pool3@5b500000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x0 0x5BD00000 0x0 0x01A00000>;
+			reg = <0x0 0x5B500000 0x0 0x00E00000>;
 			status = "disabled";
 		};
 
-		mlo_global_mem: mlo_global_mem0@5d700000 {
+		mlo_global_mem0: mlo_global_mem_0@0 {
 			no-map;
-			reg = <0x0 0x5D700000 0x0 0x1100000>;
+			size = <0x0 0x1100000>;
 			status = "disabled";
 		};
 

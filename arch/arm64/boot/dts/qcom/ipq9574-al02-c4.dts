@@ -619,10 +619,6 @@
 	status = "ok";
 };
 
-&mlo_global_mem {
-	status = "ok";
-};
-
 &mlo_global_mem0 {
 	status = "ok";
 };

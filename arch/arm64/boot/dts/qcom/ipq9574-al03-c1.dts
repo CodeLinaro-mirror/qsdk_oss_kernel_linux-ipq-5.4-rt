@@ -293,7 +293,7 @@
 			status = "ok";
 		};
 
-		mdio@90000 {
+		mdio:mdio@90000 {
 			status = "ok";
 			pinctrl-0 = <&mdio_pins>;
 			pinctrl-names = "default";
@@ -390,6 +390,27 @@
 					active = "high";
 				};
 			};
+		};
+
+		nss-macsec0 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x1>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec1 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x2>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec2 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x3>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec3 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x4>;
+			mdiobus = <&mdio>;
 		};
 
 		/* EDMA host driver configuration for the board */
@@ -540,7 +561,7 @@
 };
 
 &wifi6 {
-	hremote_node = <&qcn9224_pcie1>;
+	hremote_node = <&qcn9224_pcie2>;
 	board_id = <0x04>;
 	status = "ok";
 };

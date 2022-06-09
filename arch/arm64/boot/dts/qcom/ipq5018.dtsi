@@ -199,6 +199,7 @@
 			#dma-cells = <1>;
 			qcom,ee = <1>;
 			qcom,controlled-remotely = <1>;
+			qti,config-pipe-trust-reg = <0>;
 		};
 
 		crypto: crypto@73a000 {

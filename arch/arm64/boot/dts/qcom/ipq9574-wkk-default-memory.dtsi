@@ -6,6 +6,9 @@
  * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+#include "ipq9574-wkk-512MB-memory.dtsi"
+#else
 / {
 
 	/*		  Default Profile for Waikiki
@@ -213,14 +216,6 @@
 			status = "disabled";
                 };
 
-		/* This node will be removed once driver moves
-		 * to use new node below */
-		mlo_global_mem: mlo_global_mem0@52d00000 {
-			no-map;
-			reg = <0x0 0x62D00000 0x0 0x1100000>;
-			status = "disabled";
-		};
-
 		mlo_global_mem0: mlo_global_mem_0@0 {
 			no-map;
 			size = <0x0 0x1100000>;
@@ -233,3 +228,4 @@
 		};
 	};
 };
+#endif

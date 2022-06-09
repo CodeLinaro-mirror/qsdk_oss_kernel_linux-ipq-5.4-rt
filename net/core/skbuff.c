@@ -465,7 +465,6 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev,
 				   unsigned int length, gfp_t gfp_mask)
 {
 	struct sk_buff *skb;
-	struct skb_shared_info *shinfo;
 	unsigned int len = length;
 
 #ifdef CONFIG_SKB_RECYCLER
@@ -489,6 +488,7 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev,
 	 * Change the skb end to keep it in sync with the truesize.
 	 */
 	if (length + NET_SKB_PAD < SKB_WITH_OVERHEAD(PAGE_SIZE)) {
+		struct skb_shared_info *shinfo;
 		skb->truesize = SKB_TRUESIZE(SKB_DATA_ALIGN(length + NET_SKB_PAD));
 		skb->end = skb->tail + SKB_DATA_ALIGN(length + NET_SKB_PAD);
 

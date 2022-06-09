@@ -109,11 +109,11 @@
 	 * +--------+--------------+-------------------------+
 	 * | M3 Dump|  0x51000000  |           1MB           |
 	 * +--------+--------------+-------------------------+
-	 * |  Wkk   |  0x51100000  |          46MB           |
+	 * |  Wkk   |  0x51100000  |          58MB           |
 	 * +--------+--------------+-------------------------+
-	 * |  MHI0  |  0x53F00000  |          26MB           |
+	 * |  MHI0  |  0x54B00000  |          26MB           |
 	 * +--------+--------------+-------------------------+
-	 * |  MLO   |  0x55900000  |          16MB           |
+	 * |  MLO   |   Dynamic    |          17MB           |
 	 * +--------+--------------+-------------------------+
 	 * |                                                 |
 	 * |          Rest of the memory for Linux           |
@@ -122,17 +122,17 @@
 	 */
 		qcn9224_pcie0: qcn9224_pcie0@51100000 {
 			no-map;
-			reg = <0x0 0x51100000 0x0 0x02E00000>;
+			reg = <0x0 0x51100000 0x0 0x03A00000>;
 		};
 
-		mhi_region0: dma_pool0@53f00000 {
+		mhi_region0: dma_pool0@54b00000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x0 0x53F00000 0x0 0x01A00000>;
+			reg = <0x0 0x54B00000 0x0 0x01A00000>;
 		};
-		mlo_global_mem: mlo_global_mem0@55900000 {
+		mlo_global_mem0: mlo_global_mem_0@0 {
 			no-map;
-			reg = <0x0 0x55900000 0x0 0x1000000>;
+			size = <0x0 0x1100000>;
 		};
 #endif
 #endif
@@ -796,30 +796,6 @@
 			mdiobus = <&mdio>;
 		};
 	};
-#if !defined(__IPQ_MEM_PROFILE_256_MB__)
-	mlo_chip_info0: mlo_chip0 {
-		chip_id =  /bits/ 8 <0>;
-		num_local_links =  /bits/ 8 <2>;
-		hw_link_ids =  /bits/ 8 <0x0 0x1>;
-		valid_mlo_link_ids =  /bits/ 8 <0x1 0x1>;
-	};
-
-	mlo_chip_info1: mlo_chip1 {
-		chip_id =  /bits/ 8 <1>;
-		num_local_links =  /bits/ 8 <2>;
-		hw_link_ids =  /bits/ 8 <0x2 0x3>;
-		valid_mlo_link_ids =  /bits/ 8 <0x1 0x1>;
-	};
-
-	mlo_info: mlo_group0 {
-		mlo_group_id = /bits/ 8 <0>;
-		mlo_max_num_peer = /bits/ 16 <256>;
-		mlo_num_chips = /bits/ 8 <1>;
-		mlo_global_mem = <&mlo_global_mem>;
-		chips = <&mlo_chip_info0>, <&mlo_chip_info1>;
-
-	};
-#endif
 };
 
 #if !defined(__IPQ_MEM_PROFILE_256_MB__)
@@ -845,7 +821,7 @@
 	hremote-size = <0x1400000>;
 	tgt-mem-mode = <0x1>;
 #else
-      /* QCN9224 tgt-mem-mode=0 layout - 45MB
+      /* QCN9224 tgt-mem-mode=0 layout - 58MB
        * +=========+==============+=========+
        * |  Region | Start Offset |   Size  |
        * +---------+--------------+---------+
@@ -856,20 +832,22 @@
        * |   ETR   |  0x53600000  |   1MB   |
        * +---------+--------------+---------+
        * |  Caldb  |  0x53700000  |   8MB   |
+       * +---------+--------------+---------+
+       * |Pageable |  0x53F00000  |  12MB   |
        * +==================================+
        */
 	base-addr = <0x51100000>;
 	m3-dump-addr = <0x53500000>;
 	etr-addr = <0x53600000>;
 	caldb-addr = <0x53700000>;
+	pageable-addr = <0x53F00000>;
 	hremote-size = <0x2400000>;
+	pageable-size = <0xC00000>;
 	tgt-mem-mode = <0x0>;
 #endif
 	caldb-size = <0x800000>;
 	hremote_node = <&qcn9224_pcie0>;
 	mhi_node = <&mhi_region0>;
-	mlo_group_info = <&mlo_info>;
-	mlo_chip_info = <&mlo_chip_info0>;
 	status = "ok";
 };
 #endif

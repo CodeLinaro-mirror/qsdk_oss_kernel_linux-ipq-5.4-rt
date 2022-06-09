@@ -27,6 +27,3112 @@
 #include "clk-regmap-mux.h"
 #include "reset.h"
 
+enum {
+	P_CORE_BI_PLL_TEST_SE,
+	P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC,
+	P_GPLL0_OUT_AUX,
+	P_GPLL0_OUT_MAIN,
+	P_GPLL2_OUT_AUX,
+	P_GPLL2_OUT_MAIN,
+	P_GPLL4_OUT_AUX,
+	P_GPLL4_OUT_MAIN,
+	P_GPLL6_OUT_AUX,
+	P_SLEEP_CLK,
+	P_XO,
+};
+
+static struct clk_alpha_pll gpll0 = {
+	.offset = 0x20000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.clkr = {
+		.enable_reg = 0xb000,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gpll0",
+			.parent_data = &(const struct clk_parent_data){
+				.fw_name = "xo",
+			},
+			.num_parents = 1,
+			.ops = &clk_alpha_pll_ops,
+		},
+	},
+};
+
+static struct clk_alpha_pll gpll2 = {
+	.offset = 0x21000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.clkr = {
+		.enable_reg = 0xb000,
+		.enable_mask = BIT(1),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gpll2",
+			.parent_data = &(const struct clk_parent_data){
+				.fw_name = "xo",
+			},
+			.num_parents = 1,
+			.ops = &clk_alpha_pll_ops,
+		},
+	},
+};
+
+static struct clk_alpha_pll gpll4 = {
+	.offset = 0x22000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.clkr = {
+		.enable_reg = 0xb000,
+		.enable_mask = BIT(2),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gpll4",
+			.parent_data = &(const struct clk_parent_data){
+				.fw_name = "xo",
+			},
+			.num_parents = 1,
+			.ops = &clk_alpha_pll_ops,
+		},
+	},
+};
+
+static struct clk_alpha_pll gpll6 = {
+	.offset = 0x1f000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.clkr = {
+		.hw.init = &(const struct clk_init_data){
+			.name = "gpll6",
+			.parent_data = &(const struct clk_parent_data){
+				.fw_name = "xo",
+			},
+			.num_parents = 1,
+			.ops = &clk_alpha_pll_ops,
+		},
+	},
+};
+
+static const struct parent_map gcc_parent_map_0[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_0[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_1[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_1[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_2[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GPLL4_OUT_MAIN, 2 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_2[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll4.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_3[] = {
+	{ P_XO, 0 },
+};
+
+static const struct clk_parent_data gcc_parent_data_3[] = {
+	{ .fw_name = "xo" },
+};
+
+static const struct parent_map gcc_parent_map_4[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GPLL6_OUT_AUX, 2 },
+	{ P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4 },
+	{ P_SLEEP_CLK, 6 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_4[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll6.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "sleep_clk" },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_5[] = {
+	{ P_XO, 0 },
+	{ P_GPLL4_OUT_MAIN, 1 },
+	{ P_GPLL0_OUT_AUX, 2 },
+	{ P_GPLL6_OUT_AUX, 3 },
+	{ P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_5[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll4.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll6.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_6[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GPLL2_OUT_AUX, 2 },
+	{ P_GPLL4_OUT_AUX, 3 },
+	{ P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4 },
+	{ P_GPLL0_OUT_AUX, 5 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_6[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll2.clkr.hw },
+	{ .hw = &gpll4.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_7[] = {
+	{ P_XO, 0 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_7[] = {
+	{ .fw_name = "xo" },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_8[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GPLL0_OUT_AUX, 2 },
+	{ P_SLEEP_CLK, 6 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_8[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "sleep_clk" },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_9[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GPLL2_OUT_AUX, 2 },
+	{ P_GPLL4_OUT_AUX, 3 },
+	{ P_SLEEP_CLK, 6 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_9[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll2.clkr.hw },
+	{ .hw = &gpll4.clkr.hw },
+	{ .fw_name = "sleep_clk" },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_10[] = {
+	{ P_XO, 0 },
+	{ P_GPLL4_OUT_MAIN, 1 },
+	{ P_GPLL0_OUT_AUX, 2 },
+	{ P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_10[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll4.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_11[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GPLL2_OUT_AUX, 2 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_11[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll2.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_12[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MAIN, 1 },
+	{ P_GPLL2_OUT_MAIN, 2 },
+	{ P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_12[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll2.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_13[] = {
+	{ P_SLEEP_CLK, 6 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_13[] = {
+	{ .fw_name = "sleep_clk" },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_14[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_AUX, 2 },
+	{ P_SLEEP_CLK, 6 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_14[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "sleep_clk" },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct parent_map gcc_parent_map_15[] = {
+	{ P_XO, 0 },
+	{ P_GPLL4_OUT_AUX, 1 },
+	{ P_GPLL0_OUT_MAIN, 3 },
+	{ P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
+};
+
+static const struct clk_parent_data gcc_parent_data_15[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll4.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .hw = &gpll0.clkr.hw },
+	{ .fw_name = "core_bi_pll_test_se" },
+};
+
+static const struct freq_tbl ftbl_gcc_adss_pwm_clk_src[] = {
+	F(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_adss_pwm_clk_src = {
+	.cmd_rcgr = 0x1c004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_1,
+	.freq_tbl = ftbl_gcc_adss_pwm_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_adss_pwm_clk_src",
+		.parent_data = gcc_parent_data_1,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_1),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_apc0_voltage_droop_detector_clk_src[] = {
+	F(600000000, P_GPLL4_OUT_MAIN, 2, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_apc0_voltage_droop_detector_clk_src = {
+	.cmd_rcgr = 0x38004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_2,
+	.freq_tbl = ftbl_gcc_apc0_voltage_droop_detector_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_apc0_voltage_droop_detector_clk_src",
+		.parent_data = gcc_parent_data_2,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_2),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_apss_ahb_clk_src = {
+	.cmd_rcgr = 0x2400c,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_adss_pwm_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_apss_ahb_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_apss_axi_clk_src[] = {
+	F(533333333, P_GPLL0_OUT_MAIN, 1.5, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_apss_axi_clk_src = {
+	.cmd_rcgr = 0x24004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_6,
+	.freq_tbl = ftbl_gcc_apss_axi_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_apss_axi_clk_src",
+		.parent_data = gcc_parent_data_6,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_6),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_blsp1_qup1_spi_apps_clk_src[] = {
+	F(960000, P_XO, 1, 1, 25),
+	F(4800000, P_XO, 5, 0, 0),
+	F(9600000, P_XO, 2.5, 0, 0),
+	F(16000000, P_GPLL0_OUT_MAIN, 10, 1, 5),
+	F(24000000, P_XO, 1, 0, 0),
+	F(25000000, P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 16, 0, 0),
+	F(50000000, P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 8, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_blsp1_qup1_spi_apps_clk_src = {
+	.cmd_rcgr = 0x2004,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_blsp1_qup1_spi_apps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_blsp1_qup1_spi_apps_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_blsp1_qup2_spi_apps_clk_src = {
+	.cmd_rcgr = 0x3004,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_blsp1_qup1_spi_apps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_blsp1_qup2_spi_apps_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_blsp1_qup3_spi_apps_clk_src = {
+	.cmd_rcgr = 0x4004,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_blsp1_qup1_spi_apps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_blsp1_qup3_spi_apps_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_blsp1_uart1_apps_clk_src[] = {
+	F(3686400, P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 1, 144, 15625),
+	F(7372800, P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 1, 288, 15625),
+	F(14745600, P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 1, 576, 15625),
+	F(24000000, P_XO, 1, 0, 0),
+	F(25000000, P_GPLL0_OUT_MAIN, 16, 1, 2),
+	F(32000000, P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 12.5, 0, 0),
+	F(40000000, P_GPLL0_OUT_MAIN, 1, 1, 20),
+	F(46400000, P_GPLL0_OUT_MAIN, 1, 29, 500),
+	F(48000000, P_GPLL0_OUT_MAIN, 1, 3, 50),
+	F(51200000, P_GPLL0_OUT_MAIN, 1, 8, 125),
+	F(56000000, P_GPLL0_OUT_MAIN, 1, 7, 100),
+	F(58982400, P_GPLL0_OUT_MAIN, 1, 1152, 15625),
+	F(60000000, P_GPLL0_OUT_MAIN, 1, 3, 40),
+	F(64000000, P_GPLL0_OUT_MAIN, 12.5, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_blsp1_uart1_apps_clk_src = {
+	.cmd_rcgr = 0x202c,
+	.mnd_width = 16,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_blsp1_uart1_apps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_blsp1_uart1_apps_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_blsp1_uart2_apps_clk_src = {
+	.cmd_rcgr = 0x302c,
+	.mnd_width = 16,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_blsp1_uart1_apps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_blsp1_uart2_apps_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_blsp1_uart3_apps_clk_src = {
+	.cmd_rcgr = 0x402c,
+	.mnd_width = 16,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_blsp1_uart1_apps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_blsp1_uart3_apps_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_gp1_clk_src[] = {
+	F(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_gp1_clk_src = {
+	.cmd_rcgr = 0x8004,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_4,
+	.freq_tbl = ftbl_gcc_gp1_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_gp1_clk_src",
+		.parent_data = gcc_parent_data_4,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_4),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_gp2_clk_src = {
+	.cmd_rcgr = 0x9004,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_4,
+	.freq_tbl = ftbl_gcc_gp1_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_gp2_clk_src",
+		.parent_data = gcc_parent_data_4,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_4),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_lpass_sway_clk_src[] = {
+	F(133333333, P_GPLL0_OUT_MAIN, 6, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_lpass_sway_clk_src = {
+	.cmd_rcgr = 0x27004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_1,
+	.freq_tbl = ftbl_gcc_lpass_sway_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_lpass_sway_clk_src",
+		.parent_data = gcc_parent_data_1,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_1),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_nss_ts_clk_src[] = {
+	F(24000000, P_XO, 1, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_nss_ts_clk_src = {
+	.cmd_rcgr = 0x17088,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_7,
+	.freq_tbl = ftbl_gcc_nss_ts_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_nss_ts_clk_src",
+		.parent_data = gcc_parent_data_7,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_7),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_pcie3x1_0_axi_clk_src[] = {
+	F(240000000, P_GPLL4_OUT_MAIN, 5, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_pcie3x1_0_axi_clk_src = {
+	.cmd_rcgr = 0x29018,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_2,
+	.freq_tbl = ftbl_gcc_pcie3x1_0_axi_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie3x1_0_axi_clk_src",
+		.parent_data = gcc_parent_data_2,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_2),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_pcie3x1_0_rchg_clk_src = {
+	.cmd_rcgr = 0x2907c,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_adss_pwm_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie3x1_0_rchg_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_pcie3x1_1_axi_clk_src = {
+	.cmd_rcgr = 0x2a004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_2,
+	.freq_tbl = ftbl_gcc_pcie3x1_0_axi_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie3x1_1_axi_clk_src",
+		.parent_data = gcc_parent_data_2,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_2),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_pcie3x1_1_rchg_clk_src = {
+	.cmd_rcgr = 0x2a078,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_adss_pwm_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie3x1_1_rchg_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_pcie3x2_axi_m_clk_src[] = {
+	F(266666667, P_GPLL4_OUT_MAIN, 4.5, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_pcie3x2_axi_m_clk_src = {
+	.cmd_rcgr = 0x28018,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_2,
+	.freq_tbl = ftbl_gcc_pcie3x2_axi_m_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie3x2_axi_m_clk_src",
+		.parent_data = gcc_parent_data_2,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_2),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_pcie3x2_axi_s_clk_src = {
+	.cmd_rcgr = 0x28084,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_2,
+	.freq_tbl = ftbl_gcc_pcie3x1_0_axi_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie3x2_axi_s_clk_src",
+		.parent_data = gcc_parent_data_2,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_2),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_pcie3x2_rchg_clk_src = {
+	.cmd_rcgr = 0x28078,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_adss_pwm_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie3x2_rchg_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_pcie_aux_clk_src[] = {
+	F(2000000, P_XO, 12, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_pcie_aux_clk_src = {
+	.cmd_rcgr = 0x28004,
+	.mnd_width = 16,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_8,
+	.freq_tbl = ftbl_gcc_pcie_aux_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_pcie_aux_clk_src",
+		.parent_data = gcc_parent_data_8,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_8),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_q6_axim_clk_src = {
+	.cmd_rcgr = 0x25004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_9,
+	.freq_tbl = NULL,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_q6_axim_clk_src",
+		.parent_data = gcc_parent_data_9,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_9),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_qdss_at_clk_src[] = {
+	F(240000000, P_GPLL4_OUT_MAIN, 5, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_qdss_at_clk_src = {
+	.cmd_rcgr = 0x2d004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_5,
+	.freq_tbl = ftbl_gcc_qdss_at_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_qdss_at_clk_src",
+		.parent_data = gcc_parent_data_5,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_5),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_qdss_stm_clk_src = {
+	.cmd_rcgr = 0x2d00c,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_gp1_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_qdss_stm_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_qdss_traceclkin_clk_src[] = {
+	F(300000000, P_GPLL4_OUT_MAIN, 4, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_qdss_traceclkin_clk_src = {
+	.cmd_rcgr = 0x2d014,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_10,
+	.freq_tbl = ftbl_gcc_qdss_traceclkin_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_qdss_traceclkin_clk_src",
+		.parent_data = gcc_parent_data_10,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_10),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_qdss_tsctr_clk_src[] = {
+	F(600000000, P_GPLL4_OUT_MAIN, 2, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_qdss_tsctr_clk_src = {
+	.cmd_rcgr = 0x2d01c,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_5,
+	.freq_tbl = ftbl_gcc_qdss_tsctr_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_qdss_tsctr_clk_src",
+		.parent_data = gcc_parent_data_5,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_5),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_qpic_io_macro_clk_src[] = {
+	F(400000000, P_GPLL0_OUT_MAIN, 2, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_qpic_io_macro_clk_src = {
+	.cmd_rcgr = 0x32004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_11,
+	.freq_tbl = ftbl_gcc_qpic_io_macro_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_qpic_io_macro_clk_src",
+		.parent_data = gcc_parent_data_11,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_11),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_sdcc1_apps_clk_src[] = {
+	F(143713, P_XO, 1, 1, 167),
+	F(400000, P_XO, 1, 1, 60),
+	F(24000000, P_XO, 1, 0, 0),
+	F(48000000, P_GPLL2_OUT_MAIN, 12, 1, 2),
+	F(96000000, P_GPLL2_OUT_MAIN, 12, 0, 0),
+	F(100000000, P_GCC_GPLL0_OUT_MAIN_DIV_CLK_SRC, 4, 0, 0),
+	F(177777778, P_GPLL0_OUT_MAIN, 4.5, 0, 0),
+	F(192000000, P_GPLL2_OUT_MAIN, 6, 0, 0),
+	F(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_sdcc1_apps_clk_src = {
+	.cmd_rcgr = 0x33004,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_12,
+	.freq_tbl = ftbl_gcc_sdcc1_apps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_sdcc1_apps_clk_src",
+		.parent_data = gcc_parent_data_12,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_12),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_sleep_clk_src[] = {
+	F(32000, P_SLEEP_CLK, 1, 0, 0),
+	{ }
+};
+
+static struct clk_rcg2 gcc_sleep_clk_src = {
+	.cmd_rcgr = 0x3400c,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_13,
+	.freq_tbl = ftbl_gcc_sleep_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_sleep_clk_src",
+		.parent_data = gcc_parent_data_13,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_13),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_uniphy_sys_clk_src = {
+	.cmd_rcgr = 0x16004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_3,
+	.freq_tbl = ftbl_gcc_nss_ts_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_uniphy_sys_clk_src",
+		.parent_data = gcc_parent_data_3,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_3),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_usb0_aux_clk_src = {
+	.cmd_rcgr = 0x2c018,
+	.mnd_width = 16,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_14,
+	.freq_tbl = ftbl_gcc_pcie_aux_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_usb0_aux_clk_src",
+		.parent_data = gcc_parent_data_14,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_14),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_usb0_lfps_clk_src[] = {
+	F(25000000, P_GPLL0_OUT_MAIN, 16, 1, 2),
+	{ }
+};
+
+static struct clk_rcg2 gcc_usb0_lfps_clk_src = {
+	.cmd_rcgr = 0x2c07c,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_1,
+	.freq_tbl = ftbl_gcc_usb0_lfps_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_usb0_lfps_clk_src",
+		.parent_data = gcc_parent_data_1,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_1),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_usb0_master_clk_src = {
+	.cmd_rcgr = 0x2c004,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_0,
+	.freq_tbl = ftbl_gcc_gp1_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_usb0_master_clk_src",
+		.parent_data = gcc_parent_data_0,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static const struct freq_tbl ftbl_gcc_usb0_mock_utmi_clk_src[] = {
+	F(60000000, P_GPLL4_OUT_AUX, 10, 1, 2),
+	{ }
+};
+
+static struct clk_rcg2 gcc_usb0_mock_utmi_clk_src = {
+	.cmd_rcgr = 0x2c02c,
+	.mnd_width = 8,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_15,
+	.freq_tbl = ftbl_gcc_usb0_mock_utmi_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_usb0_mock_utmi_clk_src",
+		.parent_data = gcc_parent_data_15,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_15),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_wcss_ahb_clk_src = {
+	.cmd_rcgr = 0x25030,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_1,
+	.freq_tbl = ftbl_gcc_lpass_sway_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_wcss_ahb_clk_src",
+		.parent_data = gcc_parent_data_1,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_1),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_rcg2 gcc_xo_clk_src = {
+	.cmd_rcgr = 0x34004,
+	.mnd_width = 0,
+	.hid_width = 5,
+	.parent_map = gcc_parent_map_3,
+	.freq_tbl = ftbl_gcc_nss_ts_clk_src,
+	.clkr.hw.init = &(const struct clk_init_data){
+		.name = "gcc_xo_clk_src",
+		.parent_data = gcc_parent_data_3,
+		.num_parents = ARRAY_SIZE(gcc_parent_data_3),
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_regmap_div gcc_usb0_mock_utmi_div_clk_src = {
+	.reg = 0x2c040,
+	.shift = 0,
+	.width = 2,
+	.clkr.hw.init = &(const struct clk_init_data) {
+		.name = "gcc_usb0_mock_utmi_div_clk_src",
+		.parent_hws = (const struct clk_hw*[]){
+			&gcc_usb0_mock_utmi_clk_src.clkr.hw,
+		},
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_regmap_div_ro_ops,
+	},
+};
+
+static struct clk_branch gcc_adss_pwm_clk = {
+	.halt_reg = 0x1c00c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x1c00c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_adss_pwm_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_adss_pwm_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_ahb_clk = {
+	.halt_reg = 0x34024,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x34024,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_apc0_voltage_droop_detector_gpll0_clk = {
+	.halt_reg = 0x3800c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3800c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_apc0_voltage_droop_detector_gpll0_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_apc0_voltage_droop_detector_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_apss_ahb_clk = {
+	.halt_reg = 0x24018,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_apss_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_apss_ahb_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_apss_axi_clk = {
+	.halt_reg = 0x2401c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(1),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_apss_axi_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_apss_axi_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_ahb_clk = {
+	.halt_reg = 0x1008,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(4),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_qup1_i2c_apps_clk = {
+	.halt_reg = 0x2024,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2024,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_qup1_i2c_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_qup1_spi_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_qup1_spi_apps_clk = {
+	.halt_reg = 0x2020,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2020,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_qup1_spi_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_qup1_spi_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_qup2_i2c_apps_clk = {
+	.halt_reg = 0x3024,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3024,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_qup2_i2c_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_qup2_spi_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_qup2_spi_apps_clk = {
+	.halt_reg = 0x3020,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3020,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_qup2_spi_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_qup2_spi_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_qup3_i2c_apps_clk = {
+	.halt_reg = 0x4024,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x4024,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_qup3_i2c_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_qup3_spi_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_qup3_spi_apps_clk = {
+	.halt_reg = 0x4020,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x4020,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_qup3_spi_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_qup3_spi_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_sleep_clk = {
+	.halt_reg = 0x1010,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(5),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_sleep_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_sleep_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_uart1_apps_clk = {
+	.halt_reg = 0x2040,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2040,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_uart1_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_uart1_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_uart2_apps_clk = {
+	.halt_reg = 0x3040,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3040,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_uart2_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_uart2_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_blsp1_uart3_apps_clk = {
+	.halt_reg = 0x4054,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x4054,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_blsp1_uart3_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_blsp1_uart3_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_boot_rom_ahb_clk = {
+	.halt_reg = 0x1302c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(11),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_boot_rom_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_gp1_clk = {
+	.halt_reg = 0x8018,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x8018,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_gp1_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_gp1_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_gp2_clk = {
+	.halt_reg = 0x9018,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x9018,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_gp2_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_gp2_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_im_sleep_clk = {
+	.halt_reg = 0x34020,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x34020,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_im_sleep_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_sleep_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_lpass_core_axim_clk = {
+	.halt_reg = 0x27018,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x27018,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_lpass_core_axim_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_lpass_sway_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_lpass_sway_clk = {
+	.halt_reg = 0x27014,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x27014,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_lpass_sway_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_lpass_sway_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_mpm_ahb_clk = {
+	.halt_reg = 0x37004,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(13),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_mpm_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nss_ts_clk = {
+	.halt_reg = 0x17018,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x17018,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nss_ts_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_nss_ts_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nsscc_clk = {
+	.halt_reg = 0x17034,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17034,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nsscc_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nsscfg_clk = {
+	.halt_reg = 0x1702c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x1702c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nsscfg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_atb_clk = {
+	.halt_reg = 0x17014,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17014,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_atb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_at_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_nsscc_clk = {
+	.halt_reg = 0x17030,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17030,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_nsscc_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_pcnoc_1_clk = {
+	.halt_reg = 0x17080,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17080,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_pcnoc_1_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_qosgen_ref_clk = {
+	.halt_reg = 0x1701c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x1701c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_qosgen_ref_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_xo_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_snoc_1_clk = {
+	.halt_reg = 0x1707c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x1707c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_snoc_1_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_snoc_clk = {
+	.halt_reg = 0x17028,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17028,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_snoc_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_timeout_ref_clk = {
+	.halt_reg = 0x17020,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17020,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_timeout_ref_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_xo_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_nssnoc_xo_dcd_clk = {
+	.halt_reg = 0x17074,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17074,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_nssnoc_xo_dcd_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_xo_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_0_ahb_clk = {
+	.halt_reg = 0x29030,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x29030,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_0_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_0_aux_clk = {
+	.halt_reg = 0x29070,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x29070,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_0_aux_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie_aux_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_0_axi_m_clk = {
+	.halt_reg = 0x29038,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x29038,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_0_axi_m_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x1_0_axi_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_0_axi_s_bridge_clk = {
+	.halt_reg = 0x29048,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x29048,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_0_axi_s_bridge_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x1_0_axi_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_0_axi_s_clk = {
+	.halt_reg = 0x29040,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x29040,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_0_axi_s_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x1_0_axi_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_0_pipe_clk = {
+	.halt_reg = 0x29068,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x29068,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_0_pipe_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_1_ahb_clk = {
+	.halt_reg = 0x2a00c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2a00c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_1_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_1_aux_clk = {
+	.halt_reg = 0x2a070,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2a070,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_1_aux_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie_aux_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_1_axi_m_clk = {
+	.halt_reg = 0x2a014,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2a014,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_1_axi_m_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x1_1_axi_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_1_axi_s_bridge_clk = {
+	.halt_reg = 0x2a024,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2a024,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_1_axi_s_bridge_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x1_1_axi_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_1_axi_s_clk = {
+	.halt_reg = 0x2a01c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2a01c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_1_axi_s_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x1_1_axi_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_1_pipe_clk = {
+	.halt_reg = 0x2a068,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2a068,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_1_pipe_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_phy_ahb_clk = {
+	.halt_reg = 0x29078,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x29078,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x1_phy_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_ahb_clk = {
+	.halt_reg = 0x28030,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x28030,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x2_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_aux_clk = {
+	.halt_reg = 0x28070,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x28070,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x2_aux_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie_aux_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_axi_m_clk = {
+	.halt_reg = 0x28038,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x28038,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x2_axi_m_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x2_axi_m_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_axi_s_bridge_clk = {
+	.halt_reg = 0x28048,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x28048,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x2_axi_s_bridge_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x2_axi_s_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_axi_s_clk = {
+	.halt_reg = 0x28040,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x28040,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x2_axi_s_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_pcie3x2_axi_s_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_phy_ahb_clk = {
+	.halt_reg = 0x28080,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x28080,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x2_phy_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_pipe_clk = {
+	.halt_reg = 0x28068,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x28068,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcie3x2_pipe_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_pcnoc_lpass_clk = {
+	.halt_reg = 0x31020,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x31020,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_pcnoc_lpass_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_lpass_sway_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_prng_ahb_clk = {
+	.halt_reg = 0x13024,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(10),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_prng_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6_ahb_clk = {
+	.halt_reg = 0x25014,
+	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x25014,
+	.hwcg_bit = 1,
+	.clkr = {
+		.enable_reg = 0x25014,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_wcss_ahb_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6_ahb_s_clk = {
+	.halt_reg = 0x25018,
+	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x25018,
+	.hwcg_bit = 1,
+	.clkr = {
+		.enable_reg = 0x25018,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6_ahb_s_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_wcss_ahb_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6_axim_clk = {
+	.halt_reg = 0x2500c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x2500c,
+	.hwcg_bit = 1,
+	.clkr = {
+		.enable_reg = 0x2500c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6_axim_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_q6_axim_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6_axis_clk = {
+	.halt_reg = 0x25010,
+	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x25010,
+	.hwcg_bit = 1,
+	.clkr = {
+		.enable_reg = 0x25010,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6_axis_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6_tsctr_1to2_clk = {
+	.halt_reg = 0x25020,
+	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x25020,
+	.hwcg_bit = 1,
+	.clkr = {
+		.enable_reg = 0x25020,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6_tsctr_1to2_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6ss_atbm_clk = {
+	.halt_reg = 0x2501c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x2501c,
+	.hwcg_bit = 1,
+	.clkr = {
+		.enable_reg = 0x2501c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6ss_atbm_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_at_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6ss_pclkdbg_clk = {
+	.halt_reg = 0x25024,
+	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x25024,
+	.hwcg_bit = 1,
+	.clkr = {
+		.enable_reg = 0x25024,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6ss_pclkdbg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_q6ss_trig_clk = {
+	.halt_reg = 0x250a0,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x250a0,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_q6ss_trig_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_apb2jtag_clk = {
+	.halt_reg = 0x2d060,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d060,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_apb2jtag_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_at_clk = {
+	.halt_reg = 0x2d038,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d038,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_at_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_at_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_cfg_ahb_clk = {
+	.halt_reg = 0x2d06c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d06c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_cfg_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_dap_ahb_clk = {
+	.halt_reg = 0x2d068,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d068,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_dap_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_dap_clk = {
+	.halt_reg = 0x2d05c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(2),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_dap_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_etr_usb_clk = {
+	.halt_reg = 0x2d064,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d064,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_etr_usb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_eud_at_clk = {
+	.halt_reg = 0x2d070,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d070,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_eud_at_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_at_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_stm_clk = {
+	.halt_reg = 0x2d040,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d040,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_stm_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_stm_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_traceclkin_clk = {
+	.halt_reg = 0x2d044,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d044,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_traceclkin_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_traceclkin_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_ts_clk = {
+	.halt_reg = 0x2d078,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d078,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_ts_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_nss_ts_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_tsctr_div16_clk = {
+	.halt_reg = 0x2d058,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d058,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_tsctr_div16_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_tsctr_div2_clk = {
+	.halt_reg = 0x2d048,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d048,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_tsctr_div2_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_tsctr_div3_clk = {
+	.halt_reg = 0x2d04c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d04c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_tsctr_div3_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_tsctr_div4_clk = {
+	.halt_reg = 0x2d050,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d050,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_tsctr_div4_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qdss_tsctr_div8_clk = {
+	.halt_reg = 0x2d054,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2d054,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qdss_tsctr_div8_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qpic_ahb_clk = {
+	.halt_reg = 0x32010,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x32010,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qpic_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qpic_clk = {
+	.halt_reg = 0x32014,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x32014,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qpic_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qpic_io_macro_clk = {
+	.halt_reg = 0x3200c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3200c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qpic_io_macro_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qpic_io_macro_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_qpic_sleep_clk = {
+	.halt_reg = 0x3201c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3201c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_qpic_sleep_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_sleep_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_sdcc1_ahb_clk = {
+	.halt_reg = 0x33034,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x33034,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_sdcc1_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_sdcc1_apps_clk = {
+	.halt_reg = 0x3302c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3302c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_sdcc1_apps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_sdcc1_apps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_snoc_lpass_cfg_clk = {
+	.halt_reg = 0x2e028,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2e028,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_snoc_lpass_cfg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_lpass_sway_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_snoc_nssnoc_1_clk = {
+	.halt_reg = 0x17090,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17090,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_snoc_nssnoc_1_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_snoc_nssnoc_clk = {
+	.halt_reg = 0x17084,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x17084,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_snoc_nssnoc_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_sys_noc_qdss_stm_axi_clk = {
+	.halt_reg = 0x2e034,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2e034,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_sys_noc_qdss_stm_axi_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_stm_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_sys_noc_wcss_ahb_clk = {
+	.halt_reg = 0x2e030,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2e030,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_sys_noc_wcss_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_wcss_ahb_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_tlmm_ahb_clk = {
+	.halt_reg = 0x3e004,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(7),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_tlmm_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_tlmm_clk = {
+	.halt_reg = 0x3e008,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0xb004,
+		.enable_mask = BIT(8),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_tlmm_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_uniphy0_ahb_clk = {
+	.halt_reg = 0x16010,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x16010,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_uniphy0_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_uniphy0_sys_clk = {
+	.halt_reg = 0x1600c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x1600c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_uniphy0_sys_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_uniphy_sys_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_uniphy1_ahb_clk = {
+	.halt_reg = 0x1601c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x1601c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_uniphy1_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_uniphy1_sys_clk = {
+	.halt_reg = 0x16018,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x16018,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_uniphy1_sys_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_uniphy_sys_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_aux_clk = {
+	.halt_reg = 0x2c050,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2c050,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_aux_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_usb0_aux_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_eud_at_clk = {
+	.halt_reg = 0x30004,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x30004,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_eud_at_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_at_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_lfps_clk = {
+	.halt_reg = 0x2c090,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2c090,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_lfps_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_usb0_lfps_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_master_clk = {
+	.halt_reg = 0x2c048,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2c048,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_master_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_usb0_master_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_mock_utmi_clk = {
+	.halt_reg = 0x2c054,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2c054,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_mock_utmi_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_usb0_mock_utmi_div_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_phy_cfg_ahb_clk = {
+	.halt_reg = 0x2c05c,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2c05c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_phy_cfg_ahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll0.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_pipe_clk = {
+	.halt_reg = 0x2c078,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2c078,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_pipe_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_usb0_sleep_clk = {
+	.halt_reg = 0x2c058,
+	.halt_check = BRANCH_HALT_VOTED,
+	.clkr = {
+		.enable_reg = 0x2c058,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_usb0_sleep_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_sleep_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_axim_clk = {
+	.halt_reg = 0x2505c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2505c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_axim_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_axis_clk = {
+	.halt_reg = 0x25060,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x25060,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_axis_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_dbg_ifc_apb_bdg_clk = {
+	.halt_reg = 0x25048,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x25048,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_dbg_ifc_apb_bdg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_dbg_ifc_apb_clk = {
+	.halt_reg = 0x25038,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x25038,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_dbg_ifc_apb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_dbg_ifc_atb_bdg_clk = {
+	.halt_reg = 0x2504c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2504c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_dbg_ifc_atb_bdg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_at_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_dbg_ifc_atb_clk = {
+	.halt_reg = 0x2503c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2503c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_dbg_ifc_atb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_at_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_dbg_ifc_nts_bdg_clk = {
+	.halt_reg = 0x25050,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x25050,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_dbg_ifc_nts_bdg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_dbg_ifc_nts_clk = {
+	.halt_reg = 0x25040,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x25040,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_dbg_ifc_nts_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_qdss_tsctr_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_ecahb_clk = {
+	.halt_reg = 0x25058,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x25058,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_ecahb_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_wcss_ahb_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_mst_async_bdg_clk = {
+	.halt_reg = 0x2e0b0,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2e0b0,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_mst_async_bdg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_wcss_slv_async_bdg_clk = {
+	.halt_reg = 0x2e0b4,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x2e0b4,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_wcss_slv_async_bdg_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gpll4.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_xo_clk = {
+	.halt_reg = 0x34018,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x34018,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_xo_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_xo_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_xo_div4_clk = {
+	.halt_reg = 0x3401c,
+	.halt_check = BRANCH_HALT,
+	.clkr = {
+		.enable_reg = 0x3401c,
+		.enable_mask = BIT(0),
+		.hw.init = &(const struct clk_init_data){
+			.name = "gcc_xo_div4_clk",
+			.parent_hws = (const struct clk_hw*[]){
+				&gcc_xo_clk_src.clkr.hw,
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
 static int clk_dummy_is_enabled(struct clk_hw *hw)
 {
 	return 1;
@@ -91,300 +3197,520 @@ static const struct clk_ops clk_dummy_ops = {
 	},							\
 })
 
-static struct clk_regmap *gcc_devsoc_dummy_clks[] = {
-	[GPLL0_MAIN] = DEFINE_DUMMY_CLK(gpll0_main.clkr),
-	[GPLL0] = DEFINE_DUMMY_CLK(gpll0.clkr),
-	[GPLL2_MAIN] = DEFINE_DUMMY_CLK(gpll2_main.clkr),
-	[GPLL2] = DEFINE_DUMMY_CLK(gpll2.clkr),
-	[GPLL4_MAIN] = DEFINE_DUMMY_CLK(gpll4_main.clkr),
-	[GPLL4] = DEFINE_DUMMY_CLK(gpll4.clkr),
-	[UBI32_PLL_MAIN] = DEFINE_DUMMY_CLK(ubi32_pll_main.clkr),
-	[UBI32_PLL] = DEFINE_DUMMY_CLK(ubi32_pll.clkr),
-	[ADSS_PWM_CLK_SRC] = DEFINE_DUMMY_CLK(adss_pwm_clk_src.clkr),
-	[APSS_AHB_CLK_SRC] = DEFINE_DUMMY_CLK(apss_ahb_clk_src.clkr),
-	[APSS_AHB_POSTDIV_CLK_SRC] = DEFINE_DUMMY_CLK(apss_ahb_postdiv_clk_src.clkr),
-	[APSS_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(apss_axi_clk_src.clkr),
-	[BLSP1_QUP1_I2C_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_qup1_i2c_apps_clk_src.clkr),
-	[BLSP1_QUP1_SPI_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_qup1_spi_apps_clk_src.clkr),
-	[BLSP1_QUP2_I2C_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_qup2_i2c_apps_clk_src.clkr),
-	[BLSP1_QUP2_SPI_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_qup2_spi_apps_clk_src.clkr),
-	[BLSP1_QUP3_I2C_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_qup3_i2c_apps_clk_src.clkr),
-	[BLSP1_QUP3_SPI_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_qup3_spi_apps_clk_src.clkr),
-	[BLSP1_UART1_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_uart1_apps_clk_src.clkr),
-	[BLSP1_UART2_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(blsp1_uart2_apps_clk_src.clkr),
-	[CRYPTO_CLK_SRC] = DEFINE_DUMMY_CLK(crypto_clk_src.clkr),
-	[GCC_ADSS_PWM_CLK] = DEFINE_DUMMY_CLK(gcc_adss_pwm_clk.clkr),
-	[GCC_APSS_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_apss_ahb_clk.clkr),
-	[GCC_APSS_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_apss_axi_clk.clkr),
-	[GCC_BLSP1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_ahb_clk.clkr),
-	[GCC_BLSP1_QUP1_I2C_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup1_i2c_apps_clk.clkr),
-	[GCC_BLSP1_QUP1_SPI_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup1_spi_apps_clk.clkr),
-	[GCC_BLSP1_QUP2_I2C_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup2_i2c_apps_clk.clkr),
-	[GCC_BLSP1_QUP2_SPI_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup2_spi_apps_clk.clkr),
-	[GCC_BLSP1_QUP3_I2C_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup3_i2c_apps_clk.clkr),
-	[GCC_BLSP1_QUP3_SPI_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup3_spi_apps_clk.clkr),
-	[GCC_BLSP1_UART1_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_uart1_apps_clk.clkr),
-	[GCC_BLSP1_UART2_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_uart2_apps_clk.clkr),
-	[GCC_BTSS_LPO_CLK] = DEFINE_DUMMY_CLK(gcc_btss_lpo_clk.clkr),
-	[GCC_CMN_BLK_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_cmn_blk_ahb_clk.clkr),
-	[GCC_CMN_BLK_SYS_CLK] = DEFINE_DUMMY_CLK(gcc_cmn_blk_sys_clk.clkr),
-	[GCC_CRYPTO_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_crypto_ahb_clk.clkr),
-	[GCC_CRYPTO_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_crypto_axi_clk.clkr),
-	[GCC_CRYPTO_CLK] = DEFINE_DUMMY_CLK(gcc_crypto_clk.clkr),
-	[GCC_DCC_CLK] = DEFINE_DUMMY_CLK(gcc_dcc_clk.clkr),
-	[GCC_GEPHY_RX_CLK] = DEFINE_DUMMY_CLK(gcc_gephy_rx_clk.clkr),
-	[GCC_GEPHY_TX_CLK] = DEFINE_DUMMY_CLK(gcc_gephy_tx_clk.clkr),
-	[GCC_GMAC0_CFG_CLK] = DEFINE_DUMMY_CLK(gcc_gmac0_cfg_clk.clkr),
-	[GCC_GMAC0_PTP_CLK] = DEFINE_DUMMY_CLK(gcc_gmac0_ptp_clk.clkr),
-	[GCC_GMAC0_RX_CLK] = DEFINE_DUMMY_CLK(gcc_gmac0_rx_clk.clkr),
-	[GCC_GMAC0_SYS_CLK] = DEFINE_DUMMY_CLK(gcc_gmac0_sys_clk.clkr),
-	[GCC_GMAC0_TX_CLK] = DEFINE_DUMMY_CLK(gcc_gmac0_tx_clk.clkr),
-	[GCC_GMAC1_CFG_CLK] = DEFINE_DUMMY_CLK(gcc_gmac1_cfg_clk.clkr),
-	[GCC_GMAC1_PTP_CLK] = DEFINE_DUMMY_CLK(gcc_gmac1_ptp_clk.clkr),
-	[GCC_GMAC1_RX_CLK] = DEFINE_DUMMY_CLK(gcc_gmac1_rx_clk.clkr),
-	[GCC_GMAC1_SYS_CLK] = DEFINE_DUMMY_CLK(gcc_gmac1_sys_clk.clkr),
-	[GCC_GMAC1_TX_CLK] = DEFINE_DUMMY_CLK(gcc_gmac1_tx_clk.clkr),
-	[GCC_GP1_CLK] = DEFINE_DUMMY_CLK(gcc_gp1_clk.clkr),
-	[GCC_GP2_CLK] = DEFINE_DUMMY_CLK(gcc_gp2_clk.clkr),
-	[GCC_GP3_CLK] = DEFINE_DUMMY_CLK(gcc_gp3_clk.clkr),
-	[GCC_LPASS_CORE_AXIM_CLK] = DEFINE_DUMMY_CLK(gcc_lpass_core_axim_clk.clkr),
-	[GCC_LPASS_SWAY_CLK] = DEFINE_DUMMY_CLK(gcc_lpass_sway_clk.clkr),
-	[GCC_MDIO0_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_mdio0_ahb_clk.clkr),
-	[GCC_MDIO1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_mdio1_ahb_clk.clkr),
-	[GCC_PCIE0_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie0_ahb_clk.clkr),
-	[GCC_PCIE0_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_pcie0_aux_clk.clkr),
-	[GCC_PCIE0_AXI_M_CLK] = DEFINE_DUMMY_CLK(gcc_pcie0_axi_m_clk.clkr),
-	[GCC_PCIE0_AXI_S_BRIDGE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie0_axi_s_bridge_clk.clkr),
-	[GCC_PCIE0_AXI_S_CLK] = DEFINE_DUMMY_CLK(gcc_pcie0_axi_s_clk.clkr),
-	[GCC_PCIE1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie1_ahb_clk.clkr),
-	[GCC_PCIE1_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_pcie1_aux_clk.clkr),
-	[GCC_PCIE1_AXI_M_CLK] = DEFINE_DUMMY_CLK(gcc_pcie1_axi_m_clk.clkr),
-	[GCC_PCIE1_AXI_S_BRIDGE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie1_axi_s_bridge_clk.clkr),
-	[GCC_PCIE1_AXI_S_CLK] = DEFINE_DUMMY_CLK(gcc_pcie1_axi_s_clk.clkr),
-	[GCC_PRNG_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_prng_ahb_clk.clkr),
-	[GCC_Q6_AXIM_CLK] = DEFINE_DUMMY_CLK(gcc_q6_axim_clk.clkr),
-	[GCC_Q6_AXIM2_CLK] = DEFINE_DUMMY_CLK(gcc_q6_axim2_clk.clkr),
-	[GCC_Q6_AXIS_CLK] = DEFINE_DUMMY_CLK(gcc_q6_axis_clk.clkr),
-	[GCC_Q6_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_q6_ahb_clk.clkr),
-	[GCC_Q6_AHB_S_CLK] = DEFINE_DUMMY_CLK(gcc_q6_ahb_s_clk.clkr),
-	[GCC_Q6_TSCTR_1TO2_CLK] = DEFINE_DUMMY_CLK(gcc_q6_tsctr_1to2_clk.clkr),
-	[GCC_Q6SS_ATBM_CLK] = DEFINE_DUMMY_CLK(gcc_q6ss_atbm_clk.clkr),
-	[GCC_Q6SS_PCLKDBG_CLK] = DEFINE_DUMMY_CLK(gcc_q6ss_pclkdbg_clk.clkr),
-	[GCC_Q6SS_TRIG_CLK] = DEFINE_DUMMY_CLK(gcc_q6ss_trig_clk.clkr),
-	[GCC_QDSS_AT_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_at_clk.clkr),
-	[GCC_QDSS_CFG_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_cfg_ahb_clk.clkr),
-	[GCC_QDSS_DAP_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_dap_ahb_clk.clkr),
-	[GCC_QDSS_DAP_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_dap_clk.clkr),
-	[GCC_QDSS_ETR_USB_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_etr_usb_clk.clkr),
-	[GCC_QDSS_EUD_AT_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_eud_at_clk.clkr),
-	[GCC_QDSS_STM_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_stm_clk.clkr),
-	[GCC_QDSS_TRACECLKIN_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_traceclkin_clk.clkr),
-	[GCC_QDSS_TSCTR_DIV8_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_tsctr_div8_clk.clkr),
-	[GCC_QPIC_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_qpic_ahb_clk.clkr),
-	[GCC_QPIC_CLK] = DEFINE_DUMMY_CLK(gcc_qpic_clk.clkr),
-	[GCC_QPIC_IO_MACRO_CLK] = DEFINE_DUMMY_CLK(gcc_qpic_io_macro_clk.clkr),
-	[GCC_SDCC1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_sdcc1_ahb_clk.clkr),
-	[GCC_SDCC1_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_sdcc1_apps_clk.clkr),
-	[GCC_SLEEP_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_sleep_clk_src.clkr),
-	[GCC_SNOC_GMAC0_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_gmac0_ahb_clk.clkr),
-	[GCC_SNOC_GMAC0_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_gmac0_axi_clk.clkr),
-	[GCC_SNOC_GMAC1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_gmac1_ahb_clk.clkr),
-	[GCC_SNOC_GMAC1_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_gmac1_axi_clk.clkr),
-	[GCC_SNOC_LPASS_AXIM_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_lpass_axim_clk.clkr),
-	[GCC_SNOC_LPASS_SWAY_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_lpass_sway_clk.clkr),
-	[GCC_SNOC_UBI0_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_ubi0_axi_clk.clkr),
-	[GCC_SYS_NOC_PCIE0_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_sys_noc_pcie0_axi_clk.clkr),
-	[GCC_SYS_NOC_PCIE1_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_sys_noc_pcie1_axi_clk.clkr),
-	[GCC_SYS_NOC_QDSS_STM_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_sys_noc_qdss_stm_axi_clk.clkr),
-	[GCC_SYS_NOC_USB0_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_sys_noc_usb0_axi_clk.clkr),
-	[GCC_SYS_NOC_WCSS_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_sys_noc_wcss_ahb_clk.clkr),
-	[GCC_UBI0_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_ubi0_axi_clk.clkr),
-	[GCC_UBI0_CFG_CLK] = DEFINE_DUMMY_CLK(gcc_ubi0_cfg_clk.clkr),
-	[GCC_UBI0_CORE_CLK] = DEFINE_DUMMY_CLK(gcc_ubi0_core_clk.clkr),
-	[GCC_UBI0_DBG_CLK] = DEFINE_DUMMY_CLK(gcc_ubi0_dbg_clk.clkr),
-	[GCC_UBI0_NC_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_ubi0_nc_axi_clk.clkr),
-	[GCC_UBI0_UTCM_CLK] = DEFINE_DUMMY_CLK(gcc_ubi0_utcm_clk.clkr),
-	[GCC_UNIPHY_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy_ahb_clk.clkr),
-	[GCC_UNIPHY_RX_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy_rx_clk.clkr),
-	[GCC_UNIPHY_SYS_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy_sys_clk.clkr),
-	[GCC_UNIPHY_TX_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy_tx_clk.clkr),
-	[GCC_USB0_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_aux_clk.clkr),
-	[GCC_USB0_EUD_AT_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_eud_at_clk.clkr),
-	[GCC_USB0_LFPS_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_lfps_clk.clkr),
-	[GCC_USB0_MASTER_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_master_clk.clkr),
-	[GCC_USB0_MOCK_UTMI_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_mock_utmi_clk.clkr),
-	[GCC_USB0_PHY_CFG_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_phy_cfg_ahb_clk.clkr),
-	[GCC_USB0_SLEEP_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_sleep_clk.clkr),
-	[GCC_WCSS_ACMT_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_acmt_clk.clkr),
-	[GCC_WCSS_AHB_S_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_ahb_s_clk.clkr),
-	[GCC_WCSS_AXI_M_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_axi_m_clk.clkr),
-	[GCC_WCSS_AXI_S_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_axi_s_clk.clkr),
-	[GCC_WCSS_DBG_IFC_APB_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_apb_bdg_clk.clkr),
-	[GCC_WCSS_DBG_IFC_APB_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_apb_clk.clkr),
-	[GCC_WCSS_DBG_IFC_ATB_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_atb_bdg_clk.clkr),
-	[GCC_WCSS_DBG_IFC_ATB_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_atb_clk.clkr),
-	[GCC_WCSS_DBG_IFC_DAPBUS_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_dapbus_bdg_clk.clkr),
-	[GCC_WCSS_DBG_IFC_DAPBUS_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_dapbus_clk.clkr),
-	[GCC_WCSS_DBG_IFC_NTS_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_nts_bdg_clk.clkr),
-	[GCC_WCSS_DBG_IFC_NTS_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_nts_clk.clkr),
-	[GCC_WCSS_ECAHB_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_ecahb_clk.clkr),
-	[GCC_XO_CLK] = DEFINE_DUMMY_CLK(gcc_xo_clk.clkr),
-	[GCC_XO_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_xo_clk_src.clkr),
-	[GMAC0_RX_CLK_SRC] = DEFINE_DUMMY_CLK(gmac0_rx_clk_src.clkr),
-	[GMAC0_RX_DIV_CLK_SRC] = DEFINE_DUMMY_CLK(gmac0_rx_div_clk_src.clkr),
-	[GMAC0_TX_CLK_SRC] = DEFINE_DUMMY_CLK(gmac0_tx_clk_src.clkr),
-	[GMAC0_TX_DIV_CLK_SRC] = DEFINE_DUMMY_CLK(gmac0_tx_div_clk_src.clkr),
-	[GMAC1_RX_CLK_SRC] = DEFINE_DUMMY_CLK(gmac1_rx_clk_src.clkr),
-	[GMAC1_RX_DIV_CLK_SRC] = DEFINE_DUMMY_CLK(gmac1_rx_div_clk_src.clkr),
-	[GMAC1_TX_CLK_SRC] = DEFINE_DUMMY_CLK(gmac1_tx_clk_src.clkr),
-	[GMAC1_TX_DIV_CLK_SRC] = DEFINE_DUMMY_CLK(gmac1_tx_div_clk_src.clkr),
-	[GMAC_CLK_SRC] = DEFINE_DUMMY_CLK(gmac_clk_src.clkr),
-	[GP1_CLK_SRC] = DEFINE_DUMMY_CLK(gp1_clk_src.clkr),
-	[GP2_CLK_SRC] = DEFINE_DUMMY_CLK(gp2_clk_src.clkr),
-	[GP3_CLK_SRC] = DEFINE_DUMMY_CLK(gp3_clk_src.clkr),
-	[LPASS_AXIM_CLK_SRC] = DEFINE_DUMMY_CLK(lpass_axim_clk_src.clkr),
-	[LPASS_SWAY_CLK_SRC] = DEFINE_DUMMY_CLK(lpass_sway_clk_src.clkr),
-	[PCIE0_AUX_CLK_SRC] = DEFINE_DUMMY_CLK(pcie0_aux_clk_src.clkr),
-	[PCIE0_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(pcie0_axi_clk_src.clkr),
-	[PCIE1_AUX_CLK_SRC] = DEFINE_DUMMY_CLK(pcie1_aux_clk_src.clkr),
-	[PCIE1_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(pcie1_axi_clk_src.clkr),
-	[PCNOC_BFDCD_CLK_SRC] = DEFINE_DUMMY_CLK(pcnoc_bfdcd_clk_src.clkr),
-	[Q6_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(q6_axi_clk_src.clkr),
-	[QDSS_AT_CLK_SRC] = DEFINE_DUMMY_CLK(qdss_at_clk_src.clkr),
-	[QDSS_STM_CLK_SRC] = DEFINE_DUMMY_CLK(qdss_stm_clk_src.clkr),
-	[QDSS_TSCTR_CLK_SRC] = DEFINE_DUMMY_CLK(qdss_tsctr_clk_src.clkr),
-	[QDSS_TRACECLKIN_CLK_SRC] = DEFINE_DUMMY_CLK(qdss_traceclkin_clk_src.clkr),
-	[QPIC_IO_MACRO_CLK_SRC] = DEFINE_DUMMY_CLK(qpic_io_macro_clk_src.clkr),
-	[SDCC1_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(sdcc1_apps_clk_src.clkr),
-	[SYSTEM_NOC_BFDCD_CLK_SRC] = DEFINE_DUMMY_CLK(system_noc_bfdcd_clk_src.clkr),
-	[UBI0_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(ubi0_axi_clk_src.clkr),
-	[UBI0_CORE_CLK_SRC] = DEFINE_DUMMY_CLK(ubi0_core_clk_src.clkr),
-	[USB0_AUX_CLK_SRC] = DEFINE_DUMMY_CLK(usb0_aux_clk_src.clkr),
-	[USB0_LFPS_CLK_SRC] = DEFINE_DUMMY_CLK(usb0_lfps_clk_src.clkr),
-	[USB0_MASTER_CLK_SRC] = DEFINE_DUMMY_CLK(usb0_master_clk_src.clkr),
-	[USB0_MOCK_UTMI_CLK_SRC] = DEFINE_DUMMY_CLK(usb0_mock_utmi_clk_src.clkr),
-	[WCSS_AHB_CLK_SRC] = DEFINE_DUMMY_CLK(wcss_ahb_clk_src.clkr),
-	[PCIE0_PIPE_CLK_SRC] = DEFINE_DUMMY_CLK(pcie0_pipe_clk_src.clkr),
-	[PCIE1_PIPE_CLK_SRC] = DEFINE_DUMMY_CLK(pcie1_pipe_clk_src.clkr),
-	[GCC_PCIE0_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie0_pipe_clk.clkr),
-	[GCC_PCIE1_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie1_pipe_clk.clkr),
-	[USB0_PIPE_CLK_SRC] = DEFINE_DUMMY_CLK(usb0_pipe_clk_src.clkr),
-	[GCC_USB0_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_pipe_clk.clkr),
+static struct clk_regmap *gcc_devsoc_dummy_clocks[] = {
+	[GCC_ADSS_PWM_CLK] = DEFINE_DUMMY_CLK(gcc_adss_pwm_clk),
+	[GCC_ADSS_PWM_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_adss_pwm_clk_src),
+	[GCC_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_ahb_clk),
+	[GCC_APC0_VOLTAGE_DROOP_DETECTOR_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_apc0_voltage_droop_detector_clk_src),
+	[GCC_APC0_VOLTAGE_DROOP_DETECTOR_GPLL0_CLK] =
+		DEFINE_DUMMY_CLK(gcc_apc0_voltage_droop_detector_gpll0_clk),
+	[GCC_APSS_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_apss_ahb_clk),
+	[GCC_APSS_AHB_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_apss_ahb_clk_src),
+	[GCC_APSS_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_apss_axi_clk),
+	[GCC_APSS_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_apss_axi_clk_src),
+	[GCC_BLSP1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_ahb_clk),
+	[GCC_BLSP1_QUP1_I2C_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup1_i2c_apps_clk),
+	[GCC_BLSP1_QUP1_SPI_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup1_spi_apps_clk),
+	[GCC_BLSP1_QUP1_SPI_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_blsp1_qup1_spi_apps_clk_src),
+	[GCC_BLSP1_QUP2_I2C_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup2_i2c_apps_clk),
+	[GCC_BLSP1_QUP2_SPI_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup2_spi_apps_clk),
+	[GCC_BLSP1_QUP2_SPI_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_blsp1_qup2_spi_apps_clk_src),
+	[GCC_BLSP1_QUP3_I2C_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup3_i2c_apps_clk),
+	[GCC_BLSP1_QUP3_SPI_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_qup3_spi_apps_clk),
+	[GCC_BLSP1_QUP3_SPI_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_blsp1_qup3_spi_apps_clk_src),
+	[GCC_BLSP1_SLEEP_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_sleep_clk),
+	[GCC_BLSP1_UART1_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_uart1_apps_clk),
+	[GCC_BLSP1_UART1_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_blsp1_uart1_apps_clk_src),
+	[GCC_BLSP1_UART2_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_uart2_apps_clk),
+	[GCC_BLSP1_UART2_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_blsp1_uart2_apps_clk_src),
+	[GCC_BLSP1_UART3_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_blsp1_uart3_apps_clk),
+	[GCC_BLSP1_UART3_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_blsp1_uart3_apps_clk_src),
+	[GCC_BOOT_ROM_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_boot_rom_ahb_clk),
+	[GCC_GP1_CLK] = DEFINE_DUMMY_CLK(gcc_gp1_clk),
+	[GCC_GP1_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_gp1_clk_src),
+	[GCC_GP2_CLK] = DEFINE_DUMMY_CLK(gcc_gp2_clk),
+	[GCC_GP2_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_gp2_clk_src),
+	[GCC_IM_SLEEP_CLK] = DEFINE_DUMMY_CLK(gcc_im_sleep_clk),
+	[GCC_LPASS_CORE_AXIM_CLK] = DEFINE_DUMMY_CLK(gcc_lpass_core_axim_clk),
+	[GCC_LPASS_SWAY_CLK] = DEFINE_DUMMY_CLK(gcc_lpass_sway_clk),
+	[GCC_LPASS_SWAY_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_lpass_sway_clk_src),
+	[GCC_MPM_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_mpm_ahb_clk),
+	[GCC_NSS_TS_CLK] = DEFINE_DUMMY_CLK(gcc_nss_ts_clk),
+	[GCC_NSS_TS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_nss_ts_clk_src),
+	[GCC_NSSCC_CLK] = DEFINE_DUMMY_CLK(gcc_nsscc_clk),
+	[GCC_NSSCFG_CLK] = DEFINE_DUMMY_CLK(gcc_nsscfg_clk),
+	[GCC_NSSNOC_ATB_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_atb_clk),
+	[GCC_NSSNOC_NSSCC_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_nsscc_clk),
+	[GCC_NSSNOC_PCNOC_1_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_pcnoc_1_clk),
+	[GCC_NSSNOC_QOSGEN_REF_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_qosgen_ref_clk),
+	[GCC_NSSNOC_SNOC_1_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_snoc_1_clk),
+	[GCC_NSSNOC_SNOC_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_snoc_clk),
+	[GCC_NSSNOC_TIMEOUT_REF_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_timeout_ref_clk),
+	[GCC_NSSNOC_XO_DCD_CLK] = DEFINE_DUMMY_CLK(gcc_nssnoc_xo_dcd_clk),
+	[GCC_PCIE3X1_0_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_ahb_clk),
+	[GCC_PCIE3X1_0_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_aux_clk),
+	[GCC_PCIE3X1_0_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_axi_clk_src),
+	[GCC_PCIE3X1_0_AXI_M_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_axi_m_clk),
+	[GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_axi_s_bridge_clk),
+	[GCC_PCIE3X1_0_AXI_S_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_axi_s_clk),
+	[GCC_PCIE3X1_0_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_pipe_clk),
+	[GCC_PCIE3X1_0_RCHG_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x1_0_rchg_clk_src),
+	[GCC_PCIE3X1_1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_ahb_clk),
+	[GCC_PCIE3X1_1_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_aux_clk),
+	[GCC_PCIE3X1_1_AXI_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_axi_clk_src),
+	[GCC_PCIE3X1_1_AXI_M_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_axi_m_clk),
+	[GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_axi_s_bridge_clk),
+	[GCC_PCIE3X1_1_AXI_S_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_axi_s_clk),
+	[GCC_PCIE3X1_1_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_pipe_clk),
+	[GCC_PCIE3X1_1_RCHG_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_rchg_clk_src),
+	[GCC_PCIE3X1_PHY_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_phy_ahb_clk),
+	[GCC_PCIE3X2_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x2_ahb_clk),
+	[GCC_PCIE3X2_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x2_aux_clk),
+	[GCC_PCIE3X2_AXI_M_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x2_axi_m_clk),
+	[GCC_PCIE3X2_AXI_M_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x2_axi_m_clk_src),
+	[GCC_PCIE3X2_AXI_S_BRIDGE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x2_axi_s_bridge_clk),
+	[GCC_PCIE3X2_AXI_S_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x2_axi_s_clk),
+	[GCC_PCIE3X2_AXI_S_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x2_axi_s_clk_src),
+	[GCC_PCIE3X2_PHY_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x2_phy_ahb_clk),
+	[GCC_PCIE3X2_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x2_pipe_clk),
+	[GCC_PCIE3X2_RCHG_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x2_rchg_clk_src),
+	[GCC_PCIE_AUX_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie_aux_clk_src),
+	[GCC_PCNOC_LPASS_CLK] = DEFINE_DUMMY_CLK(gcc_pcnoc_lpass_clk),
+	[GCC_PRNG_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_prng_ahb_clk),
+	[GCC_Q6_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_q6_ahb_clk),
+	[GCC_Q6_AHB_S_CLK] = DEFINE_DUMMY_CLK(gcc_q6_ahb_s_clk),
+	[GCC_Q6_AXIM_CLK] = DEFINE_DUMMY_CLK(gcc_q6_axim_clk),
+	[GCC_Q6_AXIM_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_q6_axim_clk_src),
+	[GCC_Q6_AXIS_CLK] = DEFINE_DUMMY_CLK(gcc_q6_axis_clk),
+	[GCC_Q6_TSCTR_1TO2_CLK] = DEFINE_DUMMY_CLK(gcc_q6_tsctr_1to2_clk),
+	[GCC_Q6SS_ATBM_CLK] = DEFINE_DUMMY_CLK(gcc_q6ss_atbm_clk),
+	[GCC_Q6SS_PCLKDBG_CLK] = DEFINE_DUMMY_CLK(gcc_q6ss_pclkdbg_clk),
+	[GCC_Q6SS_TRIG_CLK] = DEFINE_DUMMY_CLK(gcc_q6ss_trig_clk),
+	[GCC_QDSS_APB2JTAG_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_apb2jtag_clk),
+	[GCC_QDSS_AT_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_at_clk),
+	[GCC_QDSS_AT_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_qdss_at_clk_src),
+	[GCC_QDSS_CFG_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_cfg_ahb_clk),
+	[GCC_QDSS_DAP_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_dap_ahb_clk),
+	[GCC_QDSS_DAP_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_dap_clk),
+	[GCC_QDSS_ETR_USB_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_etr_usb_clk),
+	[GCC_QDSS_EUD_AT_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_eud_at_clk),
+	[GCC_QDSS_STM_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_stm_clk),
+	[GCC_QDSS_STM_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_qdss_stm_clk_src),
+	[GCC_QDSS_TRACECLKIN_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_traceclkin_clk),
+	[GCC_QDSS_TRACECLKIN_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_qdss_traceclkin_clk_src),
+	[GCC_QDSS_TS_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_ts_clk),
+	[GCC_QDSS_TSCTR_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_qdss_tsctr_clk_src),
+	[GCC_QDSS_TSCTR_DIV16_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_tsctr_div16_clk),
+	[GCC_QDSS_TSCTR_DIV2_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_tsctr_div2_clk),
+	[GCC_QDSS_TSCTR_DIV3_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_tsctr_div3_clk),
+	[GCC_QDSS_TSCTR_DIV4_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_tsctr_div4_clk),
+	[GCC_QDSS_TSCTR_DIV8_CLK] = DEFINE_DUMMY_CLK(gcc_qdss_tsctr_div8_clk),
+	[GCC_QPIC_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_qpic_ahb_clk),
+	[GCC_QPIC_CLK] = DEFINE_DUMMY_CLK(gcc_qpic_clk),
+	[GCC_QPIC_IO_MACRO_CLK] = DEFINE_DUMMY_CLK(gcc_qpic_io_macro_clk),
+	[GCC_QPIC_IO_MACRO_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_qpic_io_macro_clk_src),
+	[GCC_QPIC_SLEEP_CLK] = DEFINE_DUMMY_CLK(gcc_qpic_sleep_clk),
+	[GCC_SDCC1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_sdcc1_ahb_clk),
+	[GCC_SDCC1_APPS_CLK] = DEFINE_DUMMY_CLK(gcc_sdcc1_apps_clk),
+	[GCC_SDCC1_APPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_sdcc1_apps_clk_src),
+	[GCC_SLEEP_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_sleep_clk_src),
+	[GCC_SNOC_LPASS_CFG_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_lpass_cfg_clk),
+	[GCC_SNOC_NSSNOC_1_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_nssnoc_1_clk),
+	[GCC_SNOC_NSSNOC_CLK] = DEFINE_DUMMY_CLK(gcc_snoc_nssnoc_clk),
+	[GCC_SYS_NOC_QDSS_STM_AXI_CLK] = DEFINE_DUMMY_CLK(gcc_sys_noc_qdss_stm_axi_clk),
+	[GCC_SYS_NOC_WCSS_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_sys_noc_wcss_ahb_clk),
+	[GCC_TLMM_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_tlmm_ahb_clk),
+	[GCC_TLMM_CLK] = DEFINE_DUMMY_CLK(gcc_tlmm_clk),
+	[GCC_UNIPHY0_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy0_ahb_clk),
+	[GCC_UNIPHY0_SYS_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy0_sys_clk),
+	[GCC_UNIPHY1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy1_ahb_clk),
+	[GCC_UNIPHY1_SYS_CLK] = DEFINE_DUMMY_CLK(gcc_uniphy1_sys_clk),
+	[GCC_UNIPHY_SYS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_uniphy_sys_clk_src),
+	[GCC_USB0_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_aux_clk),
+	[GCC_USB0_AUX_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_usb0_aux_clk_src),
+	[GCC_USB0_EUD_AT_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_eud_at_clk),
+	[GCC_USB0_LFPS_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_lfps_clk),
+	[GCC_USB0_LFPS_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_usb0_lfps_clk_src),
+	[GCC_USB0_MASTER_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_master_clk),
+	[GCC_USB0_MASTER_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_usb0_master_clk_src),
+	[GCC_USB0_MOCK_UTMI_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_mock_utmi_clk),
+	[GCC_USB0_MOCK_UTMI_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_usb0_mock_utmi_clk_src),
+	[GCC_USB0_MOCK_UTMI_DIV_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_usb0_mock_utmi_div_clk_src),
+	[GCC_USB0_PHY_CFG_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_phy_cfg_ahb_clk),
+	[GCC_USB0_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_pipe_clk),
+	[GCC_USB0_SLEEP_CLK] = DEFINE_DUMMY_CLK(gcc_usb0_sleep_clk),
+	[GCC_WCSS_AHB_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_wcss_ahb_clk_src),
+	[GCC_WCSS_AXIM_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_axim_clk),
+	[GCC_WCSS_AXIS_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_axis_clk),
+	[GCC_WCSS_DBG_IFC_APB_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_apb_bdg_clk),
+	[GCC_WCSS_DBG_IFC_APB_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_apb_clk),
+	[GCC_WCSS_DBG_IFC_ATB_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_atb_bdg_clk),
+	[GCC_WCSS_DBG_IFC_ATB_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_atb_clk),
+	[GCC_WCSS_DBG_IFC_NTS_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_nts_bdg_clk),
+	[GCC_WCSS_DBG_IFC_NTS_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_dbg_ifc_nts_clk),
+	[GCC_WCSS_ECAHB_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_ecahb_clk),
+	[GCC_WCSS_MST_ASYNC_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_mst_async_bdg_clk),
+	[GCC_WCSS_SLV_ASYNC_BDG_CLK] = DEFINE_DUMMY_CLK(gcc_wcss_slv_async_bdg_clk),
+	[GCC_XO_CLK] = DEFINE_DUMMY_CLK(gcc_xo_clk),
+	[GCC_XO_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_xo_clk_src),
+	[GCC_XO_DIV4_CLK] = DEFINE_DUMMY_CLK(gcc_xo_div4_clk),
+	[GPLL0] = DEFINE_DUMMY_CLK(gpll0),
+	[GPLL2] = DEFINE_DUMMY_CLK(gpll2),
+	[GPLL4] = DEFINE_DUMMY_CLK(gpll4),
+	[GPLL6] = DEFINE_DUMMY_CLK(gpll6),
+};
+
+static struct clk_regmap *gcc_devsoc_clocks[] = {
+	[GCC_ADSS_PWM_CLK] = &gcc_adss_pwm_clk.clkr,
+	[GCC_ADSS_PWM_CLK_SRC] = &gcc_adss_pwm_clk_src.clkr,
+	[GCC_AHB_CLK] = &gcc_ahb_clk.clkr,
+	[GCC_APC0_VOLTAGE_DROOP_DETECTOR_CLK_SRC] = &gcc_apc0_voltage_droop_detector_clk_src.clkr,
+	[GCC_APC0_VOLTAGE_DROOP_DETECTOR_GPLL0_CLK] =
+		&gcc_apc0_voltage_droop_detector_gpll0_clk.clkr,
+	[GCC_APSS_AHB_CLK] = &gcc_apss_ahb_clk.clkr,
+	[GCC_APSS_AHB_CLK_SRC] = &gcc_apss_ahb_clk_src.clkr,
+	[GCC_APSS_AXI_CLK] = &gcc_apss_axi_clk.clkr,
+	[GCC_APSS_AXI_CLK_SRC] = &gcc_apss_axi_clk_src.clkr,
+	[GCC_BLSP1_AHB_CLK] = &gcc_blsp1_ahb_clk.clkr,
+	[GCC_BLSP1_QUP1_I2C_APPS_CLK] = &gcc_blsp1_qup1_i2c_apps_clk.clkr,
+	[GCC_BLSP1_QUP1_SPI_APPS_CLK] = &gcc_blsp1_qup1_spi_apps_clk.clkr,
+	[GCC_BLSP1_QUP1_SPI_APPS_CLK_SRC] = &gcc_blsp1_qup1_spi_apps_clk_src.clkr,
+	[GCC_BLSP1_QUP2_I2C_APPS_CLK] = &gcc_blsp1_qup2_i2c_apps_clk.clkr,
+	[GCC_BLSP1_QUP2_SPI_APPS_CLK] = &gcc_blsp1_qup2_spi_apps_clk.clkr,
+	[GCC_BLSP1_QUP2_SPI_APPS_CLK_SRC] = &gcc_blsp1_qup2_spi_apps_clk_src.clkr,
+	[GCC_BLSP1_QUP3_I2C_APPS_CLK] = &gcc_blsp1_qup3_i2c_apps_clk.clkr,
+	[GCC_BLSP1_QUP3_SPI_APPS_CLK] = &gcc_blsp1_qup3_spi_apps_clk.clkr,
+	[GCC_BLSP1_QUP3_SPI_APPS_CLK_SRC] = &gcc_blsp1_qup3_spi_apps_clk_src.clkr,
+	[GCC_BLSP1_SLEEP_CLK] = &gcc_blsp1_sleep_clk.clkr,
+	[GCC_BLSP1_UART1_APPS_CLK] = &gcc_blsp1_uart1_apps_clk.clkr,
+	[GCC_BLSP1_UART1_APPS_CLK_SRC] = &gcc_blsp1_uart1_apps_clk_src.clkr,
+	[GCC_BLSP1_UART2_APPS_CLK] = &gcc_blsp1_uart2_apps_clk.clkr,
+	[GCC_BLSP1_UART2_APPS_CLK_SRC] = &gcc_blsp1_uart2_apps_clk_src.clkr,
+	[GCC_BLSP1_UART3_APPS_CLK] = &gcc_blsp1_uart3_apps_clk.clkr,
+	[GCC_BLSP1_UART3_APPS_CLK_SRC] = &gcc_blsp1_uart3_apps_clk_src.clkr,
+	[GCC_BOOT_ROM_AHB_CLK] = &gcc_boot_rom_ahb_clk.clkr,
+	[GCC_GP1_CLK] = &gcc_gp1_clk.clkr,
+	[GCC_GP1_CLK_SRC] = &gcc_gp1_clk_src.clkr,
+	[GCC_GP2_CLK] = &gcc_gp2_clk.clkr,
+	[GCC_GP2_CLK_SRC] = &gcc_gp2_clk_src.clkr,
+	[GCC_IM_SLEEP_CLK] = &gcc_im_sleep_clk.clkr,
+	[GCC_LPASS_CORE_AXIM_CLK] = &gcc_lpass_core_axim_clk.clkr,
+	[GCC_LPASS_SWAY_CLK] = &gcc_lpass_sway_clk.clkr,
+	[GCC_LPASS_SWAY_CLK_SRC] = &gcc_lpass_sway_clk_src.clkr,
+	[GCC_MPM_AHB_CLK] = &gcc_mpm_ahb_clk.clkr,
+	[GCC_NSS_TS_CLK] = &gcc_nss_ts_clk.clkr,
+	[GCC_NSS_TS_CLK_SRC] = &gcc_nss_ts_clk_src.clkr,
+	[GCC_NSSCC_CLK] = &gcc_nsscc_clk.clkr,
+	[GCC_NSSCFG_CLK] = &gcc_nsscfg_clk.clkr,
+	[GCC_NSSNOC_ATB_CLK] = &gcc_nssnoc_atb_clk.clkr,
+	[GCC_NSSNOC_NSSCC_CLK] = &gcc_nssnoc_nsscc_clk.clkr,
+	[GCC_NSSNOC_PCNOC_1_CLK] = &gcc_nssnoc_pcnoc_1_clk.clkr,
+	[GCC_NSSNOC_QOSGEN_REF_CLK] = &gcc_nssnoc_qosgen_ref_clk.clkr,
+	[GCC_NSSNOC_SNOC_1_CLK] = &gcc_nssnoc_snoc_1_clk.clkr,
+	[GCC_NSSNOC_SNOC_CLK] = &gcc_nssnoc_snoc_clk.clkr,
+	[GCC_NSSNOC_TIMEOUT_REF_CLK] = &gcc_nssnoc_timeout_ref_clk.clkr,
+	[GCC_NSSNOC_XO_DCD_CLK] = &gcc_nssnoc_xo_dcd_clk.clkr,
+	[GCC_PCIE3X1_0_AHB_CLK] = &gcc_pcie3x1_0_ahb_clk.clkr,
+	[GCC_PCIE3X1_0_AUX_CLK] = &gcc_pcie3x1_0_aux_clk.clkr,
+	[GCC_PCIE3X1_0_AXI_CLK_SRC] = &gcc_pcie3x1_0_axi_clk_src.clkr,
+	[GCC_PCIE3X1_0_AXI_M_CLK] = &gcc_pcie3x1_0_axi_m_clk.clkr,
+	[GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK] = &gcc_pcie3x1_0_axi_s_bridge_clk.clkr,
+	[GCC_PCIE3X1_0_AXI_S_CLK] = &gcc_pcie3x1_0_axi_s_clk.clkr,
+	[GCC_PCIE3X1_0_PIPE_CLK] = &gcc_pcie3x1_0_pipe_clk.clkr,
+	[GCC_PCIE3X1_0_RCHG_CLK_SRC] = &gcc_pcie3x1_0_rchg_clk_src.clkr,
+	[GCC_PCIE3X1_1_AHB_CLK] = &gcc_pcie3x1_1_ahb_clk.clkr,
+	[GCC_PCIE3X1_1_AUX_CLK] = &gcc_pcie3x1_1_aux_clk.clkr,
+	[GCC_PCIE3X1_1_AXI_CLK_SRC] = &gcc_pcie3x1_1_axi_clk_src.clkr,
+	[GCC_PCIE3X1_1_AXI_M_CLK] = &gcc_pcie3x1_1_axi_m_clk.clkr,
+	[GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK] = &gcc_pcie3x1_1_axi_s_bridge_clk.clkr,
+	[GCC_PCIE3X1_1_AXI_S_CLK] = &gcc_pcie3x1_1_axi_s_clk.clkr,
+	[GCC_PCIE3X1_1_PIPE_CLK] = &gcc_pcie3x1_1_pipe_clk.clkr,
+	[GCC_PCIE3X1_1_RCHG_CLK_SRC] = &gcc_pcie3x1_1_rchg_clk_src.clkr,
+	[GCC_PCIE3X1_PHY_AHB_CLK] = &gcc_pcie3x1_phy_ahb_clk.clkr,
+	[GCC_PCIE3X2_AHB_CLK] = &gcc_pcie3x2_ahb_clk.clkr,
+	[GCC_PCIE3X2_AUX_CLK] = &gcc_pcie3x2_aux_clk.clkr,
+	[GCC_PCIE3X2_AXI_M_CLK] = &gcc_pcie3x2_axi_m_clk.clkr,
+	[GCC_PCIE3X2_AXI_M_CLK_SRC] = &gcc_pcie3x2_axi_m_clk_src.clkr,
+	[GCC_PCIE3X2_AXI_S_BRIDGE_CLK] = &gcc_pcie3x2_axi_s_bridge_clk.clkr,
+	[GCC_PCIE3X2_AXI_S_CLK] = &gcc_pcie3x2_axi_s_clk.clkr,
+	[GCC_PCIE3X2_AXI_S_CLK_SRC] = &gcc_pcie3x2_axi_s_clk_src.clkr,
+	[GCC_PCIE3X2_PHY_AHB_CLK] = &gcc_pcie3x2_phy_ahb_clk.clkr,
+	[GCC_PCIE3X2_PIPE_CLK] = &gcc_pcie3x2_pipe_clk.clkr,
+	[GCC_PCIE3X2_RCHG_CLK_SRC] = &gcc_pcie3x2_rchg_clk_src.clkr,
+	[GCC_PCIE_AUX_CLK_SRC] = &gcc_pcie_aux_clk_src.clkr,
+	[GCC_PCNOC_LPASS_CLK] = &gcc_pcnoc_lpass_clk.clkr,
+	[GCC_PRNG_AHB_CLK] = &gcc_prng_ahb_clk.clkr,
+	[GCC_Q6_AHB_CLK] = &gcc_q6_ahb_clk.clkr,
+	[GCC_Q6_AHB_S_CLK] = &gcc_q6_ahb_s_clk.clkr,
+	[GCC_Q6_AXIM_CLK] = &gcc_q6_axim_clk.clkr,
+	[GCC_Q6_AXIM_CLK_SRC] = &gcc_q6_axim_clk_src.clkr,
+	[GCC_Q6_AXIS_CLK] = &gcc_q6_axis_clk.clkr,
+	[GCC_Q6_TSCTR_1TO2_CLK] = &gcc_q6_tsctr_1to2_clk.clkr,
+	[GCC_Q6SS_ATBM_CLK] = &gcc_q6ss_atbm_clk.clkr,
+	[GCC_Q6SS_PCLKDBG_CLK] = &gcc_q6ss_pclkdbg_clk.clkr,
+	[GCC_Q6SS_TRIG_CLK] = &gcc_q6ss_trig_clk.clkr,
+	[GCC_QDSS_APB2JTAG_CLK] = &gcc_qdss_apb2jtag_clk.clkr,
+	[GCC_QDSS_AT_CLK] = &gcc_qdss_at_clk.clkr,
+	[GCC_QDSS_AT_CLK_SRC] = &gcc_qdss_at_clk_src.clkr,
+	[GCC_QDSS_CFG_AHB_CLK] = &gcc_qdss_cfg_ahb_clk.clkr,
+	[GCC_QDSS_DAP_AHB_CLK] = &gcc_qdss_dap_ahb_clk.clkr,
+	[GCC_QDSS_DAP_CLK] = &gcc_qdss_dap_clk.clkr,
+	[GCC_QDSS_ETR_USB_CLK] = &gcc_qdss_etr_usb_clk.clkr,
+	[GCC_QDSS_EUD_AT_CLK] = &gcc_qdss_eud_at_clk.clkr,
+	[GCC_QDSS_STM_CLK] = &gcc_qdss_stm_clk.clkr,
+	[GCC_QDSS_STM_CLK_SRC] = &gcc_qdss_stm_clk_src.clkr,
+	[GCC_QDSS_TRACECLKIN_CLK] = &gcc_qdss_traceclkin_clk.clkr,
+	[GCC_QDSS_TRACECLKIN_CLK_SRC] = &gcc_qdss_traceclkin_clk_src.clkr,
+	[GCC_QDSS_TS_CLK] = &gcc_qdss_ts_clk.clkr,
+	[GCC_QDSS_TSCTR_CLK_SRC] = &gcc_qdss_tsctr_clk_src.clkr,
+	[GCC_QDSS_TSCTR_DIV16_CLK] = &gcc_qdss_tsctr_div16_clk.clkr,
+	[GCC_QDSS_TSCTR_DIV2_CLK] = &gcc_qdss_tsctr_div2_clk.clkr,
+	[GCC_QDSS_TSCTR_DIV3_CLK] = &gcc_qdss_tsctr_div3_clk.clkr,
+	[GCC_QDSS_TSCTR_DIV4_CLK] = &gcc_qdss_tsctr_div4_clk.clkr,
+	[GCC_QDSS_TSCTR_DIV8_CLK] = &gcc_qdss_tsctr_div8_clk.clkr,
+	[GCC_QPIC_AHB_CLK] = &gcc_qpic_ahb_clk.clkr,
+	[GCC_QPIC_CLK] = &gcc_qpic_clk.clkr,
+	[GCC_QPIC_IO_MACRO_CLK] = &gcc_qpic_io_macro_clk.clkr,
+	[GCC_QPIC_IO_MACRO_CLK_SRC] = &gcc_qpic_io_macro_clk_src.clkr,
+	[GCC_QPIC_SLEEP_CLK] = &gcc_qpic_sleep_clk.clkr,
+	[GCC_SDCC1_AHB_CLK] = &gcc_sdcc1_ahb_clk.clkr,
+	[GCC_SDCC1_APPS_CLK] = &gcc_sdcc1_apps_clk.clkr,
+	[GCC_SDCC1_APPS_CLK_SRC] = &gcc_sdcc1_apps_clk_src.clkr,
+	[GCC_SLEEP_CLK_SRC] = &gcc_sleep_clk_src.clkr,
+	[GCC_SNOC_LPASS_CFG_CLK] = &gcc_snoc_lpass_cfg_clk.clkr,
+	[GCC_SNOC_NSSNOC_1_CLK] = &gcc_snoc_nssnoc_1_clk.clkr,
+	[GCC_SNOC_NSSNOC_CLK] = &gcc_snoc_nssnoc_clk.clkr,
+	[GCC_SYS_NOC_QDSS_STM_AXI_CLK] = &gcc_sys_noc_qdss_stm_axi_clk.clkr,
+	[GCC_SYS_NOC_WCSS_AHB_CLK] = &gcc_sys_noc_wcss_ahb_clk.clkr,
+	[GCC_TLMM_AHB_CLK] = &gcc_tlmm_ahb_clk.clkr,
+	[GCC_TLMM_CLK] = &gcc_tlmm_clk.clkr,
+	[GCC_UNIPHY0_AHB_CLK] = &gcc_uniphy0_ahb_clk.clkr,
+	[GCC_UNIPHY0_SYS_CLK] = &gcc_uniphy0_sys_clk.clkr,
+	[GCC_UNIPHY1_AHB_CLK] = &gcc_uniphy1_ahb_clk.clkr,
+	[GCC_UNIPHY1_SYS_CLK] = &gcc_uniphy1_sys_clk.clkr,
+	[GCC_UNIPHY_SYS_CLK_SRC] = &gcc_uniphy_sys_clk_src.clkr,
+	[GCC_USB0_AUX_CLK] = &gcc_usb0_aux_clk.clkr,
+	[GCC_USB0_AUX_CLK_SRC] = &gcc_usb0_aux_clk_src.clkr,
+	[GCC_USB0_EUD_AT_CLK] = &gcc_usb0_eud_at_clk.clkr,
+	[GCC_USB0_LFPS_CLK] = &gcc_usb0_lfps_clk.clkr,
+	[GCC_USB0_LFPS_CLK_SRC] = &gcc_usb0_lfps_clk_src.clkr,
+	[GCC_USB0_MASTER_CLK] = &gcc_usb0_master_clk.clkr,
+	[GCC_USB0_MASTER_CLK_SRC] = &gcc_usb0_master_clk_src.clkr,
+	[GCC_USB0_MOCK_UTMI_CLK] = &gcc_usb0_mock_utmi_clk.clkr,
+	[GCC_USB0_MOCK_UTMI_CLK_SRC] = &gcc_usb0_mock_utmi_clk_src.clkr,
+	[GCC_USB0_MOCK_UTMI_DIV_CLK_SRC] = &gcc_usb0_mock_utmi_div_clk_src.clkr,
+	[GCC_USB0_PHY_CFG_AHB_CLK] = &gcc_usb0_phy_cfg_ahb_clk.clkr,
+	[GCC_USB0_PIPE_CLK] = &gcc_usb0_pipe_clk.clkr,
+	[GCC_USB0_SLEEP_CLK] = &gcc_usb0_sleep_clk.clkr,
+	[GCC_WCSS_AHB_CLK_SRC] = &gcc_wcss_ahb_clk_src.clkr,
+	[GCC_WCSS_AXIM_CLK] = &gcc_wcss_axim_clk.clkr,
+	[GCC_WCSS_AXIS_CLK] = &gcc_wcss_axis_clk.clkr,
+	[GCC_WCSS_DBG_IFC_APB_BDG_CLK] = &gcc_wcss_dbg_ifc_apb_bdg_clk.clkr,
+	[GCC_WCSS_DBG_IFC_APB_CLK] = &gcc_wcss_dbg_ifc_apb_clk.clkr,
+	[GCC_WCSS_DBG_IFC_ATB_BDG_CLK] = &gcc_wcss_dbg_ifc_atb_bdg_clk.clkr,
+	[GCC_WCSS_DBG_IFC_ATB_CLK] = &gcc_wcss_dbg_ifc_atb_clk.clkr,
+	[GCC_WCSS_DBG_IFC_NTS_BDG_CLK] = &gcc_wcss_dbg_ifc_nts_bdg_clk.clkr,
+	[GCC_WCSS_DBG_IFC_NTS_CLK] = &gcc_wcss_dbg_ifc_nts_clk.clkr,
+	[GCC_WCSS_ECAHB_CLK] = &gcc_wcss_ecahb_clk.clkr,
+	[GCC_WCSS_MST_ASYNC_BDG_CLK] = &gcc_wcss_mst_async_bdg_clk.clkr,
+	[GCC_WCSS_SLV_ASYNC_BDG_CLK] = &gcc_wcss_slv_async_bdg_clk.clkr,
+	[GCC_XO_CLK] = &gcc_xo_clk.clkr,
+	[GCC_XO_CLK_SRC] = &gcc_xo_clk_src.clkr,
+	[GCC_XO_DIV4_CLK] = &gcc_xo_div4_clk.clkr,
+	[GPLL0] = &gpll0.clkr,
+	[GPLL2] = &gpll2.clkr,
+	[GPLL4] = &gpll4.clkr,
+	[GPLL6] = &gpll6.clkr,
 };
 
 static const struct qcom_reset_map gcc_devsoc_resets[] = {
-	[GCC_APC0_VOLTAGE_DROOP_DETECTOR_BCR] = { 0x78000, 0 },
-	[GCC_BLSP1_BCR] = { 0x01000, 0 },
-	[GCC_BLSP1_QUP1_BCR] = { 0x02000, 0 },
-	[GCC_BLSP1_QUP2_BCR] = { 0x03008, 0 },
-	[GCC_BLSP1_QUP3_BCR] = { 0x04008, 0 },
-	[GCC_BLSP1_UART1_BCR] = { 0x02038, 0 },
-	[GCC_BLSP1_UART2_BCR] = { 0x03028, 0 },
-	[GCC_BOOT_ROM_BCR] = { 0x13008, 0 },
-	[GCC_BTSS_BCR] = { 0x1c000, 0 },
-	[GCC_CMN_BLK_BCR] = { 0x56300, 0 },
-	[GCC_CMN_LDO_BCR] = { 0x33000, 0 },
-	[GCC_CE_BCR] = { 0x33014, 0 },
-	[GCC_CRYPTO_BCR] = { 0x16000, 0 },
-	[GCC_DCC_BCR] = { 0x77000, 0 },
-	[GCC_DCD_BCR] = { 0x2a000, 0 },
-	[GCC_DDRSS_BCR] = { 0x1e000, 0 },
-	[GCC_EDPD_BCR] = { 0x3a000, 0 },
-	[GCC_GEPHY_BCR] = { 0x56000, 0 },
-	[GCC_GEPHY_MDC_SW_ARES] = { 0x56004, 0, 0x3 },
-	[GCC_GEPHY_DSP_HW_ARES] = { 0x56004, 1 },
-	[GCC_GEPHY_RX_ARES] = { 0x56004, 2 },
-	[GCC_GEPHY_TX_ARES] = { 0x56004, 3 },
-	[GCC_GMAC0_BCR] = { 0x19000, 0 },
-	[GCC_GMAC0_CFG_ARES] = { 0x68428, 0 },
-	[GCC_GMAC0_SYS_ARES] = { 0x68428, 1 },
-	[GCC_GMAC1_BCR] = { 0x19100, 0 },
-	[GCC_GMAC1_CFG_ARES] = { 0x68438, 0 },
-	[GCC_GMAC1_SYS_ARES] = { 0x68438, 1 },
-	[GCC_IMEM_BCR] = { 0x0e000, 0 },
-	[GCC_LPASS_BCR] = { 0x2e000, 0 },
-	[GCC_MDIO0_BCR] = { 0x58000, 0 },
-	[GCC_MDIO1_BCR] = { 0x58010, 0 },
-	[GCC_MPM_BCR] = { 0x2c000, 0 },
-	[GCC_PCIE0_BCR] = { 0x75004, 0 },
-	[GCC_PCIE0_LINK_DOWN_BCR] = { 0x750a8, 0 },
-	[GCC_PCIE0_PHY_BCR] = { 0x75038, 0 },
-	[GCC_PCIE0PHY_PHY_BCR] = { 0x7503c, 0 },
-	[GCC_PCIE0_PIPE_ARES] = { 0x75040, 0 },
-	[GCC_PCIE0_SLEEP_ARES] = { 0x75040, 1 },
-	[GCC_PCIE0_CORE_STICKY_ARES] = { 0x75040, 2 },
-	[GCC_PCIE0_AXI_MASTER_ARES] = { 0x75040, 3 },
-	[GCC_PCIE0_AXI_SLAVE_ARES] = { 0x75040, 4 },
-	[GCC_PCIE0_AHB_ARES] = { 0x75040, 5 },
-	[GCC_PCIE0_AXI_MASTER_STICKY_ARES] = { 0x75040, 6 },
-	[GCC_PCIE0_AXI_SLAVE_STICKY_ARES] = { 0x75040, 7 },
-	[GCC_PCIE1_BCR] = { 0x76004, 0 },
-	[GCC_PCIE1_LINK_DOWN_BCR] = { 0x76044, 0 },
-	[GCC_PCIE1_PHY_BCR] = { 0x76038, 0 },
-	[GCC_PCIE1PHY_PHY_BCR] = { 0x7603c, 0 },
-	[GCC_PCIE1_PIPE_ARES] = { 0x76040, 0 },
-	[GCC_PCIE1_SLEEP_ARES] = { 0x76040, 1 },
-	[GCC_PCIE1_CORE_STICKY_ARES] = { 0x76040, 2 },
-	[GCC_PCIE1_AXI_MASTER_ARES] = { 0x76040, 3 },
-	[GCC_PCIE1_AXI_SLAVE_ARES] = { 0x76040, 4 },
-	[GCC_PCIE1_AHB_ARES] = { 0x76040, 5 },
-	[GCC_PCIE1_AXI_MASTER_STICKY_ARES] = { 0x76040, 6 },
-	[GCC_PCIE1_AXI_SLAVE_STICKY_ARES] = { 0x76040, 7 },
-	[GCC_PCNOC_BCR] = { 0x27018, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT0_BCR] = { 0x48000, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT1_BCR] = { 0x48008, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT2_BCR] = { 0x48010, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT3_BCR] = { 0x48018, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT4_BCR] = { 0x48020, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT5_BCR] = { 0x48028, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT6_BCR] = { 0x48030, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT7_BCR] = { 0x48038, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT8_BCR] = { 0x48040, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT9_BCR] = { 0x48048, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT10_BCR] = { 0x48050, 0 },
-	[GCC_PCNOC_BUS_TIMEOUT11_BCR] = { 0x48058, 0 },
-	[GCC_PRNG_BCR] = { 0x13000, 0 },
-	[GCC_Q6SS_DBG_ARES] = { 0x59110, 0 },
-	[GCC_Q6_AHB_S_ARES] = { 0x59110, 1 },
-	[GCC_Q6_AHB_ARES] = { 0x59110, 2 },
-	[GCC_Q6_AXIM2_ARES] = { 0x59110, 3 },
-	[GCC_Q6_AXIM_ARES] = { 0x59110, 4 },
-	[GCC_Q6_AXIS_ARES] = { 0x59158, 0 },
-	[GCC_QDSS_BCR] = { 0x29000, 0 },
-	[GCC_QPIC_BCR] = { 0x57018, 0 },
-	[GCC_QUSB2_0_PHY_BCR] = { 0x41030, 0 },
-	[GCC_SDCC1_BCR] = { 0x42000, 0 },
-	[GCC_SEC_CTRL_BCR] = { 0x1a000, 0 },
-	[GCC_SPDM_BCR] = { 0x2f000, 0 },
-	[GCC_SYSTEM_NOC_BCR] = { 0x26000, 0 },
-	[GCC_TCSR_BCR] = { 0x28000, 0 },
-	[GCC_TLMM_BCR] = { 0x34000, 0 },
-	[GCC_UBI0_AXI_ARES] = { 0x68010, 0 },
-	[GCC_UBI0_AHB_ARES] = { 0x68010, 1 },
-	[GCC_UBI0_NC_AXI_ARES] = { 0x68010, 2 },
-	[GCC_UBI0_DBG_ARES] = { 0x68010, 3 },
-	[GCC_UBI0_UTCM_ARES] = { 0x68010, 6 },
-	[GCC_UBI0_CORE_ARES] = { 0x68010, 7 },
-	[GCC_UBI32_BCR] = { 0x19064, 0 },
-	[GCC_UNIPHY_BCR] = { 0x56100, 0 },
-	[GCC_UNIPHY_AHB_ARES] = { 0x56104, 0 },
-	[GCC_UNIPHY_SYS_ARES] = { 0x56104, 1 },
-	[GCC_UNIPHY_RX_ARES] = { 0x56104, 4 },
-	[GCC_UNIPHY_TX_ARES] = { 0x56104, 5 },
-	[GCC_UNIPHY_SOFT_RESET] = {0x56104, 0, 0x32 },
-	[GCC_USB0_BCR] = { 0x3e070, 0 },
-	[GCC_USB0_PHY_BCR] = { 0x3e034, 0 },
-	[GCC_WCSS_BCR] = { 0x18000, 0 },
-	[GCC_WCSS_DBG_ARES] = { 0x59008, 0 },
-	[GCC_WCSS_ECAHB_ARES] = { 0x59008, 1 },
-	[GCC_WCSS_ACMT_ARES] = { 0x59008, 2 },
-	[GCC_WCSS_DBG_BDG_ARES] = { 0x59008, 3 },
-	[GCC_WCSS_AHB_S_ARES] = { 0x59008, 4 },
-	[GCC_WCSS_AXI_M_ARES] = { 0x59008, 5 },
-	[GCC_WCSS_AXI_S_ARES] = { 0x59008, 6 },
-	[GCC_WCSS_Q6_BCR] = { 0x18004, 0 },
-	[GCC_WCSSAON_RESET] = { 0x59010, 0},
-	[GCC_GEPHY_MISC_ARES] = { 0x56004, 0, 0xf },
+	[GCC_ADSS_BCR] = { 0x1c000 },
+	[GCC_ADSS_PWM_CLK_ARES] = { 0x1c00c, 2 },
+	[GCC_AHB_CLK_ARES] = { 0x34024, 2 },
+	[GCC_APC0_VOLTAGE_DROOP_DETECTOR_BCR] = { 0x38000 },
+	[GCC_APC0_VOLTAGE_DROOP_DETECTOR_GPLL0_CLK_ARES] = { 0x3800c, 2 },
+	[GCC_APSS_AHB_CLK_ARES] = { 0x24018, 2 },
+	[GCC_APSS_AXI_CLK_ARES] = { 0x2401c, 2 },
+	[GCC_BLSP1_AHB_CLK_ARES] = { 0x1008, 2 },
+	[GCC_BLSP1_BCR] = { 0x1000 },
+	[GCC_BLSP1_QUP1_BCR] = { 0x2000 },
+	[GCC_BLSP1_QUP1_I2C_APPS_CLK_ARES] = { 0x2024, 2 },
+	[GCC_BLSP1_QUP1_SPI_APPS_CLK_ARES] = { 0x2020, 2 },
+	[GCC_BLSP1_QUP2_BCR] = { 0x3000 },
+	[GCC_BLSP1_QUP2_I2C_APPS_CLK_ARES] = { 0x3024, 2 },
+	[GCC_BLSP1_QUP2_SPI_APPS_CLK_ARES] = { 0x3020, 2 },
+	[GCC_BLSP1_QUP3_BCR] = { 0x4000 },
+	[GCC_BLSP1_QUP3_I2C_APPS_CLK_ARES] = { 0x4024, 2 },
+	[GCC_BLSP1_QUP3_SPI_APPS_CLK_ARES] = { 0x4020, 2 },
+	[GCC_BLSP1_SLEEP_CLK_ARES] = { 0x1010, 2 },
+	[GCC_BLSP1_UART1_APPS_CLK_ARES] = { 0x2040, 2 },
+	[GCC_BLSP1_UART1_BCR] = { 0x2028 },
+	[GCC_BLSP1_UART2_APPS_CLK_ARES] = { 0x3040, 2 },
+	[GCC_BLSP1_UART2_BCR] = { 0x3028 },
+	[GCC_BLSP1_UART3_APPS_CLK_ARES] = { 0x4054, 2 },
+	[GCC_BLSP1_UART3_BCR] = { 0x4028 },
+	[GCC_BOOT_ROM_AHB_CLK_ARES] = { 0x1302c, 2 },
+	[GCC_BOOT_ROM_BCR] = { 0x13028 },
+	[GCC_GP1_CLK_ARES] = { 0x8018, 2 },
+	[GCC_GP2_CLK_ARES] = { 0x9018, 2 },
+	[GCC_IM_SLEEP_CLK_ARES] = { 0x34020, 2 },
+	[GCC_LPASS_BCR] = { 0x27000 },
+	[GCC_LPASS_CORE_AXIM_CLK_ARES] = { 0x27018, 2 },
+	[GCC_LPASS_SWAY_CLK_ARES] = { 0x27014, 2 },
+	[GCC_MPM_AHB_CLK_ARES] = { 0x37004, 2 },
+	[GCC_MPM_BCR] = { 0x37000 },
+	[GCC_NSS_BCR] = { 0x17000 },
+	[GCC_NSS_TS_CLK_ARES] = { 0x17018, 2 },
+	[GCC_NSSCC_CLK_ARES] = { 0x17034, 2 },
+	[GCC_NSSCFG_CLK_ARES] = { 0x1702c, 2 },
+	[GCC_NSSNOC_ATB_CLK_ARES] = { 0x17014, 2 },
+	[GCC_NSSNOC_NSSCC_CLK_ARES] = { 0x17030, 2 },
+	[GCC_NSSNOC_PCNOC_1_CLK_ARES] = { 0x17080, 2 },
+	[GCC_NSSNOC_QOSGEN_REF_CLK_ARES] = { 0x1701c, 2 },
+	[GCC_NSSNOC_SNOC_1_CLK_ARES] = { 0x1707c, 2 },
+	[GCC_NSSNOC_SNOC_CLK_ARES] = { 0x17028, 2 },
+	[GCC_NSSNOC_TIMEOUT_REF_CLK_ARES] = { 0x17020, 2 },
+	[GCC_NSSNOC_XO_DCD_CLK_ARES] = { 0x17074, 2 },
+	[GCC_PCIE3X1_0_AHB_CLK_ARES] = { 0x29030, 2 },
+	[GCC_PCIE3X1_0_AUX_CLK_ARES] = { 0x29070, 2 },
+	[GCC_PCIE3X1_0_AXI_M_CLK_ARES] = { 0x29038, 2 },
+	[GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK_ARES] = { 0x29048, 2 },
+	[GCC_PCIE3X1_0_AXI_S_CLK_ARES] = { 0x29040, 2 },
+	[GCC_PCIE3X1_0_BCR] = { 0x29000 },
+	[GCC_PCIE3X1_0_LINK_DOWN_BCR] = { 0x29054 },
+	[GCC_PCIE3X1_0_PHY_BCR] = { 0x29060 },
+	[GCC_PCIE3X1_0_PHY_PHY_BCR] = { 0x2905c },
+	[GCC_PCIE3X1_1_AHB_CLK_ARES] = { 0x2a00c, 2 },
+	[GCC_PCIE3X1_1_AUX_CLK_ARES] = { 0x2a070, 2 },
+	[GCC_PCIE3X1_1_AXI_M_CLK_ARES] = { 0x2a014, 2 },
+	[GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK_ARES] = { 0x2a024, 2 },
+	[GCC_PCIE3X1_1_AXI_S_CLK_ARES] = { 0x2a01c, 2 },
+	[GCC_PCIE3X1_1_BCR] = { 0x2a000 },
+	[GCC_PCIE3X1_1_LINK_DOWN_BCR] = { 0x2a028 },
+	[GCC_PCIE3X1_1_PHY_BCR] = { 0x2a030 },
+	[GCC_PCIE3X1_1_PHY_PHY_BCR] = { 0x2a02c },
+	[GCC_PCIE3X1_PHY_AHB_CLK_ARES] = { 0x29078, 2 },
+	[GCC_PCIE3X2_AHB_CLK_ARES] = { 0x28030, 2 },
+	[GCC_PCIE3X2_AUX_CLK_ARES] = { 0x28070, 2 },
+	[GCC_PCIE3X2_AXI_M_CLK_ARES] = { 0x28038, 2 },
+	[GCC_PCIE3X2_AXI_S_BRIDGE_CLK_ARES] = { 0x28048, 2 },
+	[GCC_PCIE3X2_AXI_S_CLK_ARES] = { 0x28040, 2 },
+	[GCC_PCIE3X2_BCR] = { 0x28000 },
+	[GCC_PCIE3X2_LINK_DOWN_BCR] = { 0x28054 },
+	[GCC_PCIE3X2_PHY_AHB_CLK_ARES] = { 0x28080, 2 },
+	[GCC_PCIE3X2_PHY_BCR] = { 0x28060 },
+	[GCC_PCIE3X2PHY_PHY_BCR] = { 0x2805c },
+	[GCC_PRNG_AHB_CLK_ARES] = { 0x13024, 2 },
+	[GCC_PRNG_BCR] = { 0x13020 },
+	[GCC_Q6_AHB_CLK_ARES] = { 0x25014, 2 },
+	[GCC_Q6_AHB_S_CLK_ARES] = { 0x25018, 2 },
+	[GCC_Q6_AXIM_CLK_ARES] = { 0x2500c, 2 },
+	[GCC_Q6_AXIS_CLK_ARES] = { 0x25010, 2 },
+	[GCC_Q6_TSCTR_1TO2_CLK_ARES] = { 0x25020, 2 },
+	[GCC_Q6SS_ATBM_CLK_ARES] = { 0x2501c, 2 },
+	[GCC_Q6SS_PCLKDBG_CLK_ARES] = { 0x25024, 2 },
+	[GCC_Q6SS_TRIG_CLK_ARES] = { 0x250a0, 2 },
+	[GCC_QDSS_APB2JTAG_CLK_ARES] = { 0x2d060, 2 },
+	[GCC_QDSS_AT_CLK_ARES] = { 0x2d038, 2 },
+	[GCC_QDSS_BCR] = { 0x2d000 },
+	[GCC_QDSS_CFG_AHB_CLK_ARES] = { 0x2d06c, 2 },
+	[GCC_QDSS_DAP_AHB_CLK_ARES] = { 0x2d068, 2 },
+	[GCC_QDSS_DAP_CLK_ARES] = { 0x2d05c, 2 },
+	[GCC_QDSS_ETR_USB_CLK_ARES] = { 0x2d064, 2 },
+	[GCC_QDSS_EUD_AT_CLK_ARES] = { 0x2d070, 2 },
+	[GCC_QDSS_STM_CLK_ARES] = { 0x2d040, 2 },
+	[GCC_QDSS_TRACECLKIN_CLK_ARES] = { 0x2d044, 2 },
+	[GCC_QDSS_TS_CLK_ARES] = { 0x2d078, 2 },
+	[GCC_QDSS_TSCTR_DIV16_CLK_ARES] = { 0x2d058, 2 },
+	[GCC_QDSS_TSCTR_DIV2_CLK_ARES] = { 0x2d048, 2 },
+	[GCC_QDSS_TSCTR_DIV3_CLK_ARES] = { 0x2d04c, 2 },
+	[GCC_QDSS_TSCTR_DIV4_CLK_ARES] = { 0x2d050, 2 },
+	[GCC_QDSS_TSCTR_DIV8_CLK_ARES] = { 0x2d054, 2 },
+	[GCC_QPIC_AHB_CLK_ARES] = { 0x32010, 2 },
+	[GCC_QPIC_CLK_ARES] = { 0x32014, 2 },
+	[GCC_QPIC_BCR] = { 0x32000 },
+	[GCC_QPIC_IO_MACRO_CLK_ARES] = { 0x3200c, 2 },
+	[GCC_QPIC_SLEEP_CLK_ARES] = { 0x3201c, 2 },
+	[GCC_QUSB2_0_PHY_BCR] = { 0x2c068 },
+	[GCC_SDCC1_AHB_CLK_ARES] = { 0x33034, 2 },
+	[GCC_SDCC1_APPS_CLK_ARES] = { 0x3302c, 2 },
+	[GCC_SDCC_BCR] = { 0x33000 },
+	[GCC_SNOC_NSSNOC_1_CLK_ARES] = { 0x17090, 2 },
+	[GCC_SNOC_NSSNOC_CLK_ARES] = { 0x17084, 2 },
+	[GCC_TLMM_AHB_CLK_ARES] = { 0x3e004, 2 },
+	[GCC_TLMM_CLK_ARES] = { 0x3e008, 2 },
+	[GCC_TLMM_BCR] = { 0x3e000 },
+	[GCC_UNIPHY0_AHB_CLK_ARES] = { 0x16010, 2 },
+	[GCC_UNIPHY0_BCR] = { 0x16000 },
+	[GCC_UNIPHY0_SYS_CLK_ARES] = { 0x1600c, 2 },
+	[GCC_UNIPHY1_AHB_CLK_ARES] = { 0x1601c, 2 },
+	[GCC_UNIPHY1_BCR] = { 0x16014 },
+	[GCC_UNIPHY1_SYS_CLK_ARES] = { 0x16018, 2 },
+	[GCC_USB0_AUX_CLK_ARES] = { 0x2c050, 2 },
+	[GCC_USB0_EUD_AT_CLK_ARES] = { 0x30004, 2 },
+	[GCC_USB0_LFPS_CLK_ARES] = { 0x2c090, 2 },
+	[GCC_USB0_MASTER_CLK_ARES] = { 0x2c048, 2 },
+	[GCC_USB0_MOCK_UTMI_CLK_ARES] = { 0x2c054, 2 },
+	[GCC_USB0_PHY_BCR] = { 0x2c06c },
+	[GCC_USB0_PHY_CFG_AHB_CLK_ARES] = { 0x2c05c, 2 },
+	[GCC_USB0_SLEEP_CLK_ARES] = { 0x2c058, 2 },
+	[GCC_USB3PHY_0_PHY_BCR] = { 0x2c070 },
+	[GCC_USB_BCR] = { 0x2c000 },
+	[GCC_WCSS_AXIM_CLK_ARES] = { 0x2505c, 2 },
+	[GCC_WCSS_AXIS_CLK_ARES] = { 0x25060, 2 },
+	[GCC_WCSS_BCR] = { 0x18004 },
+	[GCC_WCSS_DBG_IFC_APB_BDG_CLK_ARES] = { 0x25048, 2 },
+	[GCC_WCSS_DBG_IFC_APB_CLK_ARES] = { 0x25038, 2 },
+	[GCC_WCSS_DBG_IFC_ATB_BDG_CLK_ARES] = { 0x2504c, 2 },
+	[GCC_WCSS_DBG_IFC_ATB_CLK_ARES] = { 0x2503c, 2 },
+	[GCC_WCSS_DBG_IFC_NTS_BDG_CLK_ARES] = { 0x25050, 2 },
+	[GCC_WCSS_DBG_IFC_NTS_CLK_ARES] = { 0x25040, 2 },
+	[GCC_WCSS_ECAHB_CLK_ARES] = { 0x25058, 2 },
+	[GCC_WCSS_Q6_BCR] = { 0x18000 },
+	[GCC_XO_CLK_ARES] = { 0x34018, 2 },
+	[GCC_XO_DIV4_CLK_ARES] = { 0x3401c, 2 },
+	[GCC_Q6SS_DBG_ARES] = { 0x25094 },
+	[GCC_WCSS_DBG_BDG_ARES] = { 0x25098, 0 },
+	[GCC_WCSS_DBG_ARES] = { 0x25098, 1 },
+	[GCC_WCSS_AXI_S_ARES] = { 0x25098, 2 },
+	[GCC_WCSS_AXI_M_ARES] = { 0x25098, 3 },
+	[GCC_WCSSAON_ARES] = { 0x2509C },
+	[GCC_PCIE3X2_PIPE_ARES] = { 0x28058, 0 },
+	[GCC_PCIE3X2_CORE_STICKY_ARES] = { 0x28058, 1 },
+	[GCC_PCIE3X2_AXI_S_STICKY_ARES] = { 0x28058, 2 },
+	[GCC_PCIE3X2_AXI_M_STICKY_ARES] = { 0x28058, 3 },
+	[GCC_PCIE3X1_0_PIPE_ARES] = { 0x29058, 0 },
+	[GCC_PCIE3X1_0_CORE_STICKY_ARES] = { 0x29058, 1 },
+	[GCC_PCIE3X1_0_AXI_S_STICKY_ARES] = { 0x29058, 2 },
+	[GCC_PCIE3X1_0_AXI_M_STICKY_ARES] = { 0x29058, 3 },
+	[GCC_PCIE3X1_1_PIPE_ARES] = { 0x2a058, 0 },
+	[GCC_PCIE3X1_1_CORE_STICKY_ARES] = { 0x2a058, 1 },
+	[GCC_PCIE3X1_1_AXI_S_STICKY_ARES] = { 0x2a058, 2 },
+	[GCC_PCIE3X1_1_AXI_M_STICKY_ARES] = { 0x2a058, 3 },
+};
+
+static const struct regmap_config gcc_devsoc_regmap_config = {
+	.reg_bits = 32,
+	.reg_stride = 4,
+	.val_bits = 32,
+	.max_register = 0x821d4,
+	.fast_io = true,
+};
+
+static const struct qcom_cc_desc gcc_devsoc_desc = {
+	.config = &gcc_devsoc_regmap_config,
+	.clks = gcc_devsoc_clocks,
+	.num_clks = ARRAY_SIZE(gcc_devsoc_clocks),
+	.resets = gcc_devsoc_resets,
+	.num_resets = ARRAY_SIZE(gcc_devsoc_resets),
+};
+
+static const struct qcom_cc_desc gcc_devsoc_dummy_desc = {
+	.config = &gcc_devsoc_regmap_config,
+	.clks = gcc_devsoc_dummy_clocks,
+	.num_clks = ARRAY_SIZE(gcc_devsoc_dummy_clocks),
+	.resets = gcc_devsoc_resets,
+	.num_resets = ARRAY_SIZE(gcc_devsoc_resets),
 };
 
 static const struct of_device_id gcc_devsoc_match_table[] = {
@@ -393,39 +3719,28 @@ static const struct of_device_id gcc_devsoc_match_table[] = {
 };
 MODULE_DEVICE_TABLE(of, gcc_devsoc_match_table);
 
-static const struct regmap_config gcc_devsoc_regmap_config = {
-	.reg_bits       = 32,
-	.reg_stride     = 4,
-	.val_bits       = 32,
-	.max_register   = 0x7fffc,
-	.fast_io	= true,
-};
-
-static const struct qcom_cc_desc gcc_devsoc_desc = {
-	.config = &gcc_devsoc_regmap_config,
-	.clks = gcc_devsoc_dummy_clks,
-	.num_clks = ARRAY_SIZE(gcc_devsoc_dummy_clks),
-	.resets = gcc_devsoc_resets,
-	.num_resets = ARRAY_SIZE(gcc_devsoc_resets),
-};
-
 static int gcc_devsoc_probe(struct platform_device *pdev)
 {
-	int ret;
+	struct qcom_cc_desc desc = gcc_devsoc_desc;
+	struct device_node *np = (&pdev->dev)->of_node;
 	struct regmap *regmap;
-	struct qcom_cc_desc devsoc_desc = gcc_devsoc_desc;
+	int ret;
 
-	regmap = qcom_cc_map(pdev, &devsoc_desc);
+	if (of_property_read_bool(np, "gcc-use-dummy"))
+		desc = gcc_devsoc_dummy_desc;
+
+	regmap = qcom_cc_map(pdev, &desc);
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
 
-	ret = qcom_cc_really_probe(pdev, &devsoc_desc, regmap);
+
+	ret = qcom_cc_really_probe(pdev, &desc, regmap);
 	if (ret) {
-		dev_err(&pdev->dev, "Failed to register devsoc GCC clocks\n");
+		dev_err(&pdev->dev, "Failed to register GCC clocks\n");
 		return ret;
 	}
 
-	dev_info(&pdev->dev, "Registered DevSoC GCC clocks provider");
+	dev_info(&pdev->dev, "Registered GCC clocks\n");
 
 	return ret;
 }
@@ -433,7 +3748,7 @@ static int gcc_devsoc_probe(struct platform_device *pdev)
 static struct platform_driver gcc_devsoc_driver = {
 	.probe = gcc_devsoc_probe,
 	.driver = {
-		.name   = "qcom,gcc-devsoc",
+		.name = "gcc-devsoc",
 		.of_match_table = gcc_devsoc_match_table,
 	},
 };
