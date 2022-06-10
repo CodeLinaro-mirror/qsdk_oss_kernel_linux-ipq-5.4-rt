@@ -48,6 +48,7 @@ dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-al02-c7.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-al02-c8.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-al02-c9.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-al02-c10.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-al02-c11.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-db-al01-c1.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-db-al01-c2.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq9574-db-al01-c3.dtb
