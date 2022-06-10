@@ -33,8 +33,10 @@
 
 #include "ipq-lpass.h"
 #include "ipq-lpass-cc.h"
+#include "ipq-lpass-tdm-pcm.h"
 
 static void __iomem *sg_ipq_lpass_base;
+static enum ipq_hw_type ipq_hw;
 
 static void ipq_lpass_reg_update(void __iomem *register_addr, uint32_t mask,
 					uint32_t value, bool f_writeonly)
@@ -286,14 +288,35 @@ void ipq_lpass_pcm_config(struct ipq_lpass_pcm_config *configPtr,
 	value = (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_EN_ENABLE_FVAL <<
 			HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_EN_SHFT);
 
+	if (ipq_hw == IPQ9574){
+		mask |= HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_EN_BMSK |
+			HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_DIR_BMSK;
+		value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_EN_ENABLE_FVAL <<
+				HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_EN_SHFT);
+	}
 	regOffset = HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_OFFS(pcm_index);
 
-	if(TDM_SINK == dir){
-		value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SPKR_FVAL
-			<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SHFT);
+	if(ipq_hw == IPQ9574){
+		if(TDM_SINK == dir){
+			value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_DIR_SPKR_FVAL
+				<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_DIR_SHFT);
+			value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_MIC_FVAL
+				<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SHFT);
+
+		} else {
+			value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_DIR_MIC_FVAL
+				<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_DIR_SHFT);
+			value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SPKR_FVAL
+				<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SHFT);
+		}
 	} else {
-		value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_MIC_FVAL
-			<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SHFT);
+		if(TDM_SINK == dir){
+			value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SPKR_FVAL
+				<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SHFT);
+		} else {
+			value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_MIC_FVAL
+				<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SHFT);
+		}
 	}
 
 	ipq_lpass_reg_update(lpaif_base + regOffset, mask, value, 1);
@@ -645,6 +668,11 @@ static void ipq_lpass_dma_config_channel_sink(struct lpass_dma_config *config)
 	value = (config->ifconfig) <<
 			HWIO_LPASS_LPAIF_RDDMA_CTLa_AUDIO_INTF_SHFT;
 
+	if  (ipq_hw == IPQ9574) {
+		mask |= HWIO_LPASS_LPAIF_RDDMA_CTLa_ENABLE_BMSK;
+		value |= (0x1 << HWIO_LPASS_LPAIF_RDDMA_CTLa_ENABLE_SHFT);
+	}
+
 	if (config->watermark)
 		value |=((config->watermark-1) <<
 				HWIO_LPASS_LPAIF_RDDMA_CTLa_FIFO_WATERMRK_SHFT);
@@ -725,6 +753,10 @@ static void ipq_lpass_dma_config_channel_source(struct lpass_dma_config *config)
 	value = (config->ifconfig) <<
 			HWIO_LPASS_LPAIF_WRDMA_CTLa_AUDIO_INTF_SHFT;
 
+	if ( ipq_hw == IPQ9574 ) {
+		mask |= HWIO_LPASS_LPAIF_WRDMA_CTLa_ENABLE_BMSK;
+		value |= (0x1 << HWIO_LPASS_LPAIF_WRDMA_CTLa_ENABLE_SHFT);
+	}
 	if (config->watermark)
 		value |=((config->watermark-1) <<
 				HWIO_LPASS_LPAIF_WRDMA_CTLa_FIFO_WATERMRK_SHFT);
@@ -1185,7 +1217,7 @@ void ipq_lpass_lpaif_muxsetup(uint32_t intf, uint32_t mode)
 	uint32_t val, src;
 
 	if (mode == TDM_MODE_MASTER) {
-		val = 3;
+		val = (ipq_hw == IPQ9574) ? 2 : 3;
 		src = 0;
 	} else {
 		val = 1;
@@ -1810,7 +1842,8 @@ static void ipq_lpass_lpm_lpaif_reset(void)
 }
 
 static const struct of_device_id ipq_lpass_id_table[] = {
-	{ .compatible = "qca,lpass-ipq5018" },
+	{ .compatible = "qca,lpass-ipq5018", .data = (void *)IPQ5018 },
+	{ .compatible = "qca,lpass-ipq9574", .data = (void *)IPQ9574 },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ipq_lpass_id_table);
@@ -1826,7 +1859,7 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 	match = of_match_device(ipq_lpass_id_table, &pdev->dev);
 	if (!match)
 		return -ENODEV;
-
+	ipq_hw = (enum ipq_hw_type)match->data;
 	resource = devm_kzalloc(dev, sizeof(*resource), GFP_KERNEL);
 	if (!resource)
 		return -ENOMEM;
@@ -1839,70 +1872,137 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 
 	if (IS_ERR(sg_ipq_lpass_base))
 		return PTR_ERR(sg_ipq_lpass_base);
-
+	if (ipq_hw == IPQ9574) {
 /*
- * clock init
+ * clock init for Alder
  */
-	resource->axi_snoc_clk = devm_clk_get(dev, "snoc_axim");
-	if (IS_ERR(resource->axi_snoc_clk))
-		return PTR_ERR(resource->axi_snoc_clk);
+		resource->sway_clk = devm_clk_get(dev, "sway");
+		if (IS_ERR(resource->sway_clk))
+			return PTR_ERR(resource->sway_clk);
 
-	resource->sway_snoc_clk = devm_clk_get(dev, "snoc_sway");
-	if (IS_ERR(resource->sway_snoc_clk))
-		return PTR_ERR(resource->sway_snoc_clk);
+		resource->axi_core_clk = devm_clk_get(dev, "axim");
+		if (IS_ERR(resource->axi_core_clk))
+			return PTR_ERR(resource->axi_core_clk);
 
-	resource->axi_core_clk = devm_clk_get(dev, "axim");
-	if (IS_ERR(resource->axi_core_clk))
-		return PTR_ERR(resource->axi_core_clk);
+		resource->snoc_cfg_clk = devm_clk_get(dev, "snoc_cfg");
+		if (IS_ERR(resource->snoc_cfg_clk))
+			return PTR_ERR(resource->snoc_cfg_clk);
 
-	resource->sway_clk = devm_clk_get(dev, "sway");
-	if (IS_ERR(resource->sway_clk))
-		return PTR_ERR(resource->sway_clk);
+		resource->pcnoc_clk = devm_clk_get(dev, "pcnoc");
+		if (IS_ERR(resource->pcnoc_clk))
+			return PTR_ERR(resource->pcnoc_clk);
 
-	resource->reset = devm_reset_control_get(dev, "lpass");
-	if (IS_ERR(resource->reset))
-		return PTR_ERR(resource->reset);
+		resource->reset = devm_reset_control_get(dev, "lpass");
+		if (IS_ERR(resource->reset))
+			return PTR_ERR(resource->reset);
 
-	ret = reset_control_deassert(resource->reset);
-	if (ret) {
-		dev_err(dev, "cannot deassert  reset\n");
-		return ret;
-	}
+		ret = reset_control_deassert(resource->reset);
+		if (ret) {
+			dev_err(dev, "cannot deassert  reset\n");
+			return ret;
+		}
 
-	ret = clk_prepare_enable(resource->axi_snoc_clk);
-	if (ret) {
-		dev_err(dev, "cannot prepare/enable axi_snoc_clk clock\n");
-		goto err_clk_axi_snoc;
-	}
+		ret = clk_prepare_enable(resource->sway_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable sway_clk clock\n");
+			goto err_clk_sway;
+		}
 
-	ret = clk_prepare_enable(resource->sway_snoc_clk);
-	if (ret) {
-		dev_err(dev, "cannot prepare/enable sway_snoc_clk clock\n");
-		goto err_clk_sway_snoc;
-	}
+		ret = clk_set_rate(resource->sway_clk , 133333334);
+		if (ret) {
+			dev_err(dev, "SWAY rate set failed (%d)\n", ret);
+			goto err_clk_sway;
+		}
 
-	ret = clk_prepare_enable(resource->axi_core_clk);
-	if (ret) {
-		dev_err(dev, "cannot prepare/enable axi_core_clk clock\n");
-		goto err_clk_axi;
-	}
+		ret = clk_prepare_enable(resource->axi_core_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable axi_core_clk clock\n");
+			goto err_clk_axi;
+		}
 
-	ret = clk_set_rate(resource->axi_core_clk, 133333334);
-	if (ret) {
-		dev_err(dev, "AXI rate set failed (%d)\n", ret);
-		goto err_clk_axi;
-	}
+		ret = clk_set_rate(resource->axi_core_clk, 133333334);
+		if (ret) {
+			dev_err(dev, "AXI rate set failed (%d)\n", ret);
+			goto err_clk_axi;
+		}
 
-	ret = clk_prepare_enable(resource->sway_clk);
-	if (ret) {
-		dev_err(dev, "cannot prepare/enable sway_clk clock\n");
-		goto err_clk_sway;
-	}
+		ret = clk_prepare_enable(resource->snoc_cfg_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable snoc_cfg_clk clock\n");
+			goto err_clk_snoc;
+		}
 
-	ret = clk_set_rate(resource->sway_clk, 66666667);
-	if (ret) {
-		dev_err(dev, "AXI rate set failed (%d)\n", ret);
-		goto err_clk_sway;
+		ret = clk_prepare_enable(resource->pcnoc_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable pcnoc_clk clock\n");
+			goto err_clk_pcnoc;
+		}
+
+	} else {
+		/*
+		   clock init for Mapple
+		 */
+		resource->axi_snoc_clk = devm_clk_get(dev, "snoc_axim");
+		if (IS_ERR(resource->axi_snoc_clk))
+			return PTR_ERR(resource->axi_snoc_clk);
+
+		resource->sway_snoc_clk = devm_clk_get(dev, "snoc_sway");
+		if (IS_ERR(resource->sway_snoc_clk))
+			return PTR_ERR(resource->sway_snoc_clk);
+
+		resource->axi_core_clk = devm_clk_get(dev, "axim");
+		if (IS_ERR(resource->axi_core_clk))
+			return PTR_ERR(resource->axi_core_clk);
+
+		resource->sway_clk = devm_clk_get(dev, "sway");
+		if (IS_ERR(resource->sway_clk))
+			return PTR_ERR(resource->sway_clk);
+
+		resource->reset = devm_reset_control_get(dev, "lpass");
+		if (IS_ERR(resource->reset))
+			return PTR_ERR(resource->reset);
+
+		ret = reset_control_deassert(resource->reset);
+		if (ret) {
+			dev_err(dev, "cannot deassert  reset\n");
+			return ret;
+		}
+
+		ret = clk_prepare_enable(resource->axi_snoc_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable axi_snoc_clk clock\n");
+			goto err_clk_axi_snoc;
+		}
+
+		ret = clk_prepare_enable(resource->sway_snoc_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable sway_snoc_clk clock\n");
+			goto err_clk_sway_snoc;
+		}
+
+		ret = clk_prepare_enable(resource->axi_core_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable axi_core_clk clock\n");
+			goto err_clk_axi;
+		}
+
+		ret = clk_set_rate(resource->axi_core_clk, 133333334);
+		if (ret) {
+			dev_err(dev, "AXI rate set failed (%d)\n", ret);
+			goto err_clk_axi;
+		}
+
+		ret = clk_prepare_enable(resource->sway_clk);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable sway_clk clock\n");
+			goto err_clk_sway;
+		}
+
+		ret = clk_set_rate(resource->sway_clk, 66666667);
+		if (ret) {
+			dev_err(dev, "AXI rate set failed (%d)\n", ret);
+			goto err_clk_sway;
+		}
 	}
 
 	platform_set_drvdata(pdev, resource);
@@ -1912,7 +2012,6 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 	ipq_lpass_lpm_lpaif_reset();
 
 	return 0;
-
 err_clk_sway:
 	clk_disable_unprepare(resource->sway_clk);
 err_clk_axi:
@@ -1921,6 +2020,11 @@ err_clk_sway_snoc:
 	clk_disable_unprepare(resource->sway_snoc_clk);
 err_clk_axi_snoc:
 	clk_disable_unprepare(resource->axi_snoc_clk);
+err_clk_snoc:
+	clk_disable_unprepare(resource->snoc_cfg_clk);
+err_clk_pcnoc:
+	clk_disable_unprepare(resource->pcnoc_clk);
+
 	return ret;
 }
 
@@ -1930,8 +2034,13 @@ static int ipq_lpass_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(resource->sway_clk);
 	clk_disable_unprepare(resource->axi_core_clk);
-	clk_disable_unprepare(resource->axi_snoc_clk);
-	clk_disable_unprepare(resource->sway_snoc_clk);
+	if (ipq_hw == IPQ9574) {
+		clk_disable_unprepare(resource->snoc_cfg_clk);
+		clk_disable_unprepare(resource->pcnoc_clk);
+	} else {
+		clk_disable_unprepare(resource->axi_snoc_clk);
+		clk_disable_unprepare(resource->sway_snoc_clk);
+	}
 	reset_control_assert(resource->reset);
 	return 0;
 }

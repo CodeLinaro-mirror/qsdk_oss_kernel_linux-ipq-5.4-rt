@@ -9,6 +9,8 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-devsoc.h>
 #include <dt-bindings/reset/qcom,gcc-devsoc.h>
+#include <dt-bindings/clock/qcom,nsscc-devsoc.h>
+#include <dt-bindings/reset/qcom,nsscc-devsoc.h>
 #include <dt-bindings/gpio/gpio.h>
 
 
@@ -270,6 +272,15 @@
 			reg = <0x1800000 0x80000>;
 			clocks = <&xo>, <&sleep_clk>;
 			clock-names = "xo", "sleep_clk";
+			#clock-cells = <0x1>;
+			#reset-cells = <0x1>;
+		};
+
+		nsscc: nsscc@39b00000{
+			compatible = "qcom,nsscc-devsoc";
+			reg = <0x39b00000 0x80000>;
+			clocks = <&xo>;
+			clock-names = "xo";
 			#clock-cells = <0x1>;
 			#reset-cells = <0x1>;
 		};
@@ -822,6 +833,11 @@
 	qti,sps {
 		compatible = "qti,msm-sps-4k";
 		qti,pipe-attr-ee;
+	};
+
+	qcom,test@0 {
+		compatible = "qcom,testmhi";
+		qcom,wlan-ramdump-dynamic = <0x400000>;
 	};
 };
 

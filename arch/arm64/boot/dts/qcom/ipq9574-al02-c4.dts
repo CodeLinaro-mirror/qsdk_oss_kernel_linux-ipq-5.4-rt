@@ -540,10 +540,10 @@
 
 		/* EDMA host driver configuration for the board */
 		edma@3ab00000 {
-			qcom,txdesc-ring-start = <8>;		/* Tx desc ring start ID */
-			qcom,txdesc-rings = <24>;		/* Total number of Tx desc rings to be provisioned */
-			qcom,txcmpl-ring-start = <8>;		/* Tx complete ring start ID */
-			qcom,txcmpl-rings = <24>;		/* Total number of Tx complete rings to be provisioned */
+			qcom,txdesc-ring-start = <4>;		/* Tx desc ring start ID */
+			qcom,txdesc-rings = <28>;		/* Total number of Tx desc rings to be provisioned */
+			qcom,txcmpl-ring-start = <4>;		/* Tx complete ring start ID */
+			qcom,txcmpl-rings = <28>;		/* Total number of Tx complete rings to be provisioned */
 			qcom,rxfill-ring-start = <4>;		/* Rx fill ring start ID */
 			qcom,rxfill-rings = <4>;		/* Total number of Rx fill rings to be provisioned */
 			qcom,rxdesc-ring-start = <20>;		/* Rx desc ring start ID */
@@ -556,11 +556,17 @@
 					<16 17 18 19>,		/* Port2 per-core Tx ring map */
 					<20 21 22 23>,		/* Port3 per-core Tx ring map */
 					<24 25 26 27>,		/* Port4 per-core Tx ring map */
-					<28 29 30 31>;		/* Port5 per-core Tx ring map */
+					<28 29 30 31>,		/* Port5 per-core Tx ring map */
+					<4 5 6 7>;		/* Used only for VP" */
 			qcom,txdesc-fc-grp-map = <1 2 3 4 5 6>;	/* Per GMAC flow control group map */
 			qcom,rxfill-map = <4 5 6 7>;		/* Per-core Rx fill ring map */
 			qcom,rxdesc-map = <20 21 22 23>;	/* Per-core Rx desc ring map */
-			interrupts = <0 371 4>,			/* Tx complete ring id #8 IRQ info */
+			qcom,vp-id = <8>;			/* Virtual port dummy MAC Id */
+			interrupts = <0 367 4>,			/* Tx complete ring id #4 IRQ info */
+				   <0 368 4>,			/* Tx complete ring id #5 IRQ info */
+				   <0 369 4>,			/* Tx complete ring id #6 IRQ info */
+				   <0 370 4>,			/* Tx complete ring id #7 IRQ info */
+				   <0 371 4>,			/* Tx complete ring id #8 IRQ info */
 				   <0 372 4>,			/* Tx complete ring id #9 IRQ info */
 				   <0 373 4>,			/* Tx complete ring id #10 IRQ info */
 				   <0 374 4>,			/* Tx complete ring id #11 IRQ info */

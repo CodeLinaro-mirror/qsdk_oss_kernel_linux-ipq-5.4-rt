@@ -112,6 +112,10 @@
 			gcc-use-dummy;
 		};
 
+		nsscc: nsscc@39b00000 {
+			nsscc-use-dummy;
+		};
+
 		serial@78af000 {
 			pinctrl-0 = <&serial_0_pins>;
 			pinctrl-names = "default";

@@ -112,6 +112,7 @@
 
 enum ipq_hw_type{
 	IPQ5018,
+	IPQ9574,
 	IPQ8074
 };
 

@@ -87,6 +87,10 @@
 			gcc-use-dummy;
 		};
 
+		nsscc: nsscc@39b00000 {
+			nsscc-use-dummy;
+		};
+
 		serial@78af000 {
 			pinctrl-0 = <&serial_0_pins>;
 			pinctrl-names = "default";
@@ -130,10 +134,58 @@
 		timer@b120000 {
 			clock-frequency = <240000>;
 		};
-	};
 
-	psci {
-		status = "disabled";
+		usb3@8A00000 {
+			status = "ok";
+
+			dwc3@8A00000 {
+				usb-phy = <>;
+				phys = <>;
+				phy-names = "";
+			};
+		};
+
+		pcie2_x1_1: pcie@10000000 {
+			max-link-speed = <1>;
+			perst-gpio = <&tlmm 40 GPIO_ACTIVE_LOW>;
+			status = "disabled";
+			pcie_x1_1_rp {
+				reg = <0 0 0 0 0>;
+
+				qcom,mhi@0 {
+					reg = <0 0 0 0 0>;
+					qrtr_instance_id = <0x21>;
+				};
+			};
+		};
+
+		pcie1_x2: pcie@18000000 {
+			max-link-speed = <1>;
+			perst-gpio = <&tlmm 41 GPIO_ACTIVE_LOW>;
+			status = "disabled";
+			pcie_x2_rp {
+				reg = <0 0 0 0 0>;
+
+				qcom,mhi@1 {
+					reg = <0 0 0 0 0>;
+					qrtr_instance_id = <0x20>;
+				};
+			};
+		};
+
+		pcie0_x1_0: pcie@20000000 {
+			max-link-speed = <1>;
+			perst-gpio = <&tlmm 42 GPIO_ACTIVE_LOW>;
+			status = "disabled";
+			pcie_x1_0_rp {
+				reg = <0 0 0 0 0>;
+
+				qcom,mhi@2 {
+					reg = <0 0 0 0 0>;
+					qrtr_instance_id = <0x22>;
+				};
+			};
+		};
 	};
 
 };

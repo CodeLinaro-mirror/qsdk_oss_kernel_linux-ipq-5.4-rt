@@ -3371,6 +3371,8 @@ struct lpass_res{
 	struct reset_control *reset;
 	struct clk *axi_core_clk;
 	struct clk *sway_clk;
+	struct clk *snoc_cfg_clk;
+	struct clk *pcnoc_clk;
 	struct clk *axi_snoc_clk;
 	struct clk *sway_snoc_clk;
 };

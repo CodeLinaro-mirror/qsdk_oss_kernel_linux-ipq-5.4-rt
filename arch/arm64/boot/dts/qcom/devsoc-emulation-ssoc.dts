@@ -20,11 +20,11 @@
 
 	clocks {
 		sleep_clk: sleep-clk {
-			clock-frequency = <320>;
+			clock-frequency = <160>;
 		};
 
 		xo: xo {
-			clock-frequency = <240000>;
+			clock-frequency = <120000>;
 		};
 	};
 
@@ -70,27 +70,18 @@
 				drive-strength = <8>;
 				bias-pull-down;
 			};
-
-			serial_1_pins: serial1-pinmux {
-				pins = "gpio25", "gpio26", "gpio27", "gpio28";
-				function = "blsp1_uart1";
-				drive-strength = <8>;
-				bias-pull-down;
-			};
 		};
 
 		gcc: gcc@1800000 {
 			gcc-use-dummy;
 		};
 
-		serial@78af000 {
-			pinctrl-0 = <&serial_0_pins>;
-			pinctrl-names = "default";
-			status = "ok";
+		nsscc: nsscc@39b00000 {
+			nsscc-use-dummy;
 		};
 
-		serial@78b0000 {
-			pinctrl-0 = <&serial_1_pins>;
+		serial@78af000 {
+			pinctrl-0 = <&serial_0_pins>;
 			pinctrl-names = "default";
 			status = "ok";
 		};
@@ -115,13 +106,13 @@
 			reg = <0x0b1b8000 0x1000>;
 		};
 
-		/*Timer freq for rumi = timer freq / 100*/
+		/* Timer freq for SSOC RUMI  = timer freq / 200 */
 		timer {
-			clock-frequency = <240000>;
+			clock-frequency = <120000>;
 		};
 
 		timer@b120000 {
-			clock-frequency = <240000>;
+			clock-frequency = <120000>;
 		};
 	};
 
