@@ -8,7 +8,7 @@
 
 /dts-v1/;
 
-#include "ipq9574-al02-c1.dts"
+#include "ipq9574-al02-c4.dts"
 
 / {
 	#address-cells = <0x2>;
@@ -16,11 +16,5 @@
 	model = "Qualcomm Technologies, Inc. IPQ9574/AP-AL02-C10";
 	compatible = "qcom,ipq9574-ap-al02-c10", "qcom,ipq9574-al02", "qcom,ipq9574";
 	interrupt-parent = <&intc>;
-	soc {
-
-		reg_update: reg_update@400000 {
-			ubi_core_enable;
-		};
-	};
 
 };
