@@ -96,6 +96,7 @@ struct ipq_lpass_pcm_params cfg_params;
 #else
 struct ipq_pcm_params cfg_params;
 #define IPQ5018				2
+#define IPQ9574				3
 #endif
 uint8_t *prev_buf;
 static enum ipq_hw_type ipq_hw;
@@ -148,7 +149,7 @@ uint32_t pcm_read_write(void)
 		/* get current Tx buffer and write the pattern
 		* We will write 1, 2, 3, ..., 255, 1, 2, 3...
 		*/
-		if (ipq_hw == IPQ5018)
+		if (ipq_hw == IPQ5018 || ipq_hw == IPQ9574)
 			ipq5018_pcm_fill_data((uint32_t *)tx_buff,
 						(size / sizeof(uint32_t)));
 		else
@@ -187,9 +188,11 @@ uint32_t pcm_init(void)
 		cfg_params.slot_count = 16;
 		cfg_params.active_slot_count = 2;
 		cfg_params.tx_slots[0] = 0;
-		cfg_params.tx_slots[1] = (ipq_hw == IPQ5018)? 1 : 3;
+		cfg_params.tx_slots[1] = (ipq_hw == IPQ5018 ||
+						ipq_hw == IPQ9574)? 1 : 3;
 		cfg_params.rx_slots[0] = 0;
-		cfg_params.rx_slots[1] = (ipq_hw == IPQ5018)? 1 : 3;
+		cfg_params.rx_slots[1] = (ipq_hw == IPQ5018 ||
+						ipq_hw == IPQ9574)? 1 : 3;
 		ret = ipq_pcm_init(&cfg_params);
 		break;
 
@@ -299,7 +302,7 @@ void process_read(uint32_t size)
 		 * our loopback should have settled, so start looking for the
 		 * sequence from here. we check only for the data, not for slot
 		 */
-		if (ipq_hw == IPQ5018) {
+		if (ipq_hw == IPQ5018 || ipq_hw == IPQ9574) {
 			ctx.expected_rx_seq = ((uint32_t *)ctx.rx_buf)[0]
 								& 0xFFFF;
 		} else {
@@ -312,7 +315,7 @@ void process_read(uint32_t size)
 		}
 	}
 
-	if (ipq_hw == IPQ5018) {
+	if (ipq_hw == IPQ5018 || ipq_hw == IPQ9574) {
 		data_u32 = ctx.rx_buf;
 	} else {
 		data_u32 = (uint32_t *)ctx.last_rx_buff;
@@ -320,13 +323,13 @@ void process_read(uint32_t size)
 	}
 	val = ctx.expected_rx_seq;
 
-	if (cfg_params.bit_width == 16 || ipq_hw == IPQ5018)
+	if (cfg_params.bit_width == 16 || ipq_hw == IPQ5018 || ipq_hw == IPQ9574)
 		size = size / 4; /* as we are checking data as uint32 */
 	else
 		size = size / 2;
 
 	for (index = 0; index < size; index++) {
-		if (cfg_params.bit_width == 16 || ipq_hw == IPQ5018) {
+		if (cfg_params.bit_width == 16 || ipq_hw == IPQ5018 || ipq_hw == IPQ9574) {
 			expected_val = val;
 			rec_val = data_u32[index] & (0xFFFF);
 		} else {
@@ -334,7 +337,7 @@ void process_read(uint32_t size)
 			rec_val = data_u16[index] & (0xFF);
 		}
 		if (expected_val != rec_val) {
-			if (ipq_hw == IPQ5018)
+			if (ipq_hw == IPQ5018 || ipq_hw == IPQ9574)
 				pr_err("\n Rx(%d) Failed at index %d:"
 					" Expected : 0x%x Received : 0x%x"
 					" index: 0x%x\n", ctx.read_count,
@@ -489,6 +492,7 @@ static void pcm_start_test(void)
 static const struct of_device_id qca_raw_lb_match_table[] = {
 	{ .compatible = "qca,ipq8074-pcm-lb", .data = (void *)IPQ8074 },
 	{ .compatible = "qca,ipq5018-pcm-lb", .data = (void *)IPQ5018 },
+	{ .compatible = "qca,ipq9574-pcm-lb", .data = (void *)IPQ9574 },
 	{},
 };
 

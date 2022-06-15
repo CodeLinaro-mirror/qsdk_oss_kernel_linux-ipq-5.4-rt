@@ -24,6 +24,10 @@ static uint32_t license_file_count = MAX_NUM_OF_LICENSES;
 void license_table_creation(uint32_t lic_file_count);
 void free_license_table(void);
 
+static unsigned int use_license_from_rootfs = 0;
+module_param(use_license_from_rootfs, uint, 0644);
+MODULE_PARM_DESC(use_license_from_rootfs, "Use license files from rootfs: 0,1");
+
 static ssize_t update_license_store(struct kobject *kobj, struct kobj_attribute *attr,
 			   const char *buf, size_t count)
 {

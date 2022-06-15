@@ -62,6 +62,16 @@
 		};
 	};
 
+	firmware {
+		scm {
+			status = "disabled";
+		};
+
+		qfprom {
+			status = "disabled";
+		};
+	};
+
 	soc {
 		pinctrl@1000000 {
 			emmc_pins: emmc_pins {
@@ -110,6 +120,206 @@
 
 		gcc: gcc@1800000 {
 			gcc-use-dummy;
+		};
+
+		nsscc: nsscc@39b00000 {
+			nsscc-use-dummy;
+		};
+
+		ess-instance {
+			num_devices = <0x1>;
+			ess-switch@3a000000 {
+				qcom,emulation; /* RUMI ENV */
+				switch_cpu_bmp = <0x1>;  /* cpu port bitmap */
+				switch_lan_bmp = <0x4>; /* lan port bitmap */
+				switch_wan_bmp = <0x2>; /* wan port bitmap */
+				switch_mac_mode = <0xd>; /* mac mode for uniphy instance0*/
+				switch_mac_mode1 = <0xd>; /* mac mode for uniphy instance1*/
+				switch_mac_mode2 = <0xff>; /* mac mode for uniphy instance2*/
+				bm_tick_mode = <0>; /* bm tick mode */
+				tm_tick_mode = <0>; /* tm tick mode */
+
+				qcom,port_phyinfo {
+					port@0 {
+						port_id = <1>;
+						forced-speed = <5000>;
+						forced-duplex = <1>;
+					};
+					port@1 {
+						port_id = <2>;
+						forced-speed = <5000>;
+						forced-duplex = <1>;
+					};
+				};
+				port_scheduler_resource {
+					port@0 {
+						port_id = <0>;
+						ucast_queue = <0 43>;
+						mcast_queue = <256 262>;
+						l0sp = <0 6>;
+						l0cdrr = <0 27>;
+						l0edrr = <0 27>;
+						l1cdrr = <0 0>;
+						l1edrr = <0 0>;
+					};
+					port@1 {
+						port_id = <1>;
+						ucast_queue = <204 211>;
+						mcast_queue = <272 275>;
+						l0sp = <51 52>;
+						l0cdrr = <108 115>;
+						l0edrr = <108 115>;
+						l1cdrr = <23 24>;
+						l1edrr = <23 24>;
+					};
+					port@2 {
+						port_id = <2>;
+						ucast_queue = <212 219>;
+						mcast_queue = <276 279>;
+						l0sp = <53 54>;
+						l0cdrr = <116 123>;
+						l0edrr = <116 123>;
+						l1cdrr = <25 26>;
+						l1edrr = <25 26>;
+					};
+					reserved {
+						ucast_queue = <44 203>;
+						mcast_queue = <263 271>;
+						l0sp = <7 50>;
+						l0cdrr = <28 107>;
+						l0edrr = <28 107>;
+						l1cdrr = <1 22>;
+						l1edrr = <1 22>;
+					};
+				};
+				port_scheduler_config {
+					port@0 {
+						port_id = <0>;
+						l1scheduler {
+							group@0 {
+								/* L0 SP */
+								sp = <0 1 2 3 4 5 6>;
+								/* cpri cdrr epri edrr */
+								cfg = <0 0 0 0>;
+							};
+						};
+						l0scheduler {
+							group@0 {
+								/* unicast queue */
+								ucast_queue = <0>;
+								ucast_loop_pri = <4>;
+								/* multicast queue */
+								mcast_queue = <256>;
+								/* sp cpri cdrr epri edrr */
+								cfg = <0 0 0 0 0>;
+							};
+							group@1 {
+								ucast_queue = <4>;
+								ucast_loop_pri = <4>;
+								cfg = <0 0 0 0 0>;
+							};
+							group@2 {
+								ucast_queue = <8>;
+								ucast_loop_pri = <4>;
+								mcast_queue = <257>;
+								cfg = <1 0 4 0 4>;
+							};
+							group@3 {
+								ucast_queue = <12>;
+								ucast_loop_pri = <4>;
+								cfg = <1 0 4 0 4>;
+							};
+							group@4 {
+								ucast_queue = <16>;
+								ucast_loop_pri = <4>;
+								mcast_queue = <258>;
+								cfg = <2 0 8 0 8>;
+							};
+							group@5 {
+								ucast_queue = <20>;
+								ucast_loop_pri = <4>;
+								cfg = <2 0 8 0 8>;
+							};
+							group@6 {
+								ucast_queue = <24>;
+								ucast_loop_pri = <4>;
+								mcast_queue = <259>;
+								cfg = <3 0 12 0 12>;
+							};
+							group@7 {
+								ucast_queue = <28>;
+								ucast_loop_pri = <4>;
+								cfg = <3 0 12 0 12>;
+							};
+							group@8 {
+								ucast_queue = <32>;
+								ucast_loop_pri = <4>;
+								mcast_queue = <260>;
+								cfg = <4 0 16 0 16>;
+							};
+							group@9 {
+								ucast_queue = <36>;
+								ucast_loop_pri = <4>;
+								mcast_queue = <261>;
+								cfg = <5 0 20 0 20>;
+							};
+							group@10 {
+								ucast_queue = <40>;
+								ucast_loop_pri = <4>;
+								mcast_queue = <262>;
+								cfg = <6 0 24 0 24>;
+							};
+						};
+					};
+					port@1 {
+						port_id = <1>;
+						l1scheduler {
+							group@0 {
+								sp = <51>;
+								cfg = <0 23 0 23>;
+							};
+							group@1 {
+								sp = <52>;
+								cfg = <1 24 1 24>;
+							};
+						};
+						l0scheduler {
+							group@0 {
+								ucast_queue = <204>;
+								ucast_loop_pri = <8>;
+								/* max priority per SP */
+								ucast_max_pri = <4>;
+								mcast_queue = <272>;
+								mcast_loop_pri = <4>;
+								cfg = <51 0 108 0 108>;
+							};
+						};
+					};
+					port@2 {
+						port_id = <2>;
+						l1scheduler {
+							group@0 {
+								sp = <53>;
+								cfg = <0 25 0 25>;
+							};
+							group@1 {
+								sp = <54>;
+								cfg = <1 26 1 26>;
+							};
+						};
+						l0scheduler {
+							group@0 {
+								ucast_queue = <212>;
+								ucast_loop_pri = <8>;
+								ucast_max_pri = <4>;
+								mcast_queue = <276>;
+								mcast_loop_pri = <4>;
+								cfg = <53 0 116 0 116>;
+							};
+						};
+					};
+				};
+			};
 		};
 
 		serial@78af000 {
@@ -230,6 +440,14 @@
 	};
 
 	psci {
+		status = "disabled";
+	};
+
+	qti,tzlog {
+		status = "disabled";
+	};
+
+	qti,scm_restart_reason {
 		status = "disabled";
 	};
 

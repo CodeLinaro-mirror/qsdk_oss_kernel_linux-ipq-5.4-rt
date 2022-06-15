@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * IPQ9574 AL02-C12 board device tree source
+ *
+ * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "ipq9574-al02-c6.dts"
+
+/ {
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+	model = "Qualcomm Technologies, Inc. IPQ9574/AP-AL02-C12";
+	compatible = "qcom,ipq9574-ap-al02-c12", "qcom,ipq9574-al02", "qcom,ipq9574";
+	interrupt-parent = <&intc>;
+	soc {
+		pcie1_x1: pci@10000000 {
+			perst-gpio = <&tlmm 26 1>;
+			max-payload-size = <1>; // 1-256 TLP bytes for WKK
+			status = "ok";
+			pcie1_rp {
+				reg = <0 0 0 0 0>;
+				qcom,mhi@1 {
+					reg = <0 0 0 0 0>;
+					qrtr_node_id = <0x31>;
+					memory-region = <0>,<&mhi_region1>;
+				};
+			};
+		};
+	};
+};
+&mhi_region1 {
+	status = "ok";
+};
+

@@ -278,6 +278,7 @@
 		arm,scatter-gather;
 		memory-region = <&q6_etr_region>;
 		coresight-csr = <&csr>;
+		csr-atid-offset = <0xE0>;
 
 		coresight-name = "coresight-tmc-etr";
 
@@ -314,6 +315,7 @@
 
 		coresight-name = "coresight-etm0";
 		cpu = <&CPU0>;
+		atid = <1>;
 
 		clocks = <&gcc GCC_QDSS_DAP_CLK>;
 		clock-names = "apb_pclk";
@@ -347,6 +349,7 @@
 
 		coresight-name = "coresight-etm1";
 		cpu = <&CPU1>;
+		atid = <2>;
 
 		clocks = <&gcc GCC_QDSS_DAP_CLK>;
 		clock-names = "apb_pclk";
@@ -380,6 +383,7 @@
 
 		coresight-name = "coresight-etm2";
 		cpu = <&CPU2>;
+		atid = <3>;
 
 		clocks = <&gcc GCC_QDSS_DAP_CLK>;
 		clock-names = "apb_pclk";
@@ -413,6 +417,7 @@
 
 		coresight-name = "coresight-etm3";
 		cpu = <&CPU3>;
+		atid = <4>;
 
 		clocks = <&gcc GCC_QDSS_DAP_CLK>;
 		clock-names = "apb_pclk";

@@ -151,6 +151,15 @@
 #define PCIE20_v3_PARF_SLV_ADDR_SPACE_SIZE	0x358
 #define SLV_ADDR_SPACE_SZ			0x10000000
 
+/* DBI registers */
+#define PCIE20_PORT_LINK_CTRL_OFF		0x710
+#define PCIE20_PORT_LINK_CTRL_OFF_MASK		0x3F0000
+#define PCIE20_LANE_SKEW_OFF			0x714
+#define PCIE20_LANE_SKEW_OFF_MASK		0xFF000000
+#define PCIE20_MULTI_LANE_CONTROL_OFF		0x8C0
+#define PCIE20_LINK_CONTROL_LINK_STATUS_REG	0x80
+#define PCIE20_PARF_LTSSM_MASK			0x3F
+
 /* RATEADAPT_VAL = 256 / ((NOC frequency / PCIe AXI frequency) - 1) */
 /* RATEADAPT_VAL = 256 / ((342M / 240M) - 1) */
 #define AGGR_NOC_PCIE_1LANE_RATEADAPT_VAL	0x200
@@ -294,6 +303,7 @@ struct qcom_pcie {
 	u32 max_speed;
 	uint32_t slv_addr_space_sz;
 	uint32_t num_lanes;
+	uint32_t domain;
 	uint32_t compliance;
 	uint32_t slot_id;
 	uint32_t axi_wr_addr_halt;
@@ -2556,6 +2566,8 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 	of_property_read_u32(pdev->dev.of_node, "axi-halt-val",
 			     &pcie->axi_wr_addr_halt);
 
+	of_property_read_u32(pdev->dev.of_node, "linux,pci-domain",&pcie->domain);
+
 	of_property_read_u32(pdev->dev.of_node, "max-payload-size",
 			     &pcie->max_payload_size);
 
@@ -2897,6 +2909,65 @@ static void qcom_ipq_tc_vc_mapping(struct pci_dev *dev)
 	}while(timeout);
 }
 
+static void qcom_ipq_switch_lane(struct pci_dev *dev)
+{
+	struct pcie_port *pp;
+	struct dw_pcie *pci;
+        struct qcom_pcie *pcie;
+	struct device *devp;
+        struct device_node *np;
+
+	u32 val;
+	int size = 4;
+	pp = dev->bus->sysdata;
+        pci = to_dw_pcie_from_pp(pp);
+        pcie = to_qcom_pcie(pci);
+	devp = pci->dev;
+	np = devp->of_node;
+
+	/* Switching PCIE Nodes 2/3 to single lane if force_to_single_lane property is defined in dts */
+	if ((of_property_read_bool(np, "force_to_single_lane")) && (pcie->domain == 3 || pcie->domain == 4)) {
+
+		dev_info(devp,"Forcing PCIE to single lane\n");
+
+		/* check if Link is in L0 state */
+		dw_pcie_read(pcie->parf + PCIE20_PARF_LTSSM, size, &val);
+		if ((val & PCIE20_PARF_LTSSM_MASK) != 0x11)
+			dev_info(devp,"Before lane switch: Link is not in L0 state: %u\n",val);
+
+		/* set link width */
+		dw_pcie_read(pci->dbi_base + PCIE20_PORT_LINK_CTRL_OFF, size, &val);
+		val &= ~(PCIE20_PORT_LINK_CTRL_OFF_MASK);
+		val |= 0x10000;
+		dw_pcie_write(pci->dbi_base + PCIE20_PORT_LINK_CTRL_OFF, size, val);
+
+		/* config lane skew */
+		dw_pcie_read(pci->dbi_base + PCIE20_LANE_SKEW_OFF, size, &val);
+		val = (val & PCIE20_LANE_SKEW_OFF_MASK)|0x20;
+		dw_pcie_write(pci->dbi_base + PCIE20_LANE_SKEW_OFF, size, val);
+
+		/* set target lane width & direct link width change */
+		dw_pcie_read(pci->dbi_base + PCIE20_MULTI_LANE_CONTROL_OFF, size, &val);
+		val |= 0xc1;
+		dw_pcie_write(pci->dbi_base + PCIE20_MULTI_LANE_CONTROL_OFF, size, val);
+
+		/* wait until the link width change is complete */
+		dw_pcie_read(pci->dbi_base + PCIE20_MULTI_LANE_CONTROL_OFF, size, &val);
+		mdelay(50);
+		dw_pcie_read(pci->dbi_base + PCIE20_MULTI_LANE_CONTROL_OFF, size, &val);
+
+		/* check if Link is in L0 state */
+		dw_pcie_read(pcie->parf + PCIE20_PARF_LTSSM, size, &val);
+		if ((val & PCIE20_PARF_LTSSM_MASK) != 0x11)
+			dev_info(devp,"After lane switch: Link is not in L0 state: %u\n",val);
+
+		dw_pcie_read(pci->dbi_base + PCIE20_LINK_CONTROL_LINK_STATUS_REG, size, &val);
+
+		dev_info(devp,"Link width is: %u\n",(val&0x3F00000)>>20);
+	}
+
+}
+
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_QCOM, 0x0101, qcom_fixup_class);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_QCOM, 0x0104, qcom_fixup_class);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_QCOM, 0x0106, qcom_fixup_class);
@@ -2905,6 +2976,7 @@ DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_QCOM, 0x0302, qcom_fixup_class);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_QCOM, 0x1000, qcom_fixup_class);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_QCOM, 0x1001, qcom_fixup_class);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_QCOM, 0x1109, qcom_ipq_tc_vc_mapping);
+DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_QCOM, 0x1108, qcom_ipq_switch_lane);
 
 static struct platform_driver qcom_pcie_driver = {
 	.probe = qcom_pcie_probe,

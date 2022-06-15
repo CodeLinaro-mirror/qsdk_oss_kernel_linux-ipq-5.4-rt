@@ -15,6 +15,7 @@
 #include <linux/sys_soc.h>
 #include <linux/types.h>
 #include <soc/qcom/socinfo.h>
+#include <linux/io.h>
 
 /*
  * SoC version type with major number in the upper 16 bits and minor
@@ -26,6 +27,7 @@
 
 #define SMEM_SOCINFO_BUILD_ID_LENGTH           32
 
+#define OEMID_REG 0xA6080
 /*
  * SMEM item id, used to acquire handles to respective
  * SMEM region.
@@ -115,8 +117,6 @@ struct socinfo {
 	__le32 foundry_id;
 	/* Version 10 */
 	__le32 serial_num;
-	__le32 oem_id;
-	__le32 prod_id;
 	/* Version 11 */
 	__le32 num_pmics;
 	__le32 pmic_array_offset;
@@ -303,6 +303,20 @@ static int qcom_show_pmic_die_revision(struct seq_file *seq, void *p)
 	return 0;
 }
 
+static void qcom_get_oemid(__le32 *oemid, __le32 *prodid)
+{
+	void __iomem *oem_id_reg;
+	u32 value;
+
+	oem_id_reg = ioremap(OEMID_REG, 4);
+	value = readl(oem_id_reg);
+	/* The upper 16 bits hold the OEM ID and lower 16 bits hold the OEM PRODUCT ID */
+	*oemid = (__le32)(value >> 16);
+	*prodid = (__le32)(value & 0xffff);
+
+	iounmap(oem_id_reg);
+}
+
 QCOM_OPEN(build_id, qcom_show_build_id);
 QCOM_OPEN(pmic_model, qcom_show_pmic_model);
 QCOM_OPEN(pmic_die_rev, qcom_show_pmic_die_revision);
@@ -450,9 +464,13 @@ static int qcom_socinfo_probe(struct platform_device *pdev)
 	struct qcom_socinfo *qs;
 	struct socinfo *info;
 	size_t item_size;
+	__le32 oem_id, prod_id;
 
 	info = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_HW_SW_BUILD_ID,
 			      &item_size);
+
+	qcom_get_oemid(&oem_id, &prod_id);
+
 	if (IS_ERR(info)) {
 		dev_err(&pdev->dev, "Couldn't find socinfo\n");
 		return PTR_ERR(info);
@@ -475,23 +493,20 @@ static int qcom_socinfo_probe(struct platform_device *pdev)
 							"%u",
 							le32_to_cpu(info->serial_num));
 
-	if (offsetof(struct socinfo, oem_id) <= item_size)
-		qs->attr.oem_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
+	qs->attr.oem_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
 							"%u",
-							le32_to_cpu(info->oem_id));
-
-	if (offsetof(struct socinfo, prod_id) <= item_size)
-		qs->attr.prod_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
+							le32_to_cpu(oem_id));
+	qs->attr.prod_id = devm_kasprintf(&pdev->dev, GFP_KERNEL,
 							"%u",
-							le32_to_cpu(info->prod_id));
-
+							le32_to_cpu(prod_id));
 	qs->soc_dev = soc_device_register(&qs->attr);
 	if (IS_ERR(qs->soc_dev))
 		return PTR_ERR(qs->soc_dev);
 
 	pr_info("CPU: %s, SoC Version: %s\n", qs->attr.machine,
 						qs->attr.revision);
-
+	pr_info("OEM_ID: %s, PROD_ID: %s\n", qs->attr.oem_id,
+						qs->attr.prod_id);
 	socinfo_debugfs_init(qs, info);
 
 	/* Feed the soc specific unique data into entropy pool */

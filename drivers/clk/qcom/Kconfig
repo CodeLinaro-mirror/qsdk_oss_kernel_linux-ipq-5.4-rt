@@ -197,6 +197,12 @@ config IPQ_GCC_DEVSOC
 	 Say Y if you want to use peripheral devices such as UART, SPI,
 	 i2c, USB, SD/eMMC, etc.
 
+config IPQ_NSSCC_DEVSOC
+	tristate "DEVSOC NSS Clock Controller"
+	depends on IPQ_GCC_DEVSOC
+	help
+	  Support for NSS clock controller on DEVSOC devices.
+
 config MSM_GCC_8660
 	tristate "MSM8660 Global Clock Controller"
 	help

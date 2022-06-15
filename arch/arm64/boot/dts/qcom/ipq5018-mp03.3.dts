@@ -224,11 +224,11 @@
 	 * | caldb  |  0x4E000000  |           5MB           |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |QCN9000 |  0x4E500000  |          38MB           |
+	 * |QCN9000 |  0x4E500000  |          26MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |        |              |                         |
-	 * |  MHI1  |  0x50B00000  |           9MB           |
+	 * |  MHI1  |  0x4FF00000  |           5MB           |
 	 * |        |              |                         |
 	 * +--------+--------------+-------------------------+
 	 * |                                                 |
@@ -289,14 +289,14 @@
 
 		q6_qcn9000_region: qcn9000_pcie0@4E500000 {
 			no-map;
-			reg = <0x0 0x4E500000 0x0 0x02600000>;
+			reg = <0x0 0x4E500000 0x0 0x01A00000>;
 		};
 
 	#if defined(__CNSS2__)
-		mhi_region1: dma_pool1@50B00000 {
+		mhi_region1: dma_pool1@4FF00000 {
 			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0x0 0x50B00000 0x0 0x00500000>;
+			reg = <0x0 0x4FF00000 0x0 0x00500000>;
 		};
 	#endif
 	#else
@@ -1017,29 +1017,30 @@
 	hremote-size = <0xF00000>;
 	tgt-mem-mode = <0x2>;
 #elif __IPQ_MEM_PROFILE_512_MB__
-	/* QCN9000 tgt-mem-mode=1 layout - 38MB
+	/* QCN9000 tgt-mem-mode=1 layout - 26MB
 	 * +=========+==============+=========+
 	 * |  Region | Start Offset |   Size  |
 	 * +---------+--------------+---------+
-	 * | HREMOTE |  0x4E500000  |   20MB  |
+	 * | HREMOTE |  0x4E500000  |   12MB  |
 	 * +---------+--------------+---------+
-	 * | M3 Dump |  0x4F900000  |   1MB   |
+	 * | M3 Dump |  0x4F100000  |   1MB   |
 	 * +---------+--------------+---------+
-	 * |   ETR   |  0x4FA00000  |   1MB   |
+	 * |   ETR   |  0x4F200000  |   1MB   |
 	 * +---------+--------------+---------+
-	 * |  Caldb  |  0x4FB00000  |   8MB   |
+	 * |  Caldb  |  0x4F300000  |   8MB   |
 	 * +---------+--------------+---------+
-	 * | Pageable|  0x50300000  |   8MB   |
+	 * | Pageable|  0x4FB00000  |   4MB   |
 	 * +==================================+
 	 */
 	base-addr = <0x4E500000>;
-	m3-dump-addr = <0x4F900000>;
-	etr-addr = <0x4FA00000>;
-	caldb-addr = <0x4FB00000>;
-	pageable-addr = <0x50300000>;
+	m3-dump-addr = <0x4F100000>;
+	etr-addr = <0x4F200000>;
+	caldb-addr = <0x4F300000>;
+	pageable-addr = <0x4FB00000>;
 	caldb-size = <0x800000>;
-	hremote-size = <0x1400000>;
+	hremote-size = <0xC00000>;
 	tgt-mem-mode = <0x1>;
+	pageable-size = <0x400000>;
 #else
 	/* QCN9000 tgt-mem-mode=0 layout - 53MB
 	 * +=========+==============+=========+
@@ -1064,7 +1065,7 @@
 	hremote-size = <0x2300000>;
 	caldb-size = <0x800000>;
 	tgt-mem-mode = <0x0>;
-#endif
 	pageable-size = <0x800000>;
+#endif
 	hremote_node = <&q6_qcn9000_region>;
 };

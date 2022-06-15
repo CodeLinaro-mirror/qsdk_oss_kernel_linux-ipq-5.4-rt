@@ -9,6 +9,8 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-devsoc.h>
 #include <dt-bindings/reset/qcom,gcc-devsoc.h>
+#include <dt-bindings/clock/qcom,nsscc-devsoc.h>
+#include <dt-bindings/reset/qcom,nsscc-devsoc.h>
 #include <dt-bindings/gpio/gpio.h>
 
 
@@ -70,6 +72,16 @@
 		L2_0: l2-cache {
 			compatible = "cache";
 			cache-level = <0x2>;
+		};
+	};
+
+	firmware {
+		scm {
+			compatible = "qcom,scm";
+		};
+
+		qfprom {
+			compatible = "qcom,qfprom-sec";
 		};
 	};
 
@@ -179,6 +191,15 @@
 			};
 		};
 
+		ess-instance {
+			compatible = "qcom,ess-instance";
+			ess-switch@3a000000 {
+				compatible = "qcom,ess-switch-ipq53xx";
+				switch_access_mode = "local bus";
+				reg = <0x3a000000 0x1000000>;
+			};
+		};
+
 		timer {
 			compatible = "arm,armv8-timer";
 			interrupts = <GIC_PPI 2 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
@@ -270,6 +291,15 @@
 			reg = <0x1800000 0x80000>;
 			clocks = <&xo>, <&sleep_clk>;
 			clock-names = "xo", "sleep_clk";
+			#clock-cells = <0x1>;
+			#reset-cells = <0x1>;
+		};
+
+		nsscc: nsscc@39b00000{
+			compatible = "qcom,nsscc-devsoc";
+			reg = <0x39b00000 0x80000>;
+			clocks = <&xo>;
+			clock-names = "xo";
 			#clock-cells = <0x1>;
 			#reset-cells = <0x1>;
 		};
@@ -814,6 +844,28 @@
 		};
 	};
 
+	pmu {
+		compatible = "arm,cortex-a53-pmu";
+		interrupts = <GIC_PPI 7 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+	};
+
+	pmu-v7 {
+		compatible = "arm,cortex-a7-pmu";
+		interrupts = <GIC_PPI 7 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+	};
+
+	qti,tzlog {
+		compatible = "qti,tzlog";
+		interrupts = <GIC_SPI 267 IRQ_TYPE_EDGE_RISING>;
+		qti,tz-diag-buf-size = <0x3000>;
+		qti,tz-ring-off = <7>;
+		qti,tz-log-pos-info-off = <810>;
+	};
+
+	qti,scm_restart_reason {
+		compatible = "qti,scm_restart_reason";
+	};
+
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
@@ -822,6 +874,11 @@
 	qti,sps {
 		compatible = "qti,msm-sps-4k";
 		qti,pipe-attr-ee;
+	};
+
+	qcom,test@0 {
+		compatible = "qcom,testmhi";
+		qcom,wlan-ramdump-dynamic = <0x400000>;
 	};
 };
 

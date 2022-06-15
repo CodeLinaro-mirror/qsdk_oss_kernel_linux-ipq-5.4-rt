@@ -92,10 +92,10 @@ static ssize_t soc_info_get(struct device *dev,
 	if (attr == &dev_attr_serial_number)
 		return sprintf(buf, "%s\n", soc_dev->attr->serial_number);
 	if (attr == &dev_attr_oem_id)
-		return scnprintf(buf, sizeof(unsigned int), "%s\n",
+		return scnprintf(buf, sizeof(u64), "%s\n",
 				soc_dev->attr->oem_id);
 	if (attr == &dev_attr_prod_id)
-		return scnprintf(buf, sizeof(unsigned int), "%s\n",
+		return scnprintf(buf, sizeof(u64), "%s\n",
 				soc_dev->attr->prod_id);
 	if (attr == &dev_attr_soc_id)
 		return sprintf(buf, "%s\n", soc_dev->attr->soc_id);
