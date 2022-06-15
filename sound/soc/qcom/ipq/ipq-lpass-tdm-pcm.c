@@ -64,6 +64,7 @@ static struct platform_device *pcm_pdev;
 static spinlock_t pcm_lock;
 static struct ipq_lpass_pcm_params *pcm_params;
 static uint32_t voice_loopback;
+static enum ipq_hw_type ipq_hw;
 
 static DECLARE_WAIT_QUEUE_HEAD(pcm_q);
 
@@ -195,10 +196,15 @@ uint32_t ipq_lpass_pcm_validate_params(struct ipq_lpass_pcm_params *params,
 	config->bit_width = params->bit_width;
 	config->slot_count = params->slot_count;
 	config->slot_width = params->bit_width;
-	config->sync_type = TDM_SHORT_SYNC_TYPE;
+	if (ipq_hw == IPQ9574) {
+		config->sync_type = TDM_LONG_SYNC_TYPE;
+		config->sync_delay = TDM_DATA_DELAY_1_CYCLE;
+	} else {
+		config->sync_type = TDM_SHORT_SYNC_TYPE;
+		config->sync_delay = TDM_DATA_DELAY_0_CYCLE;
+	}
 	config->ctrl_data_oe = TDM_CTRL_DATA_OE_ENABLE;
 	config->invert_sync = TDM_LONG_SYNC_NORMAL;
-	config->sync_delay = TDM_DATA_DELAY_0_CYCLE;
 
 	return 0;
 }
@@ -239,7 +245,8 @@ static void ipq_lpass_dma_config_init(struct lpass_dma_buffer *buffer)
 	dma_config.watermark = buffer->watermark;
 	dma_config.ifconfig = buffer->ifconfig;
 	dma_config.idx = buffer->idx;
-	if (dma_config.burst_size >= 8){
+	dma_config.burst8_en = 0;
+	if (dma_config.burst_size >= 8 && ipq_hw != IPQ9574){
 		dma_config.burst8_en = 1;
 		dma_config.burst_size = 1;
 	}
@@ -309,19 +316,40 @@ static void __iomem *ipq_lpass_phy_virt_lpm(uint32_t phy_addr)
 
 static int ipq_lpass_setup_bit_clock(uint32_t clk_rate)
 {
-/*
- * set clock rate for PRI & SEC
- * PRI is slave mode and seondary is master
- */
-	ipq_lpass_lpaif_muxsetup(INTERFACE_PRIMARY, TDM_MODE_SLAVE);
+	if(ipq_hw == IPQ9574)
+	{
 
-	if (ipq_lpass_set_clk_rate(INTERFACE_SECONDARY, clk_rate) != 0){
-		pr_err("%s: Bit clk set Failed \n",
-			__func__);
-		return -EINVAL;
-	} else {
-		ipq_lpass_lpaif_muxsetup(INTERFACE_SECONDARY,
+		/*
+		 * set clock rate for PRI & SEC
+		 * PRI and secondary both are master mode
+		 *
+		 */
+		ipq_lpass_lpaif_muxsetup(INTERFACE_PRIMARY, TDM_MODE_MASTER);
+
+		if (ipq_lpass_set_clk_rate(INTERFACE_PRIMARY, clk_rate) != 0){
+			pr_err("%s: Bit clk set Failed \n",
+				__func__);
+			return -EINVAL;
+		} else {
+			ipq_lpass_lpaif_muxsetup(INTERFACE_SECONDARY,
 						TDM_MODE_MASTER);
+		}
+	} else {
+
+		/*
+		 * set clock rate for PRI & SEC
+		 * PRI is slave mode and seondary is master
+		 */
+		ipq_lpass_lpaif_muxsetup(INTERFACE_PRIMARY, TDM_MODE_SLAVE);
+
+		if (ipq_lpass_set_clk_rate(INTERFACE_SECONDARY, clk_rate) != 0){
+				pr_err("%s: Bit clk set Failed \n",
+					__func__);
+				return -EINVAL;
+		} else {
+			ipq_lpass_lpaif_muxsetup(INTERFACE_SECONDARY,
+							TDM_MODE_MASTER);
+		}
 	}
 
 	return 0;
@@ -339,6 +367,7 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 {
 	struct ipq_lpass_pcm_config config;
 	int ret;
+	uint32_t interface_id;
 	uint32_t clk_rate;
 	uint32_t temp_lpm_base;
 	uint32_t int_samples_per_period;
@@ -402,9 +431,8 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 
 	if((DEAFULT_PCM_WATERMARK >= dword_per_sample_intr) ||
 		(dword_per_sample_intr & 0x3)  ){
-		watermark = 1;
+		watermark = (ipq_hw == IPQ9574) ? watermark : 1;
 	}
-
 /*
  * DMA Rx buffer
  */
@@ -440,10 +468,17 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 	if (voice_loopback == 0)
 		temp_lpm_base += LPASS_DMA_BUFFER_SIZE;
 	atomic_set(&rx_add, 0);
+
 /*
  * DMA Tx buffer
  */
-	tx_dma_buffer->idx = DMA_CHANNEL1;
+	if (ipq_hw == IPQ9574) {
+		tx_dma_buffer->idx = DMA_CHANNEL0;
+		tx_dma_buffer->ifconfig = INTERFACE_PRIMARY;
+	} else {
+		tx_dma_buffer->idx = DMA_CHANNEL1;
+		tx_dma_buffer->ifconfig = INTERFACE_SECONDARY;
+	}
 	tx_dma_buffer->dir = LPASS_HW_DMA_SINK;
 	tx_dma_buffer->bytes_per_sample = bytes_per_sample;
 	tx_dma_buffer->bit_width = params->bit_width;
@@ -470,7 +505,6 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 		tx_dma_buffer->dma_buffer = NULL;
 	}
 	tx_dma_buffer->watermark = watermark;
-	tx_dma_buffer->ifconfig = INTERFACE_SECONDARY;
 	tx_dma_buffer->intr_id = INTERRUPT_CHANNEL0;
 
 	ipq_lpass_fill_tx_data(
@@ -485,10 +519,11 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
  * Secondary PCM support only TX mode
  */
 
+	interface_id = (ipq_hw == IPQ9574) ? PRIMARY : SECONDARY;
 	ipq_lpass_dma_config_init(rx_dma_buffer);
 	ipq_lpass_dma_config_init(tx_dma_buffer);
 	ipq_lpass_pcm_reset(ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				interface_id, LPASS_HW_DMA_SINK);
 	ipq_lpass_pcm_reset(ipq_lpass_lpaif_base,
 				PRIMARY, LPASS_HW_DMA_SOURCE);
 /*
@@ -497,17 +532,18 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
  */
 	config.sync_src = TDM_MODE_MASTER;
 	ipq_lpass_pcm_config(&config, ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				interface_id, LPASS_HW_DMA_SINK);
 /*
  * Rx mode support in Primary interface
  * configure primary as TDM slave mode
  */
-	config.sync_src = TDM_MODE_SLAVE;
+	if (ipq_hw != IPQ9574)
+		config.sync_src = TDM_MODE_SLAVE;
 	ipq_lpass_pcm_config(&config, ipq_lpass_lpaif_base,
 				PRIMARY, LPASS_HW_DMA_SOURCE);
 
 	ipq_lpass_pcm_reset_release(ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				interface_id, LPASS_HW_DMA_SINK);
 	ipq_lpass_pcm_reset_release(ipq_lpass_lpaif_base,
 				PRIMARY, LPASS_HW_DMA_SOURCE);
 
@@ -517,7 +553,7 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 	ipq_lpass_pcm_enable(ipq_lpass_lpaif_base,
 				PRIMARY, LPASS_HW_DMA_SOURCE);
 	ipq_lpass_pcm_enable(ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				interface_id, LPASS_HW_DMA_SINK);
 
 	return ret;
 }
@@ -642,7 +678,8 @@ void ipq_pcm_deinit(struct ipq_lpass_pcm_params *params)
 EXPORT_SYMBOL(ipq_pcm_deinit);
 
 static const struct of_device_id qca_raw_match_table[] = {
-	{ .compatible = "qca,ipq5018-lpass-pcm" },
+	{ .compatible = "qca,ipq5018-lpass-pcm", .data = (void *)IPQ5018 },
+	{ .compatible = "qca,ipq9574-lpass-pcm", .data = (void *)IPQ9574 },
 	{},
 };
 
@@ -674,6 +711,7 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 	if (!pdev)
 		return -EINVAL;
 
+	ipq_hw = (enum ipq_hw_type)match->data;
 	pcm_pdev = pdev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
