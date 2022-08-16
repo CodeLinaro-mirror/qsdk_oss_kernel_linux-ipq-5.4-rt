@@ -198,6 +198,34 @@
 					drive-strength = <16>;
 					bias-pull-down;
 				};
+
+				mux_5 {
+					pins = "gpio47";
+					function = "audio_sec";
+					drive-strength = <16>;
+					bias-pull-down;
+				};
+
+				mux_6 {
+					pins = "gpio46";
+					function = "audio_sec";
+					drive-strength = <16>;
+					bias-pull-down;
+				};
+
+				mux_7 {
+					pins = "gpio45";
+					function = "audio_sec";
+					drive-strength = <16>;
+					bias-pull-down;
+				};
+
+				mux_8 {
+					pins = "gpio44";
+					function = "audio_sec";
+					drive-strength = <16>;
+					bias-pull-down;
+				};
 			};
 
 			button_pins: button_pins {
