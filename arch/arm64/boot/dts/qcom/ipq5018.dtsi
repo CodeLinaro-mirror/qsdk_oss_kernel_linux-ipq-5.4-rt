@@ -89,7 +89,7 @@
 
 	qseecom {
 		compatible = "ipq5018-qseecom";
-		memory-region = <&tzapp>;
+		memory-region = <&tzapp>, <&tzapp_data>;
 	};
 
 	firmware {

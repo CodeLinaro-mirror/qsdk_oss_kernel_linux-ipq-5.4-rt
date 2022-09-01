@@ -88,7 +88,7 @@
 	qseecom {
 		compatible = "ipq807x-qseecom";
 #if !defined(__IPQ_MEM_PROFILE_256_MB__) && !defined(__IPQ_MEM_PROFILE_512_MB__)
-		memory-region = <&tzapp>;
+		memory-region = <&tzapp>, <&tzapp_data>;
 #endif
 		notify-align = <1>;
 		status = "ok";
