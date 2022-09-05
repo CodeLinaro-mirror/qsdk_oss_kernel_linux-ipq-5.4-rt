@@ -912,6 +912,113 @@
 			#mbox-cells = <1>;
 		};
 
+		wifi0: wifi@c0000000 {
+			compatible = "qcom,cnss-qca5332", "qcom,ipq5332-wifi";
+			reg = <0xc000000 0x1000000>;
+		#ifdef __IPQ_MEM_PROFILE_256_MB__
+			qcom,tgt-mem-mode = <2>;
+		#elif __IPQ_MEM_PROFILE_512_MB__
+			qcom,tgt-mem-mode = <1>;
+		#else
+			qcom,tgt-mem-mode = <0>;
+		#endif
+			qcom,rproc = <&q6v5_wcss>;
+			qcom,bdf-addr = <0x4BA00000 0x4BA00000 0x4BA00000
+					 0x0 0x0>;
+			interrupts = <0 559 1>,
+				<0 560 1>,
+				<0 561 1>,
+				<0 422 1>,
+				<0 423 1>,
+				<0 424 1>,
+				<0 425 1>,
+				<0 426 1>,
+				<0 427 1>,
+				<0 428 1>,
+				<0 429 1>,
+				<0 430 1>,
+				<0 431 1>,
+				<0 432 1>,
+				<0 433 1>,
+				<0 491 1>,
+				<0 495 1>,
+				<0 493 1>,
+				<0 544 1>,
+				<0 457 1>,
+				<0 504 1>,
+				<0 497 1>,
+				<0 454 1>,
+				<0 453 1>,
+				<0 452 1>,
+				<0 451 1>,
+				<0 488 1>,
+				<0 488 1>,
+				<0 484 1>,
+				<0 554 1>,
+				<0 554 1>,
+				<0 549 1>,
+				<0 507 1>,
+				<0 500 1>,
+				<0 499 1>,
+				<0 498 1>,
+				<0 467 1>,
+				<0 466 1>,
+				<0 458 1>,
+				<0 450 1>,
+				<0 543 1>,
+				<0 486 1>,
+				<0 486 1>,
+				<0 482 1>,
+				<0 419 1>;
+
+			interrupt-names = "misc-pulse1",
+				"misc-latch",
+				"sw-exception",
+				"ce0",
+				"ce1",
+				"ce2",
+				"ce3",
+				"ce4",
+				"ce5",
+				"ce6",
+				"ce7",
+				"ce8",
+				"ce9",
+				"ce10",
+				"ce11",
+				"host2wbm-desc-feed",
+				"host2reo-re-injection",
+				"host2reo-command",
+				"host2rxdma-monitor-ring1",
+				"reo2ost-exception",
+				"wbm2host-rx-release",
+				"reo2host-status",
+				"reo2host-destination-ring4",
+				"reo2host-destination-ring3",
+				"reo2host-destination-ring2",
+				"reo2host-destination-ring1",
+				"rxdma2host-monitor-destination-mac3",
+				"rxdma2host-monitor-destination-mac2",
+				"rxdma2host-monitor-destination-mac1",
+				"host2rxdma-host-buf-ring-mac3",
+				"host2rxdma-host-buf-ring-mac2",
+				"host2rxdma-host-buf-ring-mac1",
+				"host2tcl-input-ring4",
+				"host2tcl-input-ring3",
+				"host2tcl-input-ring2",
+				"host2tcl-input-ring1",
+				"wbm2host-tx-completions-ring4",
+				"wbm2host-tx-completions-ring3",
+				"wbm2host-tx-completions-ring2",
+				"wbm2host-tx-completions-ring1",
+				"host2tx-monitor-ring1",
+				"txmon2host-monitor-destination-mac3",
+				"txmon2host-monitor-destination-mac2",
+				"txmon2host-monitor-destination-mac1",
+				"umac_reset";
+			status = "disabled";
+		};
+
 		wcss: wcss-smp2p {
 			compatible = "qcom,smp2p";
 			qcom,smem = <435>, <428>;

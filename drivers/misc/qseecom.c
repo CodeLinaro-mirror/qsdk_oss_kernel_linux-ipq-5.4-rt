@@ -3910,6 +3910,9 @@ static int __init qseecom_probe(struct platform_device *pdev)
 {
 	struct device_node *of_node = pdev->dev.of_node;
 	struct device_node *node;
+	struct resource qseecom_res;
+	phys_addr_t node_addr;
+	size_t node_size;
 	const struct of_device_id *id;
 	struct reserved_mem *rmem = NULL;
 	struct qsee_notify_app notify_app;
@@ -3937,6 +3940,21 @@ static int __init qseecom_probe(struct platform_device *pdev)
 		pr_err("QSEECom: TZApp cannot be used\n");
 		goto load;
 	}
+
+	node = of_parse_phandle(of_node, "memory-region", 1);
+	if (node && !of_address_to_resource(node, 0, &qseecom_res)) {
+		node_addr = qseecom_res.start;
+		node_size = resource_size(&qseecom_res);
+
+		ret = dma_declare_coherent_memory(qdev, node_addr,
+				node_addr, node_size);
+		if(ret) {
+			pr_err("QSEECom: Unable to acquire tzapp_data memory-region\n");
+			pr_err("QSEECom: TZApp cannot be used\n");
+			goto load;
+		}
+	}
+
 	notify_app.applications_region_addr = rmem->base;
 	notify_app.applications_region_size = rmem->size;
 

@@ -349,6 +349,7 @@
 					qrtr_node_id = <0x31>;
 					memory-region = <0>,<&mhi_region1>;
 					boot-args = <0x0 0x0 0x0 0x0 0x0 0x0>;
+					license-file = "";
 				};
 #else
 				wifi@1 {
@@ -392,6 +393,7 @@
 					qrtr_node_id = <0x32>;
 					memory-region = <0>,<&mhi_region2>;
 					boot-args = <0x0 0x0 0x0 0x0 0x0 0x0>;
+					license-file = "";
 				};
 #else
 				wifi@2 {
@@ -435,6 +437,7 @@
 					qrtr_node_id = <0x33>;
 					memory-region = <0>,<&mhi_region3>;
 					boot-args = <0x0 0x0 0x0 0x0 0x0 0x0>;
+					license-file = "";
 				};
 #else
 				wifi@3 {

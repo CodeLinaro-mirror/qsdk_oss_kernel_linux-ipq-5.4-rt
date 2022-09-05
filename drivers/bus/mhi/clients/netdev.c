@@ -202,8 +202,6 @@ static void mhi_netdev_queue(struct mhi_netdev *mhi_netdev)
 		 * with buffer, the buffer won't be freed
 		 */
 		atomic_inc(&mhi_buf->page->_refcount);
-		dma_sync_single_for_device(dev, mhi_buf->dma_addr, mhi_buf->len,
-					   DMA_FROM_DEVICE);
 		ret = mhi_queue_dma(mhi_dev, DMA_FROM_DEVICE, mhi_buf,
 					 mhi_buf->len, MHI_EOT);
 		if (unlikely(ret)) {

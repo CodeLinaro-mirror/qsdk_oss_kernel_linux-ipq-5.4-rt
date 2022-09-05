@@ -27,6 +27,7 @@
 #define COREDUMP_DESC	"Q6-COREDUMP"
 #define Q6_SFR_DESC	"Q6-SFR"
 
+#define PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1 	0x3168
 #define PCIE_SOC_PCIE_REG_PCIE_SCRATCH_0	0x4040
 #define PCIE_REMAP_BAR_CTRL_OFFSET		0x310C
 #define PCIE_SCRATCH_0_WINDOW_VAL		0x4000003C
@@ -727,6 +728,82 @@ static void mhi_firmware_copy(struct mhi_controller *mhi_cntrl,
 	}
 }
 
+static void *mhi_download_fw_license(struct mhi_controller *mhi_cntrl, dma_addr_t *dma_addr, size_t *size)
+{
+	struct device *dev = &mhi_cntrl->mhi_dev->dev;
+	int  ret;
+	void *buf;
+	const struct firmware *license_file = NULL;
+	size_t extra_bytes;
+	const char *license_filename = NULL;
+
+	/* Get the license file name from device tree */
+	if (of_property_read_string(mhi_cntrl->cntrl_dev->of_node,
+					"license-file", &license_filename)) {
+		dev_err(dev, "License file not present in DTS  node,"
+						"Assuming no license mode\n");
+		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
+		return NULL;
+	}
+
+	if (license_filename && (strlen(license_filename) == 0)) {
+		dev_err(dev, "License file is empty in DTS  node,"
+						"Assuming no license mode\n");
+		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
+		return NULL;
+
+	}
+
+	/*
+	 *  Load the license from file system into DMA memory.
+	 *  Format is
+	 *  <4 Byte Magic><4 Byte Length if Lincense Payload><License Payload>
+	 */
+	ret = request_firmware(&license_file, license_filename, dev);
+	if (ret) {
+		dev_err(dev, "Error loading license file (%s) : %d,"
+			" Assuming no license mode\n", license_filename, ret);
+		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
+		return NULL;
+	}
+
+	extra_bytes = 4 + 4; /* size of magic, size of length */
+	buf = mhi_fw_alloc_coherent(mhi_cntrl,
+			license_file->size + extra_bytes,
+					dma_addr, GFP_KERNEL);
+	if (!buf) {
+		release_firmware(license_file);
+		dev_err(dev, "Error Allocating memory for license : %d\n", ret);
+		return NULL;
+	}
+
+	/* setup the buffer:  magic, length, license file data */
+
+#define LICENSE_DATA_MAGIC	"SSLD"
+#define LICENSE_DATA_MAGIC_SIZE	4
+	memcpy(buf, (void *)LICENSE_DATA_MAGIC, LICENSE_DATA_MAGIC_SIZE);
+
+	memcpy(buf + LICENSE_DATA_MAGIC_SIZE,
+				(void *)&license_file->size,
+						sizeof(license_file->size));
+
+	memcpy(buf + extra_bytes, license_file->data, license_file->size);
+
+	*size = license_file->size + extra_bytes;
+
+	/* Let device know the license data address : Assuming 32 bit only*/
+	mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1,
+					      lower_32_bits(*dma_addr));
+
+	release_firmware(license_file);
+	return buf;
+}
+
+
 static int mhi_update_scratch_reg(struct mhi_controller *mhi_cntrl, u32 val)
 {
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
@@ -814,11 +891,13 @@ void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 	const struct firmware *firmware = NULL;
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
 	const char *fw_name;
-	void *buf;
-	dma_addr_t dma_addr;
-	size_t size;
+	void *buf, *license_buf;
+	dma_addr_t dma_addr, license_dma_addr;
+	size_t size, license_buf_size;
 	int i, ret;
 	u32 instance;
+
+	license_buf = NULL;
 
 	if (MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state)) {
 		dev_err(dev, "Device MHI is not in valid state\n");
@@ -871,6 +950,9 @@ void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 		release_firmware(firmware);
 		goto error_fw_load;
 	}
+
+	/* Download the License */
+	license_buf = mhi_download_fw_license(mhi_cntrl, &license_dma_addr, &license_buf_size);
 
 	/* Download image using BHI */
 	memcpy(buf, firmware->data, size);
@@ -935,6 +1017,12 @@ fw_load_ready_state:
 		goto error_ready_state;
 	}
 
+	/*
+	 * Release is TODO, waiting for Q6 side changes to read license
+	 * before BHIe.
+	 */
+
+	/*mhi_fw_free_coherent(mhi_cntrl, license_buf_size, license_buf, license_dma_addr);*/
 	dev_info(dev, "Wait for device to enter SBL or Mission mode\n");
 	return;
 
@@ -947,6 +1035,9 @@ error_ready_state:
 error_fw_load:
 	mhi_cntrl->pm_state = MHI_PM_FW_DL_ERR;
 	wake_up_all(&mhi_cntrl->state_event);
+
+	if (license_buf)
+		mhi_fw_free_coherent(mhi_cntrl, license_buf_size, license_buf, license_dma_addr);
 }
 
 int mhi_download_amss_image(struct mhi_controller *mhi_cntrl)
