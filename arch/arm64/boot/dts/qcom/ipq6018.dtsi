@@ -1397,9 +1397,11 @@
 		q6v5_wcss: remoteproc@cd00000 {
 			compatible = "qcom,ipq6018-wcss-pil";
 			reg = <0x0cd00000 0x4040>,
-				<0x004ab000 0x20>;
+				<0x004ab000 0x20>,
+				<0xCB50000 0x8>;
 			reg-names = "qdsp6",
-				    "rmb";
+				    "rmb",
+				    "wcmn";
 			interrupts-extended = <&intc GIC_SPI 325 IRQ_TYPE_EDGE_RISING>,
 					      <&wcss_smp2p_in 0 0>,
 					      <&wcss_smp2p_in 1 0>,
