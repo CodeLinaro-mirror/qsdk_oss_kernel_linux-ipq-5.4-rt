@@ -728,81 +728,88 @@ static void mhi_firmware_copy(struct mhi_controller *mhi_cntrl,
 	}
 }
 
-static void *mhi_download_fw_license(struct mhi_controller *mhi_cntrl, dma_addr_t *dma_addr, size_t *size)
+static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl, dma_addr_t *dma_addr, size_t *size)
 {
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
 	int  ret;
 	void *buf;
-	const struct firmware *license_file = NULL;
-	size_t extra_bytes;
-	const char *license_filename = NULL;
+	const struct firmware *file = NULL;
+	size_t header_size;
+	const char *filename = NULL;
+	char *magic = NULL;
 
-	/* Get the license file name from device tree */
-	if (of_property_read_string(mhi_cntrl->cntrl_dev->of_node,
-					"license-file", &license_filename)) {
-		dev_err(dev, "License file not present in DTS  node,"
-						"Assuming no license mode\n");
+	/* Check the ftm-mode or license-file is defined in device tree */
+	if (of_property_read_bool(mhi_cntrl->cntrl_dev->of_node, "ftm-mode")) {
+		if (of_property_read_string(mhi_cntrl->cntrl_dev->of_node,
+					"secdat-file", &filename) == 0) {
+			if (filename != NULL && (strlen(filename) != 0))
+				magic = "SBSD";
+		}
+	} else if (of_property_read_string(mhi_cntrl->cntrl_dev->of_node,
+					"license-file", &filename) == 0 ) {
+		if (filename != NULL && (strlen(filename) != 0))
+			magic = "SSLD";
+	} else {
+		dev_err(dev, "License file or ftm-mode not present in DTS node,"
+					"Assuming no License or ftm mode\n");
 		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
 				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
 		return NULL;
 	}
 
-	if (license_filename && (strlen(license_filename) == 0)) {
-		dev_err(dev, "License file is empty in DTS  node,"
-						"Assuming no license mode\n");
+	if (filename == NULL || magic == NULL) {
+		dev_err(dev, "License or secdat file is empty in DTS node,"
+					"Assuming no License or ftm mode\n");
 		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
 				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
 		return NULL;
-
 	}
 
 	/*
-	 *  Load the license from file system into DMA memory.
+	 *  Load the file from file system into DMA memory.
 	 *  Format is
-	 *  <4 Byte Magic><4 Byte Length if Lincense Payload><License Payload>
+	 *  <4 Byte Magic><4 Byte Length if file Payload><file Payload>
 	 */
-	ret = request_firmware(&license_file, license_filename, dev);
+	ret = request_firmware(&file, filename, dev);
 	if (ret) {
-		dev_err(dev, "Error loading license file (%s) : %d,"
-			" Assuming no license mode\n", license_filename, ret);
+		dev_err(dev, "Error in loading file (%s) : %d,"
+			" Assuming no license or ftm mode\n", filename, ret);
 		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
 				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
 		return NULL;
 	}
 
-	extra_bytes = 4 + 4; /* size of magic, size of length */
+	header_size = 4 + 4; /* size of magic, size of length */
 	buf = mhi_fw_alloc_coherent(mhi_cntrl,
-			license_file->size + extra_bytes,
+			file->size + header_size,
 					dma_addr, GFP_KERNEL);
 	if (!buf) {
-		release_firmware(license_file);
-		dev_err(dev, "Error Allocating memory for license : %d\n", ret);
+		release_firmware(file);
+		dev_err(dev, "Error Allocating memory for license or ftm mode : %d\n", ret);
 		return NULL;
 	}
 
-	/* setup the buffer:  magic, length, license file data */
+	/* setup the buffer:  magic, length, payload */
+#define DATA_MAGIC_SIZE	4
 
-#define LICENSE_DATA_MAGIC	"SSLD"
-#define LICENSE_DATA_MAGIC_SIZE	4
-	memcpy(buf, (void *)LICENSE_DATA_MAGIC, LICENSE_DATA_MAGIC_SIZE);
+	memcpy(buf, magic, DATA_MAGIC_SIZE);
 
-	memcpy(buf + LICENSE_DATA_MAGIC_SIZE,
-				(void *)&license_file->size,
-						sizeof(license_file->size));
+	memcpy(buf + DATA_MAGIC_SIZE,
+				(void *)&file->size,
+						sizeof(file->size));
 
-	memcpy(buf + extra_bytes, license_file->data, license_file->size);
+	memcpy(buf + header_size, file->data, file->size);
 
-	*size = license_file->size + extra_bytes;
+	*size = file->size + header_size;
 
-	/* Let device know the license data address : Assuming 32 bit only*/
+	/* Let device know the license or secdat data address : Assuming 32 bit only*/
 	mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
 				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1,
 					      lower_32_bits(*dma_addr));
 
-	release_firmware(license_file);
+	release_firmware(file);
 	return buf;
 }
-
 
 static int mhi_update_scratch_reg(struct mhi_controller *mhi_cntrl, u32 val)
 {
@@ -952,7 +959,7 @@ void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 	}
 
 	/* Download the License */
-	license_buf = mhi_download_fw_license(mhi_cntrl, &license_dma_addr, &license_buf_size);
+	license_buf = mhi_download_fw_license_or_secdat(mhi_cntrl, &license_dma_addr, &license_buf_size);
 
 	/* Download image using BHI */
 	memcpy(buf, firmware->data, size);
