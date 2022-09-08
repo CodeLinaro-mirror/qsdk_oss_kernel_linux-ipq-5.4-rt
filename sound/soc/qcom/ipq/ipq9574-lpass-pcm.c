@@ -77,7 +77,7 @@ static struct ipq_lpass_props ipq9574_lpass_pcm_cfg = {
 			.dir                    =       LPASS_HW_DMA_SINK,
 			.invert_sync            =       TDM_LONG_SYNC_NORMAL,
 			.sync_type              =       TDM_SHORT_SYNC_TYPE,
-			.sync_delay             =       TDM_DATA_DELAY_1_CYCLE,
+			.sync_delay             =       TDM_DATA_DELAY_0_CYCLE,
 			.ctrl_data_oe           =       TDM_CTRL_DATA_OE_ENABLE,
 		},
 		{
@@ -86,7 +86,7 @@ static struct ipq_lpass_props ipq9574_lpass_pcm_cfg = {
 			.dir                    =       LPASS_HW_DMA_SINK,
 			.invert_sync            =       TDM_LONG_SYNC_NORMAL,
 			.sync_type              =       TDM_SHORT_SYNC_TYPE,
-			.sync_delay             =       TDM_DATA_DELAY_1_CYCLE,
+			.sync_delay             =       TDM_DATA_DELAY_0_CYCLE,
 			.ctrl_data_oe           =       TDM_CTRL_DATA_OE_ENABLE,
 		},
 	},
