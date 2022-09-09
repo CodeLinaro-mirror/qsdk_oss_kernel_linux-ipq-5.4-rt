@@ -35,6 +35,7 @@ struct qcom_scm {
 	struct clk *bus_clk;
 	struct reset_controller_dev reset;
 
+	void __iomem *dload_reg;
 	u64 dload_mode_addr;
 	u32 hvc_log_cmd_id;
 	u32 smmu_state_cmd_id;
@@ -494,7 +495,7 @@ static void qcom_scm_set_download_mode(bool enable)
 		dev_err(__scm->dev, "failed to set download mode: %d\n", ret);
 }
 
-static int qcom_scm_find_dload_address(struct device *dev, u64 *addr)
+static int qcom_scm_find_dload_address(struct device *dev, struct qcom_scm *scm)
 {
 	struct device_node *tcsr;
 	struct device_node *np = dev->of_node;
@@ -515,7 +516,12 @@ static int qcom_scm_find_dload_address(struct device *dev, u64 *addr)
 	if (ret < 0)
 		return ret;
 
-	*addr = res.start + offset;
+	scm->dload_mode_addr = res.start + offset;
+	scm->dload_reg = devm_ioremap(dev, res.start, resource_size(&res));
+	if (!scm->dload_reg) {
+		pr_err("%s: Error mapping memory region!\n", __func__);
+		return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -689,7 +695,8 @@ int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf)
 	if (ret)
 		return ret;
 
-	ret = __qti_scm_dload(__scm->dev, svc_id, cmd_id, cmd_buf);
+	ret = __qti_scm_dload(__scm->dev, svc_id, cmd_id, cmd_buf,
+			      __scm->dload_mode_addr, __scm->dload_reg);
 
 	qcom_scm_clk_disable();
 
@@ -1055,7 +1062,7 @@ static int qcom_scm_probe(struct platform_device *pdev)
 	if (!scm)
 		return -ENOMEM;
 
-	ret = qcom_scm_find_dload_address(&pdev->dev, &scm->dload_mode_addr);
+	ret = qcom_scm_find_dload_address(&pdev->dev, scm);
 	if (ret < 0)
 		return ret;
 

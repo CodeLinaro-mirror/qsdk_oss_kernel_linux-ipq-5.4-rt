@@ -17,10 +17,6 @@
 	qcom,pmic-id = <0x0 0x0 0x0 0x0>;
 
 	firmware {
-		scm {
-			compatible = "qcom,scm-ipq8074", "qcom,scm";
-		};
-
 		qfprom {
 			compatible = "qcom,qfprom-sec";
 			img-addr = <0x4A400000>;
@@ -1012,6 +1008,11 @@
 			reg = <0x01945000 0xe000>;
 		};
 
+		tcsr_boot_misc: syscon@193d100 {
+			compatible = "syscon";
+			reg = <0x0193d100 0x4>;
+		};
+
 		tcsr_mutex_regs: syscon@193d000 {
 			compatible = "syscon";
 			reg = <0x01905000 0x8000>;
@@ -1022,6 +1023,11 @@
 			reg = <0x0b111000 0x6000>;
 			#clock-cells = <1>;
 			#mbox-cells = <1>;
+		};
+
+		scm {
+			compatible = "qcom,scm-ipq8074", "qcom,scm";
+			qcom,dload-mode = <&tcsr_boot_misc 0>;
 		};
 
 		q6v5_wcss: q6v5_wcss@cd00000 {

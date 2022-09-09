@@ -200,8 +200,6 @@ extern int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 #define SCM_CMD_TZ_SET_DLOAD_FOR_SECURE_BOOT	0x14
 
 /*
- * TCSR_BOOT_MISC_REG - TCSR register where the magic cookie will be written
- *
  * Based on the magic cookies CLEAR_MAGIC, SET_MAGIC, SET_MAGIC_WARMRESET,
  * corresponding value DLOAD_MODE_DISABLE, DLOAD_MODE_ENABLE,
  * DLOAD_MODE_ENABLE_WARMRESET will be written into the TCSR register.
@@ -209,15 +207,16 @@ extern int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
  * SET_MAGIC_WARMRESET is a unique case, where IMEM content will be preserved
  * in the crash dump disabled case.
  */
-#define TCSR_BOOT_MISC_REG			0x193d100ull
 #define CLEAR_MAGIC				0x0
-#define DLOAD_MODE_DISABLE			0x00ull
 #define SET_MAGIC				0x1
-#define DLOAD_MODE_ENABLE			0x10ull
 #define SET_MAGIC_WARMRESET			0x2
-#define DLOAD_MODE_ENABLE_WARMRESET		0x20ull
 #define ABNORMAL_MAGIC				0x3
-#define DLOAD_MODE_DISABLE_ABNORMALRESET	0x40ull
+
+#define DLOAD_MODE_DISABLE			(~BIT(4))
+#define DLOAD_MODE_ENABLE			BIT(4)
+#define DLOAD_MODE_ENABLE_WARMRESET		BIT(5)
+#define DLOAD_MODE_DISABLE_ABNORMALRESET	BIT(6)
+
 #define TCSR_Q6SS_BOOT_TRIG_REG			0x193d204ull
 
 #define PD_LOAD_SVC_ID          0x2
@@ -229,7 +228,8 @@ extern int __qti_scm_wcss_boot(struct device *, u32 svc_id, u32 cmd_id,
 				void *cmd_buf);
 extern int qti_scm_wcss_boot(u32 svc_id, u32 cmd_id, void *cmd_buf);
 extern int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id,
-				void *cmd_buf);
+				void *cmd_buf, u64 dload_mode_addr,
+				void __iomem *dload_reg);
 extern int __qti_scm_pdseg_memcpy_v2(struct device *dev, u32 peripheral,
 				int phno, dma_addr_t dma, int seg_cnt);
 extern int qti_scm_pdseg_memcpy_v2(u32 peripheral, int phno, dma_addr_t dma,

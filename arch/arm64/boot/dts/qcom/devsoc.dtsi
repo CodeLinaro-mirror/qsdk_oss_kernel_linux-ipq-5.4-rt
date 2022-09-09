@@ -146,10 +146,6 @@
 	};
 
 	firmware {
-		scm {
-			compatible = "qcom,scm";
-		};
-
 		qfprom {
 			compatible = "qcom,qfprom-sec";
 			img-addr = <0x4A100000>;
@@ -696,6 +692,11 @@
 			};
 		};
 
+		tcsr_boot_misc: syscon@193d100 {
+			compatible = "syscon";
+			reg = <0x0193d100 0x4>;
+		};
+
 		tcsr_mutex_regs: syscon@1905000 {
 			compatible = "syscon";
 			reg = <0x01905000 0x8000>;
@@ -711,6 +712,11 @@
 			compatible = "qcom,smem";
 			memory-region = <&smem_region>;
 			hwlocks = <&tcsr_mutex 0>;
+		};
+
+		scm {
+			compatible = "qcom,scm";
+			qcom,dload-mode = <&tcsr_boot_misc 0>;
 		};
 
 		usb3: usb3@8A00000 {

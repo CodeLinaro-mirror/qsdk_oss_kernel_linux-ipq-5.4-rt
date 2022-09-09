@@ -755,7 +755,8 @@ int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 	return ret ? : res.a1;
 }
 
-int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf)
+int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf,
+		    u64 dload_mode_addr, void __iomem *dload_reg)
 {
 	struct qcom_scm_desc desc = {0};
 	struct arm_smccc_res res;
@@ -763,13 +764,17 @@ int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf)
 	unsigned int enable;
 
 	enable = cmd_buf ? *((unsigned int *)cmd_buf) : 0;
-	desc.args[0] = TCSR_BOOT_MISC_REG;
+	desc.args[0] = dload_mode_addr;
+	desc.args[1] = readl(dload_reg);
 	if (enable == SET_MAGIC_WARMRESET)
-		desc.args[1] = DLOAD_MODE_ENABLE_WARMRESET;
+		desc.args[1] |= DLOAD_MODE_ENABLE_WARMRESET;
 	else if (enable == ABNORMAL_MAGIC)
-		desc.args[1] = DLOAD_MODE_DISABLE_ABNORMALRESET;
-	else
-		desc.args[1] = enable ? DLOAD_MODE_ENABLE : DLOAD_MODE_DISABLE;
+		desc.args[1] |= DLOAD_MODE_DISABLE_ABNORMALRESET;
+	else if (enable == SET_MAGIC)
+		desc.args[1] |= DLOAD_MODE_ENABLE;
+	else if (enable == CLEAR_MAGIC)
+		desc.args[1] &= DLOAD_MODE_DISABLE;
+
 	desc.arginfo = QCOM_SCM_ARGS(2, QCOM_SCM_VAL, QCOM_SCM_VAL);
 	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_SVC_IO,
 			    QCOM_SCM_IO_WRITE, &desc, &res);

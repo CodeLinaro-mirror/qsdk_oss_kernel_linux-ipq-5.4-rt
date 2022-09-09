@@ -1328,20 +1328,25 @@ int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 	return ret ? : le32_to_cpu(desc.ret[0]);
 }
 
-static int __qti_scm_dload_v8(struct device *dev, void *cmd_buf)
+static int __qti_scm_dload_v8(struct device *dev, void *cmd_buf,
+			      u64 dload_mode_addr, void __iomem *dload_reg)
 {
 	struct scm_desc desc = {0};
 	int ret;
 	unsigned int enable;
 
 	enable = cmd_buf ? *((unsigned int *)cmd_buf) : 0;
-	desc.args[0] = TCSR_BOOT_MISC_REG;
+	desc.args[0] = dload_mode_addr;
+	desc.args[1] = readl(dload_reg);
 	if (enable == SET_MAGIC_WARMRESET)
-		desc.args[1] = DLOAD_MODE_ENABLE_WARMRESET;
+		desc.args[1] |= DLOAD_MODE_ENABLE_WARMRESET;
 	else if (enable == ABNORMAL_MAGIC)
-		desc.args[1] = DLOAD_MODE_DISABLE_ABNORMALRESET;
-	else
-		desc.args[1] = enable ? DLOAD_MODE_ENABLE : DLOAD_MODE_DISABLE;
+		desc.args[1] |= DLOAD_MODE_DISABLE_ABNORMALRESET;
+	else if (enable == SET_MAGIC)
+		desc.args[1] |= DLOAD_MODE_ENABLE;
+	else if (enable == CLEAR_MAGIC)
+		desc.args[1] &= DLOAD_MODE_DISABLE;
+
 	desc.arginfo = SCM_ARGS(2, QCOM_SCM_VAL, QCOM_SCM_VAL);
 	ret = qti_scm_call2(dev, SCM_SIP_FNID(QCOM_SCM_SVC_IO,
 					QCOM_SCM_IO_WRITE), &desc);
@@ -1499,12 +1504,13 @@ int __qti_scm_int_radio_powerdown(struct device *dev, u32 peripheral)
 		return -ENOTSUPP;
 }
 
-int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf)
+int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf, u64 dload_mode_addr, void __iomem *dload_reg)
 {
 	long ret;
 
 	if (is_scm_armv8())
-		return __qti_scm_dload_v8(dev, cmd_buf);
+		return __qti_scm_dload_v8(dev, cmd_buf, dload_mode_addr,
+					  dload_reg);
 
 	if (cmd_buf)
 		ret = qcom_scm_call(dev, svc_id, cmd_id, cmd_buf,

@@ -121,12 +121,6 @@
 	};
 
 	firmware {
-		scm {
-			compatible = "qcom,scm";
-			hvc-log-cmd-id = <0xA>;
-			smmu-state-cmd-id = <0x20>;
-		};
-
 		qfprom {
 			compatible = "qcom,qfprom-sec";
 			img-addr = <0x4A100000>;
@@ -961,9 +955,21 @@
 			reg = <0x01905000 0x8000>;
 		};
 
+		tcsr_boot_misc: syscon@193d100 {
+			compatible = "syscon";
+			reg = <0x0193d100 0x4>;
+		};
+
 		tcsr_q6_block: syscon@1945000 {
 			compatible = "syscon";
 			reg = <0x1945000 0xE000>;
+		};
+
+		scm {
+			compatible = "qcom,scm";
+			hvc-log-cmd-id = <0xA>;
+			smmu-state-cmd-id = <0x20>;
+			qcom,dload-mode = <&tcsr_boot_misc 0>;
 		};
 
 		nsscc: nsscc@39b00000 {
