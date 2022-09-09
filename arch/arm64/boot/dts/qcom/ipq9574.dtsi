@@ -331,6 +331,8 @@
 			capture_memory = "lpm";
 			playback_memory = "lpm";
 			voice_loopback = <0>;
+			slave = <0>;
+			instance_id = <0>;
 			status = "disabled";
 		};
 
