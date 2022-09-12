@@ -3444,6 +3444,8 @@ struct ipq_lpass_pcm_config
 	uint32_t bit_width;
 	uint32_t slot_count;
 	uint32_t sync_type;
+	uint32_t dir;
+	uint32_t pcm_index;
 	uint32_t sync_delay;
 	uint32_t slot_width;
 	uint32_t slot_mask;

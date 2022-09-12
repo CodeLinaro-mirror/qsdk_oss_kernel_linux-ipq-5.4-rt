@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -61,8 +61,64 @@ static struct platform_device *pcm_pdev;
 static spinlock_t pcm_lock;
 static struct ipq_lpass_pcm_params *pcm_params;
 static uint32_t voice_loopback;
+static uint32_t slave;
+static uint32_t instance_id;
+static enum ipq_hw_type ipq_hw;
 
 static DECLARE_WAIT_QUEUE_HEAD(pcm_q);
+
+static struct ipq_lpass_props ipq9574_lpass_pcm_cfg = {
+	/* playback (TX) */
+	.npcm			=	2,
+	{
+		{
+			.sync_src               =       TDM_MODE_MASTER,
+			.pcm_index              =       PRIMARY,
+			.dir                    =       LPASS_HW_DMA_SINK,
+			.invert_sync            =       TDM_LONG_SYNC_NORMAL,
+			.sync_type              =       TDM_SHORT_SYNC_TYPE,
+			.sync_delay             =       TDM_DATA_DELAY_1_CYCLE,
+			.ctrl_data_oe           =       TDM_CTRL_DATA_OE_ENABLE,
+		},
+		{
+			.sync_src               =       TDM_MODE_MASTER,
+			.pcm_index              =       SECONDARY,
+			.dir                    =       LPASS_HW_DMA_SINK,
+			.invert_sync            =       TDM_LONG_SYNC_NORMAL,
+			.sync_type              =       TDM_SHORT_SYNC_TYPE,
+			.sync_delay             =       TDM_DATA_DELAY_1_CYCLE,
+			.ctrl_data_oe           =       TDM_CTRL_DATA_OE_ENABLE,
+		},
+	},
+	{
+		{
+			/* playback (TX) */
+			.tx_idx                    =       DMA_CHANNEL0,
+			.tx_dir                    =       LPASS_HW_DMA_SINK,
+			.tx_intr_id                =       INTERRUPT_CHANNEL0,
+			.tx_ifconfig               =       INTERFACE_PRIMARY,
+
+			/* Capture (RX) */
+			.rx_idx                    =       DMA_CHANNEL0,
+			.rx_dir                    =       LPASS_HW_DMA_SOURCE,
+			.rx_intr_id                =       INTERRUPT_CHANNEL0,
+			.rx_ifconfig               =       INTERFACE_PRIMARY,
+		},
+		{
+			/* playback (TX) */
+			.tx_idx                    =       DMA_CHANNEL0,
+			.tx_dir                    =       LPASS_HW_DMA_SINK,
+			.tx_intr_id                =       INTERRUPT_CHANNEL0,
+			.tx_ifconfig               =       INTERFACE_SECONDARY,
+
+			/* Capture (RX) */
+			.rx_idx                    =       DMA_CHANNEL0,
+			.rx_dir                    =       LPASS_HW_DMA_SOURCE,
+			.rx_intr_id                =       INTERRUPT_CHANNEL0,
+			.rx_ifconfig               =       INTERFACE_SECONDARY,
+		},
+	},
+};
 
 static uint32_t ipq_lpass_pcm_get_dataptr(struct lpass_dma_buffer *buffer,
 							uint32_t addr)
@@ -192,10 +248,6 @@ uint32_t ipq_lpass_pcm_validate_params(struct ipq_lpass_pcm_params *params,
 	config->bit_width = params->bit_width;
 	config->slot_count = params->slot_count;
 	config->slot_width = params->bit_width;
-	config->sync_type = TDM_SHORT_SYNC_TYPE;
-	config->ctrl_data_oe = TDM_CTRL_DATA_OE_ENABLE;
-	config->invert_sync = TDM_LONG_SYNC_NORMAL;
-	config->sync_delay = TDM_DATA_DELAY_0_CYCLE;
 
 	return 0;
 }
@@ -236,6 +288,7 @@ static void ipq_lpass_dma_config_init(struct lpass_dma_buffer *buffer)
 	dma_config.watermark = buffer->watermark;
 	dma_config.ifconfig = buffer->ifconfig;
 	dma_config.idx = buffer->idx;
+	dma_config.burst8_en = 0;
 	if (dma_config.burst_size >= 8) {
 		dma_config.burst8_en = 1;
 		dma_config.burst_size = 1;
@@ -281,50 +334,71 @@ static uint32_t ipq_lpass_prepare_dma_buffer(uint32_t actual_buffer_size,
 	return circular_buff_size;
 }
 
-static void ipq_lpass_fill_tx_data(uint32_t *tx_buff, uint32_t size,
-					struct ipq_lpass_pcm_params *params)
-{
-	uint i,slot = 0;
-
-	slot = params->active_slot_count;
-	for (i = 0; i < size / 4; ) {
-		for (slot = 0; slot < params->active_slot_count; slot++) {
-			if (params->bit_width == 16) {
-				tx_buff[i] = params->tx_slots[slot] << 16;
-			} else {
-				tx_buff[i] = params->tx_slots[slot] << 8;
-			}
-			i++;
-		}
-	}
-}
-
 static void __iomem *ipq_lpass_phy_virt_lpm(uint32_t phy_addr)
 {
 	return (ipq_lpass_lpm_base + (phy_addr - IPQ_LPASS_LPM_BASE));
 }
 
-static int ipq_lpass_setup_bit_clock(uint32_t clk_rate)
+
+static int ipq9574_lpass_setup_bit_clock(uint32_t clk_rate, struct ipq_lpass_pcm_config config)
 {
 
-/*
- * set clock rate for PRI & SEC
- * PRI is slave mode and seondary is master
- */
-	ipq_lpass_lpaif_muxsetup(INTERFACE_PRIMARY, TDM_MODE_SLAVE);
+	/*
+	 * set clock rate for PRI & SEC
+	 * PRI and secondary both are master mode
+	 *
+	 */
+	 uint32_t intf;
+	 if(config.pcm_index == PRIMARY)
+		intf = INTERFACE_PRIMARY;
+	 else
+	 	intf = INTERFACE_SECONDARY;
 
-	if (ipq_lpass_set_clk_rate(INTERFACE_SECONDARY, clk_rate) != 0){
-		pr_err("%s: Bit clk set Failed \n",
-				__func__);
-		return -EINVAL;
+	 if(config.sync_src == TDM_MODE_MASTER)
+	 {
+		ipq_lpass_lpaif_muxsetup(intf, TDM_MODE_MASTER);
+
+		if (ipq_lpass_set_clk_rate(intf, clk_rate) != 0){
+			pr_err("%s: Bit clk set Failed \n", __func__);
+			return -EINVAL;
+		}
 	} else {
-		ipq_lpass_lpaif_muxsetup(INTERFACE_SECONDARY,
-				TDM_MODE_MASTER);
+
+		ipq_lpass_lpaif_muxsetup(intf, TDM_MODE_SLAVE);
 	}
-
 	return 0;
-
 }
+
+static void ipq9574_lpass_pcm_update_config( struct ipq_lpass_props *data, struct ipq_lpass_pcm_config *config)
+{
+	struct ipq_lpass_pcm_tdm_config *pcm_config;
+	struct ipq_lpass_wr_rd_dma_config *dma_config;
+
+	pcm_config = &data->pcm_config[instance_id];
+	if(slave == 1)
+		 pcm_config->sync_src = TDM_MODE_SLAVE;
+	config->sync_src = pcm_config->sync_src;
+	config->pcm_index = pcm_config->pcm_index;
+	config->dir = pcm_config->dir;
+	config->invert_sync = pcm_config->invert_sync;
+	config->sync_type = pcm_config->sync_type;
+	config->sync_delay = pcm_config->sync_delay;
+	config->ctrl_data_oe = pcm_config->ctrl_data_oe;
+
+	dma_config = &data->dma_config[instance_id];
+	rx_dma_buffer->idx = dma_config->rx_idx;
+	rx_dma_buffer->dir = dma_config->rx_dir;
+	rx_dma_buffer->ifconfig = dma_config->rx_ifconfig;
+	rx_dma_buffer->intr_id = dma_config->rx_intr_id;
+	tx_dma_buffer->watermark = DEAFULT_PCM_WATERMARK;
+
+	tx_dma_buffer->idx = dma_config->tx_idx;
+	tx_dma_buffer->dir = dma_config->tx_dir;
+	tx_dma_buffer->ifconfig = dma_config->tx_ifconfig;
+	tx_dma_buffer->intr_id = dma_config->tx_intr_id;
+	tx_dma_buffer->watermark = DEAFULT_PCM_WATERMARK;
+}
+
 
 /*
  * FUNCTION: ipq_lpass_pcm_init
@@ -346,10 +420,10 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 	uint32_t bytes_per_sample_intr;
 	uint32_t dword_per_sample_intr;
 	uint32_t no_of_buffers;
-	uint32_t watermark = DEAFULT_PCM_WATERMARK;
 
 	if ((rx_dma_buffer == NULL ) || (tx_dma_buffer == NULL))
 		return -EPERM;
+
 
 	ret = ipq_lpass_pcm_validate_params(params, &config);
 	if (ret)
@@ -382,32 +456,27 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 		return -ENOMEM;
 	}
 
-	no_of_buffers = circular_buffer / samples_per_interrupt;
+	no_of_buffers = circular_buffer / (samples_per_interrupt );
 
 	if (voice_loopback == 1)
 		no_of_buffers = PCM_VOICE_LOOPBACK_BUFFER_SIZE /
 					PCM_VOICE_LOOPBACK_INTR_SIZE;
 
 	clk_rate = params->bit_width * params->rate * params->slot_count;
-	ret = ipq_lpass_setup_bit_clock(clk_rate);
-	if (ret)
-		return ret;
 
 	bytes_per_sample_intr = int_samples_per_period * bytes_per_sample *
 					params->active_slot_count;
 
 	dword_per_sample_intr = bytes_per_sample_intr >> 2;
 
-	if((DEAFULT_PCM_WATERMARK >= dword_per_sample_intr) ||
-		(dword_per_sample_intr & 0x3)  ){
-		watermark = 1;
-	}
+	ipq9574_lpass_pcm_update_config(&ipq9574_lpass_pcm_cfg, &config);
 
+	ret = ipq9574_lpass_setup_bit_clock(clk_rate, config);
+	if (ret)
+		return ret;
 /*
  * DMA Rx buffer
  */
-	rx_dma_buffer->idx = DMA_CHANNEL0;
-	rx_dma_buffer->dir = LPASS_HW_DMA_SOURCE;
 	rx_dma_buffer->bytes_per_sample = bytes_per_sample;
 	rx_dma_buffer->bit_width = params->bit_width;
 	rx_dma_buffer->int_samples_per_period = int_samples_per_period;
@@ -432,9 +501,6 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 		rx_dma_buffer->dma_last_curr_addr = temp_lpm_base;
 		rx_dma_buffer->dma_buffer = NULL;
 	}
-	rx_dma_buffer->watermark = watermark;
-	rx_dma_buffer->ifconfig = INTERFACE_PRIMARY;
-	rx_dma_buffer->intr_id = INTERRUPT_CHANNEL0;
 	if (voice_loopback == 0)
 		temp_lpm_base += LPASS_DMA_BUFFER_SIZE;
 	atomic_set(&rx_add, 0);
@@ -442,8 +508,6 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 /*
  * DMA Tx buffer
  */
-	tx_dma_buffer->idx = DMA_CHANNEL1;
-	tx_dma_buffer->dir = LPASS_HW_DMA_SINK;
 	tx_dma_buffer->bytes_per_sample = bytes_per_sample;
 	tx_dma_buffer->bit_width = params->bit_width;
 	tx_dma_buffer->int_samples_per_period = int_samples_per_period;
@@ -468,17 +532,7 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 		tx_dma_buffer->dma_last_curr_addr = temp_lpm_base;
 		tx_dma_buffer->dma_buffer = NULL;
 	}
-	tx_dma_buffer->watermark = watermark;
-	tx_dma_buffer->ifconfig = INTERFACE_SECONDARY;
-	tx_dma_buffer->intr_id = INTERRUPT_CHANNEL0;
 
-	ipq_lpass_fill_tx_data(
-		tx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM ?
-			(uint32_t *)ipq_lpass_phy_virt_lpm(
-				tx_dma_buffer->dma_base_address) :
-			(uint32_t *)tx_dma_buffer->dma_buffer,
-			tx_dma_buffer->dma_buffer_size,
-				params);
 /*
  * TDM/PCM , Primary PCM support only RX mode
  * Secondary PCM support only TX mode
@@ -487,36 +541,34 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 	ipq_lpass_dma_config_init(rx_dma_buffer);
 	ipq_lpass_dma_config_init(tx_dma_buffer);
 	ipq_lpass_pcm_reset(ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				config.pcm_index, LPASS_HW_DMA_SINK);
 	ipq_lpass_pcm_reset(ipq_lpass_lpaif_base,
-				PRIMARY, LPASS_HW_DMA_SOURCE);
+				config.pcm_index, LPASS_HW_DMA_SOURCE);
 /*
  * Tx mode support in Sconday interface.
  * configure secondary as TDM master mode
  */
-	config.sync_src = TDM_MODE_MASTER;
 	ipq_lpass_pcm_config(&config, ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				config.pcm_index, LPASS_HW_DMA_SINK);
 /*
  * Rx mode support in Primary interface
  * configure primary as TDM slave mode
  */
-	config.sync_src = TDM_MODE_SLAVE;
 	ipq_lpass_pcm_config(&config, ipq_lpass_lpaif_base,
-				PRIMARY, LPASS_HW_DMA_SOURCE);
+				config.pcm_index, LPASS_HW_DMA_SOURCE);
 
 	ipq_lpass_pcm_reset_release(ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				config.pcm_index, LPASS_HW_DMA_SINK);
 	ipq_lpass_pcm_reset_release(ipq_lpass_lpaif_base,
-				PRIMARY, LPASS_HW_DMA_SOURCE);
+				config.pcm_index, LPASS_HW_DMA_SOURCE);
 
 	ipq_lpass_dma_enable(rx_dma_buffer);
 	ipq_lpass_dma_enable(tx_dma_buffer);
 
 	ipq_lpass_pcm_enable(ipq_lpass_lpaif_base,
-				PRIMARY, LPASS_HW_DMA_SOURCE);
+				config.pcm_index, LPASS_HW_DMA_SOURCE);
 	ipq_lpass_pcm_enable(ipq_lpass_lpaif_base,
-				SECONDARY, LPASS_HW_DMA_SINK);
+				config.pcm_index, LPASS_HW_DMA_SINK);
 
 	return ret;
 }
@@ -641,7 +693,7 @@ void ipq_pcm_deinit(struct ipq_lpass_pcm_params *params)
 EXPORT_SYMBOL(ipq_pcm_deinit);
 
 static const struct of_device_id qca_raw_match_table[] = {
-	{ .compatible = "qca,ipq5018-lpass-pcm" },
+	{ .compatible = "qca,ipq9574-lpass-pcm", .data = (void *)IPQ9574 },
 	{},
 };
 
@@ -656,6 +708,8 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 {
 	uint32_t irq;
 	uint32_t voice_lb = 0;
+	uint32_t instance = 0;
+	uint32_t slave_lb = 0;
 	struct resource *res;
 	const struct of_device_id *match;
 	uint32_t single_buf_size_max;
@@ -670,20 +724,25 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 	if (!pdev)
 		return -EINVAL;
 
+	ipq_hw = (enum ipq_hw_type)match->data;
 	pcm_pdev = pdev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	ipq_lpass_lpaif_base = devm_ioremap_resource(&pdev->dev, res);
+	if(res) {
+		ipq_lpass_lpaif_base =ioremap(res->start, resource_size(res));
+		if (!ipq_lpass_lpaif_base)
+		{
+			pr_err("%s: Failed to ioremap Lapif Base Address\n",
+					__func__);
+			return PTR_ERR(ipq_lpass_lpaif_base);
+		}
 
-	if (IS_ERR(ipq_lpass_lpaif_base))
-		return PTR_ERR(ipq_lpass_lpaif_base);
-
-	ipq_lpass_lpm_base = ioremap_nocache(IPQ_LPASS_LPM_BASE,
+		ipq_lpass_lpm_base = ioremap_nocache(IPQ_LPASS_LPM_BASE,
 				IPQ_LPASS_LPM_SIZE);
 
-	if (IS_ERR(ipq_lpass_lpm_base))
-		return PTR_ERR(ipq_lpass_lpm_base);
-
+		if (IS_ERR(ipq_lpass_lpm_base))
+			return PTR_ERR(ipq_lpass_lpm_base);
+	}
 	if (!pdev->dev.coherent_dma_mask)
 		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 
@@ -729,6 +788,12 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 
 	of_property_read_u32(pdev->dev.of_node, "voice_loopback", &voice_lb);
 	voice_loopback = voice_lb;
+
+	of_property_read_u32(pdev->dev.of_node, "instance_id", &instance);
+	instance_id = instance;
+
+	of_property_read_u32(pdev->dev.of_node, "slave", &slave_lb);
+	slave = slave_lb;
 
 	if (voice_loopback) {
 	/* Setting LPM if voice_loopback enabled */
@@ -858,7 +923,7 @@ static int ipq_lpass_pcm_driver_remove(struct platform_device *pdev)
  * DESCRIPTION OF PCM RAW MODULE
  */
 
-#define DRIVER_NAME "ipq_lpass_pcm_raw"
+#define DRIVER_NAME "ipq9574_lpass_pcm_raw"
 
 static struct platform_driver ipq_lpass_pcm_raw_driver = {
 	.probe		= ipq_lpass_pcm_driver_probe,
@@ -873,4 +938,4 @@ module_platform_driver(ipq_lpass_pcm_raw_driver);
 
 MODULE_ALIAS(DRIVER_NAME);
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_DESCRIPTION("QCA RAW PCM VoIP Platform Driver");
+MODULE_DESCRIPTION("QTI RAW PCM VoIP Platform Driver");
