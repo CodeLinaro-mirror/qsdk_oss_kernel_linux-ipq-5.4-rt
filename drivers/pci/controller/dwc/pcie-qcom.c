@@ -19,6 +19,7 @@
 #include <linux/notifier.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/of_pci.h>
 #include <linux/pci.h>
 #include <linux/pm_runtime.h>
 #include <linux/platform_device.h>
@@ -361,6 +362,7 @@ int pci_create_scan_root_bus(struct pcie_port *pp)
 	struct pci_bus *child;
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
 	struct device *dev = pci->dev;
+	struct pci_host_bridge *hbrg;
 
 	pci_add_resource(&res, pp->busn);
 	pci_add_resource(&res, pp->io);
@@ -383,6 +385,9 @@ int pci_create_scan_root_bus(struct pcie_port *pp)
 
 	if (pp->ops->scan_bus)
 		pp->ops->scan_bus(pp);
+
+	hbrg = pci_find_host_bridge(pp->root_bus);
+	hbrg->map_irq = of_irq_parse_and_map_pci;
 
 	pci_bus_size_bridges(pp->root_bus);
 	pci_bus_assign_resources(pp->root_bus);
