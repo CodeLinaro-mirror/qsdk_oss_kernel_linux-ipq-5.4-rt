@@ -1027,9 +1027,11 @@
 		q6v5_wcss: q6v5_wcss@cd00000 {
 			compatible = "qcom,ipq8074-wcss-pil";
 			reg = <0x0cd00000 0x4040>,
-			      <0x004ab000 0x20>;
+				<0x004ab000 0x20>,
+				<0xCB50000 0x8>;
 			reg-names = "qdsp6",
-				    "rmb";
+				    "rmb",
+				    "wcmn";
 			qca,auto-restart;
 			qca,extended-intc;
 			interrupts-extended = <&intc 0 325 1>,

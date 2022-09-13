@@ -106,6 +106,10 @@
 #define MAX_HALT_REG		4
 
 #define WCNSS_PAS_ID		6
+#define QDSP6SS_Q6V7_VERSION	0x30010000
+#define QDSP6SS_Q6V6_VERSION	0x20020000
+#define QDSP6SS_Q6V5_VERSION	0x100A0000
+#define WCSS_VERSION		0x10000000
 
 static int debug_wcss;
 static const struct wcss_data wcss_ipq6018_res_init;
@@ -209,6 +213,8 @@ struct wcss_data {
 	bool requires_force_stop;
 	bool need_mem_protection;
 	bool need_auto_boot;
+	int q6ss_version;
+	int wcss_version;
 };
 
 struct wcss_clk {
@@ -818,6 +824,11 @@ static int q6v5_wcss_start(struct rproc *rproc)
 	struct q6v5_wcss *wcss = rproc->priv;
 	int ret;
 	uint32_t val;
+	const struct wcss_data *desc;
+
+	desc = of_device_get_match_data(wcss->dev);
+	if (!desc)
+		return -EINVAL;
 
 	ret = clk_prepare_enable(wcss->prng_clk);
 	if (ret) {
@@ -898,18 +909,16 @@ wait_for_reset:
 
 	if (wcss->wcmn_base) {
 		/* Read the version registers to make sure WCSS is out of reset
-		 * Q6SS_WLAN_QDSP6SS_VERSION = 0x30010000
-		 * WCMN_WCSS_WCMN_R0_WCSS_CORE_HW_VERSION = 0x10000000
 		 */
 		val = readl(wcss->reg_base);
-		if (val != 0x30010000) {
+		if (val != desc->q6ss_version) {
 			dev_err(wcss->dev, "Invalid QDSP6SS Version : 0x%x\n", val);
 			return -EINVAL;
 		}
 		dev_info(wcss->dev, "QDSP6SS Version : 0x%x\n", val);
 
 		val = readl(wcss->wcmn_base);
-		if (val != 0x10000000) {
+		if (val != desc->wcss_version) {
 			dev_err(wcss->dev, "Invalid WCSS Version : 0x%x\n", val);
 			return -EINVAL;
 		}
@@ -2169,6 +2178,8 @@ static const struct wcss_data wcss_ipq8074_res_init = {
 	.need_mem_protection = true,
 	.need_auto_boot = false,
 	.q6_version = Q6V5,
+	.q6ss_version = QDSP6SS_Q6V5_VERSION,
+	.wcss_version = WCSS_VERSION,
 };
 
 static const struct wcss_data wcss_ipq6018_res_init = {
@@ -2188,6 +2199,8 @@ static const struct wcss_data wcss_ipq6018_res_init = {
 	.need_mem_protection = true,
 	.need_auto_boot = false,
 	.q6_version = Q6V5,
+	.q6ss_version = QDSP6SS_Q6V5_VERSION,
+	.wcss_version = WCSS_VERSION,
 };
 
 static const struct wcss_data wcss_ipq5018_res_init = {
@@ -2207,6 +2220,8 @@ static const struct wcss_data wcss_ipq5018_res_init = {
 	.need_mem_protection = true,
 	.need_auto_boot = false,
 	.q6_version = Q6V6,
+	.q6ss_version = QDSP6SS_Q6V6_VERSION,
+	.wcss_version = WCSS_VERSION,
 };
 
 static const struct wcss_data wcss_ipq9574_res_init = {
@@ -2226,6 +2241,8 @@ static const struct wcss_data wcss_ipq9574_res_init = {
 	.need_mem_protection = true,
 	.need_auto_boot = false,
 	.q6_version = Q6V7,
+	.q6ss_version = QDSP6SS_Q6V7_VERSION,
+	.wcss_version = WCSS_VERSION,
 };
 
 static const struct wcss_data wcss_qcs404_res_init = {
