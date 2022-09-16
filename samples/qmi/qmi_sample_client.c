@@ -787,7 +787,7 @@ static void lic_cb(struct qmi_handle *qmi, struct sockaddr_qrtr *sq,
 			txn->result = -EINVAL;
 
 		memcpy(&resp_val, resp->pong, sizeof(resp->pong));
-		pr_info("Response for OEM ID from %d:%d handle[%p] is %d\n",
+		pr_info("Response for OEM ID from %d:%d handle[%p] is 0x%x\n",
 				qmi->sq.sq_port, qmi->sq.sq_node, qmi, resp_val);
 	} else if (hdr->msg_id == LIC_GET_SERIAl_NUM_REQ_V01) {
 
@@ -795,7 +795,7 @@ static void lic_cb(struct qmi_handle *qmi, struct sockaddr_qrtr *sq,
 			txn->result = -EINVAL;
 
 		memcpy(&resp_val, resp->pong, sizeof(resp->pong));
-		pr_info("Response for serial number from %d:%d handle[%p] is %d\n",
+		pr_info("Response for serial number from %d:%d handle[%p] is 0x%x\n",
 				qmi->sq.sq_port, qmi->sq.sq_node, qmi, resp_val);
 	} else if (hdr->msg_id == LIC_GET_EXTERNAL_PART_REQ_V01) {
 
@@ -803,7 +803,7 @@ static void lic_cb(struct qmi_handle *qmi, struct sockaddr_qrtr *sq,
 			txn->result = -EINVAL;
 
 		memcpy(&resp_val, resp->pong, sizeof(resp->pong));
-		pr_info("Response for external part from %d:%d handle[%p] is %d\n",
+		pr_info("Response for external part from %d:%d handle[%p] is 0x%x\n",
 				qmi->sq.sq_port, qmi->sq.sq_node, qmi, resp_val);
 	} else if (hdr->msg_id == LIC_GET_JTAG_ID_REQ_V01) {
 
@@ -811,7 +811,7 @@ static void lic_cb(struct qmi_handle *qmi, struct sockaddr_qrtr *sq,
 			txn->result = -EINVAL;
 
 		memcpy(&resp_val, resp->pong, sizeof(resp->pong));
-		pr_info("Response for OEM ID from %d:%d handle[%p] is %d\n",
+		pr_info("Response for JTAG ID from %d:%d handle[%p] is 0x%x\n",
 				qmi->sq.sq_port, qmi->sq.sq_node, qmi, resp_val);
 	}
 
