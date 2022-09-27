@@ -23,6 +23,7 @@
 #include <linux/firmware.h>
 #include <linux/delay.h>
 
+#define MAX_PCIE_INSTANCE 4
 
 #define DEFAULT_FW_PATH				"qcn9224/fuse_blower.bin"
 #define QCN9224_PCIE_REMAP_BAR_CTRL_OFFSET      0x310C
@@ -63,6 +64,12 @@
 #define WINDOW_START				MAX_UNWINDOWED_ADDRESS
 #define WINDOW_RANGE_MASK			0x7FFFF
 static DEFINE_SPINLOCK(pci_reg_window_lock);
+
+struct pcie_dev_list{
+	struct pci_dev *pci_dev;
+	const struct pci_device_id *id;
+};
+struct pcie_dev_list gpci_dev_list[MAX_PCIE_INSTANCE];
 
 char *fw_path;
 module_param(fw_path, charp, 0444);
@@ -323,15 +330,55 @@ out:
 	return ret;
 }
 
+static int idx;
+static ssize_t fuse_blower_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", idx);
+}
+
+static ssize_t fuse_blower_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t n)
+{
+	int ret, index;
+
+	ret = kstrtoint(buf, 0, &index);
+	if (ret || index >= idx) {
+		printk("invalid pci idx %d ret %d \n", index, ret);
+		return n;
+	}
+
+	mhi_fuse_pci_enable_bus(gpci_dev_list[index].pci_dev,
+					gpci_dev_list[index].id);
+
+	return n;
+}
+
+static const DEVICE_ATTR(fuse_blower, 0644, fuse_blower_show,
+			fuse_blower_store);
+
+struct module *mod = THIS_MODULE;
 int mhi_fuse_pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *id)
 {
 
 	printk("--->\n");
 
-	printk("Vendor ID:0x%x Device ID:0x%x Probed Device ID:0x%x\n",
-			pci_dev->vendor, pci_dev->device, id->device);
+	printk("PCI: 0x%x Vendor ID:0x%x Device ID:0x%x idx %d\n",
+			(u32) pci_dev->resource[0].start & 0xff000000,
+			pci_dev->vendor, pci_dev->device, idx);
 
-	mhi_fuse_pci_enable_bus(pci_dev, id);
+	gpci_dev_list[idx].pci_dev = pci_dev;
+	gpci_dev_list[idx].id = id;
+
+	if (!idx) {
+		sysfs_create_file(&mod->mkobj.kobj,
+					&dev_attr_fuse_blower.attr);
+	}
+	idx++;
+
 	printk("<---done\n");
 	return 0;
 
