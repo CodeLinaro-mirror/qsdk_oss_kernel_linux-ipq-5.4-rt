@@ -2780,6 +2780,7 @@ u16 dev_pick_tx_zero(struct net_device *dev, struct sk_buff *skb,
 u16 dev_pick_tx_cpu_id(struct net_device *dev, struct sk_buff *skb,
 		       struct net_device *sb_dev);
 int dev_queue_xmit(struct sk_buff *skb);
+bool dev_fast_xmit_vp(struct sk_buff *skb, struct net_device *dev);
 bool dev_fast_xmit(struct sk_buff *skb, struct net_device *dev,
 		   netdev_features_t features);
 int dev_queue_xmit_accel(struct sk_buff *skb, struct net_device *sb_dev);
