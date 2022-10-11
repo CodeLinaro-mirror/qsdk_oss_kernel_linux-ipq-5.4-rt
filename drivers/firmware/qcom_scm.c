@@ -681,7 +681,7 @@ int qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 }
 EXPORT_SYMBOL(qti_fuseipq_scm_call);
 
-int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg)
+int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf)
 {
 	int ret;
 
@@ -689,7 +689,7 @@ int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg)
 	if (ret)
 		return ret;
 
-	ret = __qti_scm_dload(__scm->dev, svc_id, cmd_id, cmd_buf, dload_reg);
+	ret = __qti_scm_dload(__scm->dev, svc_id, cmd_id, cmd_buf);
 
 	qcom_scm_clk_disable();
 
@@ -697,23 +697,6 @@ int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg)
 
 }
 EXPORT_SYMBOL(qti_scm_dload);
-
-int qti_scm_set_kernel_boot_complete(u32 svc_id, u32 val)
-{
-	int ret;
-
-	ret = qcom_scm_clk_enable();
-	if (ret)
-		return ret;
-
-	ret = __qti_scm_set_kernel_boot_complete(__scm->dev, svc_id, val);
-
-	qcom_scm_clk_disable();
-
-	return ret;
-
-}
-EXPORT_SYMBOL(qti_scm_set_kernel_boot_complete);
 
 int qti_scm_wcss_boot(u32 svc_id, u32 cmd_id, void *cmd_buf)
 {

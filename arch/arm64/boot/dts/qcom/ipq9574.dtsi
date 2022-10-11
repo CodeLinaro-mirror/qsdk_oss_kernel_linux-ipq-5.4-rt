@@ -2281,12 +2281,6 @@
 			qti,offset-page-indices = <56>;
 		};
 
-		qti,scm_restart_reason {
-			compatible = "qti,scm_restart_reason";
-			reg = <0x0193d100 0x4>;
-			qti,runtime-failsafe = <0>;
-		};
-
 		wifi0: wifi@c0000000 {
 			compatible = "qcom,cnss-qca9574", "qcom,ipq9574-wifi";
 			reg = <0xc000000 0x1000000>;
@@ -3649,6 +3643,10 @@
 				};
 			};
 		};
+	};
+
+	qti,scm_restart_reason {
+		compatible = "qti,scm_restart_reason";
 	};
 
 	qti,gadget_diag@0 {
