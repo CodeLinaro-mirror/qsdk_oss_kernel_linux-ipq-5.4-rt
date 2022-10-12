@@ -45,6 +45,11 @@
         status = "ok";
 };
 
+&mlo_global_mem0 {
+	size = <0x0 0x1100000>;
+	status = "ok";
+};
+
 &wifi0 {
 	/* Enable IPQ9574 integratd 2G Radio */
 	led-gpio = <&tlmm 64 1>;
