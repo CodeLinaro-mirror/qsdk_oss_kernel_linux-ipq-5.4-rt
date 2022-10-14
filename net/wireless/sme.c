@@ -753,8 +753,10 @@ void __cfg80211_connect_result(struct net_device *dev,
 		return;
 	}
 
-	if (WARN_ON(!cr->bss))
+	if (!cr->bss) {
+		pr_warn("%s:bss not found\n", __func__);
 		return;
+	}
 
 	wdev->current_bss = bss_from_pub(cr->bss);
 
