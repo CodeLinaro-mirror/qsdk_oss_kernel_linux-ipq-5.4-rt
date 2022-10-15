@@ -1947,3 +1947,29 @@ int __qti_scm_toggle_bt_eco(struct device *dev, u32 peripheral, u32 arg)
 
 	return ret ? : le32_to_cpu(desc.ret[0]);
 }
+
+static int __qti_scm_set_trybit_v8(struct device *dev, u32 val, u64 dload_mode_addr)
+{
+	struct scm_desc desc = {0};
+	int ret;
+
+	desc.args[0] = dload_mode_addr;
+	desc.args[1] = val;
+
+	desc.arginfo = SCM_ARGS(2, QCOM_SCM_VAL, QCOM_SCM_VAL);
+	ret = qti_scm_call2(dev, SCM_SIP_FNID(QCOM_SCM_SVC_IO,
+					QCOM_SCM_IO_WRITE), &desc);
+	if (ret)
+		return ret;
+
+	return le32_to_cpu(desc.ret[0]);
+}
+
+int __qti_scm_set_trybit(struct device *dev, u32 svc_id, u32 val, u64 dload_mode_addr)
+{
+	if (!is_scm_armv8())
+		return -ENOTSUPP;
+
+	return __qti_scm_set_trybit_v8(dev, val, dload_mode_addr);
+
+}

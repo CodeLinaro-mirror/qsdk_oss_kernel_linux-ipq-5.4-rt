@@ -705,6 +705,32 @@ int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf)
 }
 EXPORT_SYMBOL(qti_scm_dload);
 
+int qti_scm_set_trybit(u32 svc_id)
+{
+	int ret;
+	unsigned int val;
+
+	ret = qcom_scm_clk_enable();
+	if (ret)
+		return ret;
+
+	val = readl(__scm->dload_reg);
+	val |= QTI_TRYBIT;
+	ret = __qti_scm_set_trybit(__scm->dev, svc_id, val, __scm->dload_mode_addr);
+
+	qcom_scm_clk_disable();
+
+	return ret;
+
+}
+EXPORT_SYMBOL(qti_scm_set_trybit);
+
+int qti_read_dload_reg()
+{
+	return readl(__scm->dload_reg);
+}
+EXPORT_SYMBOL(qti_read_dload_reg);
+
 int qti_scm_wcss_boot(u32 svc_id, u32 cmd_id, void *cmd_buf)
 {
 	int ret;

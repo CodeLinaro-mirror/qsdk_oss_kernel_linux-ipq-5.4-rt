@@ -1268,3 +1268,19 @@ int __qti_scm_toggle_bt_eco(struct device *dev, u32 peripheral, u32 arg)
 
 	return ret ? false : !!res.a1;
 }
+
+int __qti_scm_set_trybit(struct device *dev, u32 svc_id, u32 val, u64 dload_mode_addr)
+{
+	struct qcom_scm_desc desc = {0};
+	struct arm_smccc_res res;
+	int ret;
+
+	desc.args[0] = dload_mode_addr;
+	desc.args[1] = val;
+
+	desc.arginfo = QCOM_SCM_ARGS(2, QCOM_SCM_VAL, QCOM_SCM_VAL);
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_SVC_IO,
+				QCOM_SCM_IO_WRITE, &desc, &res);
+
+	return ret ? : res.a1;
+}

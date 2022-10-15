@@ -21,6 +21,7 @@
 #define QTI_TZ_DIAG_LOG_ENCR_ID		0x0
 #define QTI_TZ_QSEE_LOG_ENCR_ID		0x1
 #define QTI_TZ_LOG_NO_UPDATE		-6
+#define QTI_TRYBIT     			BIT(12)
 enum qseecom_qceos_cmd_id {
 	QSEOS_APP_START_COMMAND	= 0x01,
 	QSEOS_APP_SHUTDOWN_COMMAND,
@@ -385,4 +386,7 @@ extern int qti_scm_pdseg_memcpy(u32 peripheral, int phno, dma_addr_t dma,
 								size_t size);
 extern int qti_scm_int_radio_powerup(u32 peripheral);
 extern int qti_scm_int_radio_powerdown(u32 peripheral);
+extern int __qti_scm_set_trybit(struct device *dev, u32 svc_id, u32 val, u64 dload_mode_addr);
+extern int qti_scm_set_trybit(u32 svc_id);
+extern int qti_read_dload_reg(void);
 #endif
