@@ -57,6 +57,8 @@ struct qca_uni_pcie_phy {
 	struct device *dev;
 	unsigned int phy_type;
 	struct clk *pipe_clk;
+	struct clk *lane_m_clk;
+	struct clk *lane_s_clk;
 	struct reset_control *res_phy;
 	struct reset_control *res_phy_phy;
 	u32 is_phy_gen3;
@@ -146,6 +148,8 @@ static int qca_uni_pcie_phy_power_on(struct phy *x)
 
 	usleep_range(PIPE_CLK_DELAY_MIN_US, PIPE_CLK_DELAY_MAX_US);
 	clk_prepare_enable(phy->pipe_clk);
+	clk_prepare_enable(phy->lane_m_clk);
+	clk_prepare_enable(phy->lane_s_clk);
 	usleep_range(30, 50);
 	qca_uni_pcie_phy_init(phy);
 	return 0;
@@ -207,6 +211,18 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 	if (IS_ERR(phy->pipe_clk)) {
 		dev_err(phy->dev, "cannot get pipe clock");
 		return PTR_ERR(phy->pipe_clk);
+	}
+
+	phy->lane_m_clk = devm_clk_get_optional(phy->dev, "lane_m_clk");
+	if (IS_ERR(phy->lane_m_clk)) {
+		dev_err(phy->dev, "cannot get lane_m clock");
+		return PTR_ERR(phy->lane_m_clk);
+	}
+
+	phy->lane_s_clk = devm_clk_get_optional(phy->dev, "lane_s_clk");
+	if (IS_ERR(phy->lane_s_clk)) {
+		dev_err(phy->dev, "cannot get lane_s clock");
+		return PTR_ERR(phy->lane_s_clk);
 	}
 
 	phy->res_phy = devm_reset_control_get(phy->dev, "phy");
@@ -301,6 +317,8 @@ static int qca_uni_pcie_remove(struct platform_device *pdev)
 	struct qca_uni_pcie_phy  *phy = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(phy->pipe_clk);
+	clk_disable_unprepare(phy->lane_m_clk);
+	clk_disable_unprepare(phy->lane_s_clk);
 
 	return 0;
 }

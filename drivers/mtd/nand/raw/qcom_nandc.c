@@ -3626,13 +3626,13 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 	if (of_property_read_u32(np, "qcom,io_macro_max_clk",
 				&max_iomacro_clk)) {
 		dev_err(nandc->dev, "Error in reading max io macro clock from dts");
-		goto trng_err;
+		goto mem_err;
 	}
 
 	/* Read all supported io_macro clock frequency from dts */
 	if (!of_get_property(np, "qcom,io_macro_clk_rates", &len)) {
 		dev_err(nandc->dev, "Error in reading length of io_macro_clock\n");
-		goto trng_err;
+		goto mem_err;
 	}
 
 	sz = (len / sizeof(*arr));
@@ -3640,13 +3640,13 @@ static int qspi_execute_training(struct qcom_nand_controller *nandc,
 	arr = kzalloc(sz * sizeof(*arr), GFP_KERNEL);
 	if (!arr) {
 		dev_err(nandc->dev, "failed allocating memory for qcom,io_macro_clk_rates\n");
-		goto trng_err;
+		goto mem_err;
 	}
 
 	ret = of_property_read_u32_array(np, "qcom,io_macro_clk_rates", arr, sz);
 	if (ret < 0) {
 		dev_err(nandc->dev, "failed reading array qcom,io_macro_clk_rates %d\n", ret);
-		goto trng_err;
+		goto mem_err;
 	}
 
 	sz -= 1;

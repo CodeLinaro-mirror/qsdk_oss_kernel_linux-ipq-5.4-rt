@@ -222,8 +222,13 @@
 			reg = <0x4b0000 0x800>;
 			phy-type = "gen3";
 			#phy-cells = <0>;
-			clocks = <&gcc GCC_PCIE3X1_0_PIPE_CLK>;
-			clock-names = "pipe_clk";
+			clocks = <&gcc GCC_PCIE3X1_0_PIPE_CLK>,
+				<&gcc GCC_SNOC_PCIE3_1LANE_M_CLK>,
+				<&gcc GCC_SNOC_PCIE3_1LANE_S_CLK>;
+
+			clock-names = "pipe_clk",
+					"lane_m_clk",
+					"lane_s_clk";
 
 			resets = <&gcc GCC_PCIE3X1_0_PHY_BCR>,
 				<&gcc GCC_PCIE3X1_0_PHY_PHY_BCR>;
@@ -240,8 +245,13 @@
 			reg = <0x4b1000 0x800>;
 			phy-type = "gen3";
 			#phy-cells = <0>;
-			clocks = <&gcc GCC_PCIE3X2_PIPE_CLK>;
-			clock-names = "pipe_clk";
+			clocks = <&gcc GCC_PCIE3X2_PIPE_CLK>,
+				<&gcc GCC_SNOC_PCIE3_2LANE_M_CLK>,
+				<&gcc GCC_SNOC_PCIE3_2LANE_S_CLK>;
+
+			clock-names = "pipe_clk",
+					"lane_m_clk",
+					"lane_s_clk";
 
 			resets = <&gcc GCC_PCIE3X2_PHY_BCR>,
 				<&gcc GCC_PCIE3X2PHY_PHY_BCR>;
@@ -262,8 +272,13 @@
 			qti,multiplexed-phy;
 			qti,phy-mux-regs = <&tcsr_q6_block 0x2544>;
 
-			clocks = <&gcc GCC_PCIE3X1_1_PIPE_CLK>;
-			clock-names = "pipe_clk";
+			clocks = <&gcc GCC_PCIE3X1_1_PIPE_CLK>,
+				<&gcc GCC_SNOC_PCIE3_1LANE_1_M_CLK>,
+				<&gcc GCC_SNOC_PCIE3_1LANE_1_S_CLK>;
+
+			clock-names = "pipe_clk",
+					"lane_m_clk",
+					"lane_s_clk";
 
 			resets = <&gcc GCC_PCIE3X1_1_PHY_BCR>,
 				<&gcc GCC_PCIE3X1_1_PHY_PHY_BCR>;
@@ -281,8 +296,13 @@
 			reg = <0x4b1000 0x1000>;
 			phy-type = "gen3";
 			#phy-cells = <0>;
-			clocks = <&gcc GCC_PCIE3X2_PIPE_CLK>;
-			clock-names = "pipe_clk";
+			clocks = <&gcc GCC_PCIE3X2_PIPE_CLK>,
+				<&gcc GCC_SNOC_PCIE3_2LANE_M_CLK>,
+				<&gcc GCC_SNOC_PCIE3_2LANE_S_CLK>;
+
+			clock-names = "pipe_clk",
+					"lane_m_clk",
+					"lane_s_clk";
 
 			resets = <&gcc GCC_PCIE3X2_PHY_BCR>,
 				<&gcc GCC_PCIE3X2PHY_PHY_BCR>;
@@ -754,7 +774,7 @@
 
 		/* 1L controller with 2L/2x1L Flexible PHY 2nd lane */
 		pcie2: pcie@10000000 {
-			compatible = "qti,pcie-ipq9574";
+			compatible = "qti,pcie-ipq5332";
 			reg =  <0x10000000 0xf1d
 				0x10000F20 0xa8
 				0x10001000 0x1000
@@ -802,6 +822,8 @@
 				      "aux",
 				      "axi_bridge";
 
+			axi-m-clk-frequency = <240000000>;
+
 			resets = <&gcc GCC_PCIE3X1_1_PIPE_ARES>,
 				 <&gcc GCC_PCIE3X1_1_CORE_STICKY_ARES>,
 				 <&gcc GCC_PCIE3X1_1_AXI_M_CLK_ARES>,
@@ -833,7 +855,7 @@
 		 * Connected to the 1st lane of the Flexible PHY in 1L mode
 		 */
 		pcie1: pcie@18000000 {
-			compatible = "qti,pcie-ipq9574";
+			compatible = "qti,pcie-ipq5332";
 			reg =  <0x18000000 0xf1d
 				0x18000F20 0xa8
 				0x18001000 0x1000
@@ -882,6 +904,8 @@
 				      "aux",
 				      "axi_bridge";
 
+			axi-m-clk-frequency = <266666667>;
+
 			resets = <&gcc GCC_PCIE3X2_PIPE_ARES>,
 				 <&gcc GCC_PCIE3X2_CORE_STICKY_ARES>,
 				 <&gcc GCC_PCIE3X2_AXI_M_CLK_ARES>,
@@ -911,7 +935,7 @@
 
 		/* 1L controller with USB/PCIe combo PHY */
 		pcie0: pcie@20000000 {
-			compatible = "qti,pcie-ipq9574";
+			compatible = "qti,pcie-ipq5332";
 			reg =  <0x20000000 0xf1d
 				0x20000F20 0xa8
 				0x20001000 0x1000
@@ -958,6 +982,8 @@
 				      "ahb",
 				      "aux",
 				      "axi_bridge";
+
+			axi-m-clk-frequency = <240000000>;
 
 			resets = <&gcc GCC_PCIE3X1_0_PIPE_ARES>,
 				 <&gcc GCC_PCIE3X1_0_CORE_STICKY_ARES>,

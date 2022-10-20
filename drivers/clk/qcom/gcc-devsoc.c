@@ -106,7 +106,7 @@ static struct clk_alpha_pll gpll2_main = {
 };
 
 static struct clk_alpha_pll_postdiv gpll2 = {
-	.offset = 0x20000,
+	.offset = 0x21000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_GCC_PLL_TYPE_STROMER_PLUS],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
@@ -137,7 +137,7 @@ static struct clk_alpha_pll gpll4_main = {
 };
 
 static struct clk_alpha_pll_postdiv gpll4 = {
-	.offset = 0x20000,
+	.offset = 0x22000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_GCC_PLL_TYPE_STROMER_PLUS],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
@@ -397,6 +397,7 @@ static const struct clk_parent_data gcc_parent_data_16[] = {
 };
 
 static const struct freq_tbl ftbl_gcc_adss_pwm_clk_src[] = {
+	F(24000000, P_XO, 1, 0, 0),
 	F(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0),
 	{ }
 };
@@ -625,6 +626,7 @@ static struct clk_rcg2 gcc_blsp1_uart3_apps_clk_src = {
 };
 
 static const struct freq_tbl ftbl_gcc_gp1_clk_src[] = {
+	F(24000000, P_XO, 1, 0, 0),
 	F(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0),
 	{ }
 };
@@ -1032,7 +1034,10 @@ static struct clk_fixed_factor gcc_qdss_tsctr_div16_clk_src = {
 };
 
 static const struct freq_tbl ftbl_gcc_qpic_io_macro_clk_src[] = {
-	F(400000000, P_GPLL0_OUT_MAIN, 2, 0, 0),
+	F(24000000, P_XO, 1, 0, 0),
+	F(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0),
+	F(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0),
+	F(320000000, P_GPLL0_OUT_MAIN, 2.5, 0, 0),
 	{ }
 };
 
@@ -1056,7 +1061,6 @@ static const struct freq_tbl ftbl_gcc_sdcc1_apps_clk_src[] = {
 	F(24000000, P_XO, 1, 0, 0),
 	F(48000000, P_GPLL2_OUT_MAIN, 12, 1, 2),
 	F(96000000, P_GPLL2_OUT_MAIN, 12, 0, 0),
-	F(100000000, P_GPLL0_OUT_MAIN, 8, 0, 0),
 	F(177777778, P_GPLL0_OUT_MAIN, 4.5, 0, 0),
 	F(192000000, P_GPLL2_OUT_MAIN, 6, 0, 0),
 	F(200000000, P_GPLL0_OUT_MAIN, 4, 0, 0),
@@ -4146,11 +4150,11 @@ static struct clk_regmap *gcc_devsoc_dummy_clocks[] = {
 	[GCC_PCIE3X1_0_PIPE_CLK_SRC] = DEFINE_DUMMY_CLK(pcie3x1_0_pipe_clk_src),
 	[GCC_PCIE3X1_1_PIPE_CLK_SRC] = DEFINE_DUMMY_CLK(pcie3x1_1_pipe_clk_src),
 	[GCC_USB0_PIPE_CLK_SRC] = DEFINE_DUMMY_CLK(usb0_pipe_clk_src),
-	[GPLL0_MAIN] = &gpll0_main.clkr,
+	[GPLL0_MAIN] = DEFINE_DUMMY_CLK(gpll0_main),
 	[GPLL0] = DEFINE_DUMMY_CLK(gpll0),
-	[GPLL2_MAIN] = &gpll2_main.clkr,
+	[GPLL2_MAIN] = DEFINE_DUMMY_CLK(gpll2_main),
 	[GPLL2] = DEFINE_DUMMY_CLK(gpll2),
-	[GPLL4_MAIN] = &gpll4_main.clkr,
+	[GPLL4_MAIN] = DEFINE_DUMMY_CLK(gpll4_main),
 	[GPLL4] = DEFINE_DUMMY_CLK(gpll4),
 };
 
@@ -4525,6 +4529,8 @@ static const struct qcom_reset_map gcc_devsoc_resets[] = {
 	[GCC_PCIE3X1_1_AXI_M_STICKY_ARES] = { 0x2a058, 3 },
 	[GCC_IM_SLEEP_CLK_ARES] = { 0x34020, 2 },
 	[GCC_NSSNOC_PCNOC_1_CLK_ARES] = { 0x17080, 2 },
+	[GCC_UNIPHY0_XPCS_ARES] = { 0x16050 },
+	[GCC_UNIPHY1_XPCS_ARES] = { 0x16060 },
 };
 
 static const struct regmap_config gcc_devsoc_regmap_config = {
