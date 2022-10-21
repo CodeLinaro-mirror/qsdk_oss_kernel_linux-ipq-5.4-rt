@@ -102,6 +102,7 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 	if (likely(skb)) {
 		struct skb_shared_info *shinfo;
 		bool is_fast_recycled = skb->fast_recycled;
+		bool recycled_for_ds = skb->recycled_for_ds;
 
 		/* We're about to write a large amount to the skb to
 		 * zero most of the structure so prefetch the start
@@ -127,6 +128,9 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 		/* Restore fast_recycled flag */
 		if (is_fast_recycled) {
 			skb->fast_recycled = 1;
+		}
+		if (recycled_for_ds) {
+			skb->recycled_for_ds = 1;
 		}
 	}
 
