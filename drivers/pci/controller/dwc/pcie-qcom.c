@@ -19,6 +19,7 @@
 #include <linux/notifier.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/of_pci.h>
 #include <linux/pci.h>
 #include <linux/pm_runtime.h>
 #include <linux/platform_device.h>
@@ -361,6 +362,7 @@ int pci_create_scan_root_bus(struct pcie_port *pp)
 	struct pci_bus *child;
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
 	struct device *dev = pci->dev;
+	struct pci_host_bridge *hbrg;
 
 	pci_add_resource(&res, pp->busn);
 	pci_add_resource(&res, pp->io);
@@ -383,6 +385,9 @@ int pci_create_scan_root_bus(struct pcie_port *pp)
 
 	if (pp->ops->scan_bus)
 		pp->ops->scan_bus(pp);
+
+	hbrg = pci_find_host_bridge(pp->root_bus);
+	hbrg->map_irq = of_irq_parse_and_map_pci;
 
 	pci_bus_size_bridges(pp->root_bus);
 	pci_bus_assign_resources(pp->root_bus);
@@ -1712,6 +1717,7 @@ static int qti_pcie_init_2_9_0_9574(struct qcom_pcie *pcie)
 	struct qcom_pcie_resources_2_9_0 *res = &pcie->res.v2_9_0;
 	struct dw_pcie *pci = pcie->pci;
 	struct device *dev = pci->dev;
+	unsigned int axi_m_clk_freq;
 	int i, ret;
 	u32 val;
 
@@ -1758,10 +1764,14 @@ static int qti_pcie_init_2_9_0_9574(struct qcom_pcie *pcie)
 		goto err_clk_axi_m;
 	}
 
-	if (pcie->num_lanes == 1)
-		ret = clk_set_rate(res->axi_m_clk, AXI_CLK_RATE_IPQ9574);
-	else if (pcie->num_lanes == 2)
-		ret = clk_set_rate(res->axi_m_clk, AXI_M_2LANE_CLK_RATE_IPQ9574);
+	if (!device_property_read_u32(dev, "axi-m-clk-frequency", &axi_m_clk_freq)) {
+		ret = clk_set_rate(res->axi_m_clk, axi_m_clk_freq);
+	} else {
+		if (pcie->num_lanes == 1)
+			ret = clk_set_rate(res->axi_m_clk, AXI_CLK_RATE_IPQ9574);
+		else if (pcie->num_lanes == 2)
+			ret = clk_set_rate(res->axi_m_clk, AXI_M_2LANE_CLK_RATE_IPQ9574);
+	}
 
 	if (ret) {
 		dev_err(dev, "MClk rate set failed (%d)\n", ret);
@@ -2822,6 +2832,7 @@ static const struct of_device_id qcom_pcie_match[] = {
 	{ .compatible = "qcom,pcie-ipq4019", .data = &qcom_pcie_2_4_0 },
 	{ .compatible = "qcom,pcie-qcs404", .data = &qcom_pcie_2_4_0 },
 	{ .compatible = "qcom,pcie-ipq5018", .data = &qcom_pcie_2_9_0_ipq5018 },
+	{ .compatible = "qti,pcie-ipq5332", .data = &qti_pcie_2_9_0_ipq9574 },
 	{ .compatible = "qti,pcie-ipq9574", .data = &qti_pcie_2_9_0_ipq9574 },
 	{ }
 };

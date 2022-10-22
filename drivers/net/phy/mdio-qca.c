@@ -70,6 +70,8 @@
 #define PHY_DEBUG_PORT_DATA			0x1e
 #define PHY_LDO_EFUSE_REG			0x180
 #define PHY_ICC_EFUSE_REG			0x280
+#define PHY_10BT_SG_THRESH_REG		0x3380
+#define PHY_MMD1_CTRL2ANA_OPTION2_REG		0x40018102
 #define PHY_ADDR_LENGTH			5
 #define PHY_ADDR_NUM				4
 #define UNIPHY_ADDR_NUM			3
@@ -412,6 +414,23 @@ qca_mht_efuse_loading(struct mii_bus *mii_bus, u8 ethphy)
 	qca_phy_debug_write(mii_bus, phy_addr, PHY_ICC_EFUSE_REG, reg_val);
 }
 
+static void
+qca_mht_ethphy_ana_fixup(struct mii_bus *mii_bus, u8 ethphy)
+{
+	u32 phy_addr = 0;
+	u16 reg_val = 0;
+
+	phy_addr = qca_mii_read(mii_bus, EPHY_CFG) >> (ethphy * PHY_ADDR_LENGTH)
+		& GENMASK(4, 0);
+	/*increase 100BT tx amplitude*/
+	reg_val = qca_mdio_read(mii_bus, phy_addr, PHY_MMD1_CTRL2ANA_OPTION2_REG);
+	qca_mdio_write(mii_bus, phy_addr, PHY_MMD1_CTRL2ANA_OPTION2_REG,
+		reg_val | 0x7f);
+	/*increase 10BT signal detect threshold*/
+	reg_val = qca_phy_debug_read(mii_bus, phy_addr, PHY_10BT_SG_THRESH_REG);
+	qca_phy_debug_write(mii_bus, phy_addr, PHY_10BT_SG_THRESH_REG, reg_val | 0x1);
+}
+
 static void qca_mht_clock_init(struct mii_bus *mii_bus)
 {
 	u32 val = 0;
@@ -455,6 +474,9 @@ static void qca_mht_clock_init(struct mii_bus *mii_bus)
 		for(i = 0; i < 4; i++)
 			qca_mht_efuse_loading(mii_bus, i);
 	}
+	/*fix 100BT template issue and 10BT threshold issue*/
+	for(i = 0; i < 4; i++)
+		qca_mht_ethphy_ana_fixup(mii_bus, i);
 	/* Enable efuse loading into analog circuit */
 	val = qca_mii_read(mii_bus, EPHY_CFG);
 	/* BIT20 for PHY0 and PHY1, BIT21 for PHY2 and PHY3 */

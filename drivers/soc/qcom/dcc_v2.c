@@ -6,6 +6,7 @@
 #include <linux/module.h>
 #include <linux/bitops.h>
 #include <linux/cdev.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/iopoll.h>
@@ -174,6 +175,8 @@ struct dcc_drvdata {
 	uint8_t			curr_list;
 	uint8_t			cti_trig;
 	uint8_t			loopoff;
+	struct clk_bulk_data	*clks;
+	int num_clks;
 };
 
 static uint32_t dcc_offset_conv(struct dcc_drvdata *drvdata, uint32_t off)
@@ -1824,17 +1827,33 @@ static int dcc_probe(struct platform_device *pdev)
 	if (ret)
 		return -EINVAL;
 
+	drvdata->num_clks = devm_clk_bulk_get_all(dev, &drvdata->clks);
+	if (drvdata->num_clks < 0) {
+		dev_err(dev, "failed to get clocks\n");
+		return drvdata->num_clks;
+	};
+
+	ret = clk_bulk_prepare_enable(drvdata->num_clks, drvdata->clks);
+	if (ret) {
+		dev_err(dev, "failed to enable clocks, err = %d\n", ret);
+		return ret;
+	};
+
 	if (BVAL(dcc_readl(drvdata, DCC_HW_INFO), 9) ||
 			of_device_is_compatible(pdev->dev.of_node, "qcom,dcc-v2-devsoc")) {
 		drvdata->mem_map_ver = DCC_MEM_MAP_VER3;
 		drvdata->nr_link_list = dcc_readl(drvdata, DCC_LL_NUM_INFO);
-		if (drvdata->nr_link_list == 0)
-			return  -EINVAL;
+		if (drvdata->nr_link_list == 0) {
+			ret = -EINVAL;
+			goto err;
+		}
 	} else if ((dcc_readl(drvdata, DCC_HW_INFO) & 0x3F) == 0x3F) {
 		drvdata->mem_map_ver = DCC_MEM_MAP_VER2;
 		drvdata->nr_link_list = dcc_readl(drvdata, DCC_LL_NUM_INFO);
-		if (drvdata->nr_link_list == 0)
-			return  -EINVAL;
+		if (drvdata->nr_link_list == 0) {
+			ret = -EINVAL;
+			goto err;
+		}
 	} else {
 		drvdata->mem_map_ver = DCC_MEM_MAP_VER1;
 		drvdata->nr_link_list = DCC_MAX_LINK_LIST;
@@ -1848,28 +1867,40 @@ static int dcc_probe(struct platform_device *pdev)
 	mutex_init(&drvdata->mutex);
 	drvdata->data_sink = devm_kzalloc(dev, drvdata->nr_link_list *
 			sizeof(enum dcc_data_sink), GFP_KERNEL);
-	if (!drvdata->data_sink)
-		return -ENOMEM;
+	if (!drvdata->data_sink) {
+		ret = -ENOMEM;
+		goto err;
+	}
 	drvdata->func_type = devm_kzalloc(dev, drvdata->nr_link_list *
 			sizeof(enum dcc_func_type), GFP_KERNEL);
-	if (!drvdata->func_type)
-		return -ENOMEM;
+	if (!drvdata->func_type) {
+		ret = -ENOMEM;
+		goto err;
+	}
 	drvdata->enable = devm_kzalloc(dev, drvdata->nr_link_list *
 			sizeof(bool), GFP_KERNEL);
-	if (!drvdata->enable)
-		return -ENOMEM;
+	if (!drvdata->enable) {
+		ret = -ENOMEM;
+		goto err;
+	}
 	drvdata->configured = devm_kzalloc(dev, drvdata->nr_link_list *
 			sizeof(bool), GFP_KERNEL);
-	if (!drvdata->configured)
-		return -ENOMEM;
+	if (!drvdata->configured) {
+		ret = -ENOMEM;
+		goto err;
+	}
 	drvdata->nr_config = devm_kzalloc(dev, drvdata->nr_link_list *
 			sizeof(uint32_t), GFP_KERNEL);
-	if (!drvdata->nr_config)
-		return -ENOMEM;
+	if (!drvdata->nr_config) {
+		ret = -ENOMEM;
+		goto err;
+	}
 	drvdata->cfg_head = devm_kzalloc(dev, drvdata->nr_link_list *
 			sizeof(struct list_head), GFP_KERNEL);
-	if (!drvdata->cfg_head)
-		return -ENOMEM;
+	if (!drvdata->cfg_head) {
+		ret = -ENOMEM;
+		goto err;
+	}
 
 	for (i = 0; i < drvdata->nr_link_list; i++) {
 		INIT_LIST_HEAD(&drvdata->cfg_head[i]);
@@ -1900,12 +1931,15 @@ static int dcc_probe(struct platform_device *pdev)
 
 	return 0;
 err:
+	clk_bulk_disable_unprepare(drvdata->num_clks, drvdata->clks);
 	return ret;
 }
 
 static int dcc_remove(struct platform_device *pdev)
 {
 	struct dcc_drvdata *drvdata = platform_get_drvdata(pdev);
+
+	clk_bulk_disable_unprepare(drvdata->num_clks, drvdata->clks);
 
 	dcc_sram_dev_exit(drvdata);
 

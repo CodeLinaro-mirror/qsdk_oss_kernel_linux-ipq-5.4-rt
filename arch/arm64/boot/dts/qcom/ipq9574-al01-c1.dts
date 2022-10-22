@@ -26,6 +26,7 @@
 	aliases {
 		serial0 = &blsp1_uart2;
 		serial1 = &blsp1_uart4;
+		serial2 = &blsp1_uart3;
 		ethernet0 = "/soc/dp1";
 		ethernet1 = "/soc/dp2";
 		ethernet2 = "/soc/dp3";
@@ -45,6 +46,22 @@
 				function = "blsp2_uart";
 				drive-strength = <8>;
 				bias-disable;
+			};
+
+			gps_pins: gps_pins {
+				blsp3_uart_pinmux {
+					pins = "gpio17", "gpio18";
+					function = "blsp3_uart";
+					drive-strength = <8>;
+					bias-disable;
+				};
+
+				gps_on_off {
+					pins = "gpio7";
+					function = "gpio";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
 			};
 
 			leds_pins: leds_pinmux {
@@ -156,6 +173,12 @@
 
 		blsp1_uart2: serial@78b1000 {
 			pinctrl-0 = <&blsp1_uart2_pins>;
+			pinctrl-names = "default";
+			status = "ok";
+		};
+
+		blsp1_uart3: serial@78b2000 {
+			pinctrl-0 = <&gps_pins>;
 			pinctrl-names = "default";
 			status = "ok";
 		};
@@ -453,6 +476,7 @@
 			qcom,rx-page-mode = <0>;		/* Rx fill ring page mode */
 			qcom,tx-map-priority-level = <1>;	/* Tx priority level per port */
 			qcom,rx-map-priority-level = <1>;	/* Rx priority level per core */
+			qcom,ppeds-num = <0>;			/* Number of PPEDS nodes */
 			qcom,txdesc-map = <8 9 10 11>,		/* Port0 per-core Tx ring map */
 					<12 13 14 15>,		/* Port1 per-core Tx ring map */
 					<16 17 18 19>,		/* Port2 per-core Tx ring map */
@@ -472,10 +496,10 @@
 					<6 14 22 30>,		/* Priority 6 queues per-core Rx ring map */
 					<7 15 23 31>;		/* Priority 7 queues per-core Rx ring map */
 			qcom,vp-id = <8>;			/* Virtual port dummy MAC Id */
-			qcom,txdesc_point_offload_ring = <1>;		/* Txdesc point offlaod ring */
-			qcom,txcmpl_point_offload_ring = <1>;		/* Txcmpl point offlaod ring */
-			qcom,rxfill_point_offload_ring = <1>;		/* Rxfill point offlaod ring */
-			qcom,rxdesc_point_offload_ring = <1>;		/* Rxdesc point offlaod ring */
+			qcom,txdesc_point_offload_ring = <0>;		/* Txdesc point offlaod ring */
+			qcom,txcmpl_point_offload_ring = <0>;		/* Txcmpl point offlaod ring */
+			qcom,rxfill_point_offload_ring = <0>;		/* Rxfill point offlaod ring */
+			qcom,rxdesc_point_offload_ring = <0>;		/* Rxdesc point offlaod ring */
 			interrupts = <0 367 4>,			/* Tx complete ring id #4 IRQ info */
 				   <0 368 4>,			/* Tx complete ring id #5 IRQ info */
 				   <0 369 4>,			/* Tx complete ring id #6 IRQ info */

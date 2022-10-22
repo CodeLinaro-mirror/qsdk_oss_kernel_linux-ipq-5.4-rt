@@ -101,6 +101,7 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 
 	if (likely(skb)) {
 		struct skb_shared_info *shinfo;
+		bool is_fast_recycled = skb->fast_recycled;
 
 		/* We're about to write a large amount to the skb to
 		 * zero most of the structure so prefetch the start
@@ -121,6 +122,12 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 		skb_reset_tail_pointer(skb);
 
 		skb->dev = dev;
+
+		skb->is_from_recycler = 1;
+		/* Restore fast_recycled flag */
+		if (is_fast_recycled) {
+			skb->fast_recycled = 1;
+		}
 	}
 
 	return skb;
@@ -217,6 +224,36 @@ inline bool skb_recycler_consume(struct sk_buff *skb)
 		return true;
 	}
 #endif
+
+	local_irq_restore(flags);
+	preempt_enable();
+
+	return false;
+}
+
+/**
+ *	skb_recycler_consume_list_fast - free a list of skbs
+ *	@skb_list: head of the buffer list
+ *
+ *	Add the list of given SKBs to CPU list. Assumption is that these buffers
+ *	have been allocated originally from recycler and have been transmitted through
+ *	a controlled fast xmit path, thus removing the need for additional checks
+ *	before recycling the buffers back to pool
+ */
+inline bool skb_recycler_consume_list_fast(struct sk_buff_head *skb_list)
+{
+	unsigned long flags;
+	struct sk_buff_head *h;
+
+	h = &get_cpu_var(recycle_list);
+	local_irq_save(flags);
+	/* Attempt to enqueue the CPU hot recycle list first */
+	if (likely(skb_queue_len(h) < skb_recycle_max_skbs)) {
+		skb_queue_splice(skb_list,h);
+		local_irq_restore(flags);
+		preempt_enable();
+		return true;
+	}
 
 	local_irq_restore(flags);
 	preempt_enable();

@@ -169,16 +169,19 @@
 			status = "ok";
 		};
 
-		pcie1_x2: pcie@18000000 {
+		pcie1_phy_x2: phy_x2@4b1000 {
+			status = "ok";
+		};
+
+		pcie1: pcie@18000000 {
 			max-link-speed = <1>;
 			perst-gpio = <&tlmm 47 GPIO_ACTIVE_LOW>;
 			status = "ok";
-			pcie_x2_rp {
+			pcie1_rp {
 				reg = <0 0 0 0 0>;
 
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
-					qrtr_instance_id = <0x20>;
 				};
 			};
 		};

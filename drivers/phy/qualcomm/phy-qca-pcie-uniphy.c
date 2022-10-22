@@ -24,6 +24,8 @@
 #include <linux/reset.h>
 #include <linux/of_device.h>
 #include <linux/delay.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
 
 #define PIPE_CLK_DELAY_MIN_US			5000
 #define PIPE_CLK_DELAY_MAX_US			5100
@@ -55,12 +57,17 @@ struct qca_uni_pcie_phy {
 	struct device *dev;
 	unsigned int phy_type;
 	struct clk *pipe_clk;
+	struct clk *lane_m_clk;
+	struct clk *lane_s_clk;
 	struct reset_control *res_phy;
 	struct reset_control *res_phy_phy;
 	u32 is_phy_gen3;
 	u32 mode;
 	u32 is_x2;
 	void __iomem *reg_base;
+	u32 no_phy_init;
+        struct regmap *phy_mux_map;
+        u32 phy_mux_reg;
 };
 
 #define	phy_to_dw_phy(x)	container_of((x), struct qca_uni_pcie_phy, phy)
@@ -92,6 +99,9 @@ static void qca_uni_pcie_phy_init(struct qca_uni_pcie_phy *phy)
 {
 	int loop = 0;
 	void __iomem *reg = phy->reg_base;
+
+	if (phy->no_phy_init)
+		return;
 
 	while (loop < 2) {
 		reg += (loop * 0x800);
@@ -138,8 +148,42 @@ static int qca_uni_pcie_phy_power_on(struct phy *x)
 
 	usleep_range(PIPE_CLK_DELAY_MIN_US, PIPE_CLK_DELAY_MAX_US);
 	clk_prepare_enable(phy->pipe_clk);
+	clk_prepare_enable(phy->lane_m_clk);
+	clk_prepare_enable(phy->lane_s_clk);
 	usleep_range(30, 50);
 	qca_uni_pcie_phy_init(phy);
+	return 0;
+}
+
+static int phy_mux_sel(struct qca_uni_pcie_phy *phy)
+{
+	struct of_phandle_args args;
+	int ret;
+
+	ret = of_parse_phandle_with_fixed_args(phy->dev->of_node,
+			"qti,phy-mux-regs", 1, 0, &args);
+	if (ret) {
+		dev_err(phy->dev, "failed to parse qti,phy-mux-regs\n");
+		return ret;
+	}
+
+	phy->phy_mux_map = syscon_node_to_regmap(args.np);
+	of_node_put(args.np);
+	if (IS_ERR(phy->phy_mux_map)) {
+		pr_err("phy mux regs map failed: %ld\n",
+						PTR_ERR(phy->phy_mux_map));
+		return PTR_ERR(phy->phy_mux_map);
+	}
+
+	phy->phy_mux_reg = args.args[0];
+	/* two single lane mux selection */
+	ret = regmap_write(phy->phy_mux_map, phy->phy_mux_reg, 0x1);
+	if (ret) {
+		dev_err(phy->dev,
+			"Not able to configure phy mux selection: %d\n", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -154,6 +198,8 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 	if (ret)
 		phy->is_x2 = 0;
 
+	phy->no_phy_init = of_property_read_bool(phy->dev->of_node, "no-phy-init");
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	phy->reg_base = devm_ioremap_resource(phy->dev, res);
 	if (IS_ERR(phy->reg_base)) {
@@ -165,6 +211,18 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 	if (IS_ERR(phy->pipe_clk)) {
 		dev_err(phy->dev, "cannot get pipe clock");
 		return PTR_ERR(phy->pipe_clk);
+	}
+
+	phy->lane_m_clk = devm_clk_get_optional(phy->dev, "lane_m_clk");
+	if (IS_ERR(phy->lane_m_clk)) {
+		dev_err(phy->dev, "cannot get lane_m clock");
+		return PTR_ERR(phy->lane_m_clk);
+	}
+
+	phy->lane_s_clk = devm_clk_get_optional(phy->dev, "lane_s_clk");
+	if (IS_ERR(phy->lane_s_clk)) {
+		dev_err(phy->dev, "cannot get lane_s clock");
+		return PTR_ERR(phy->lane_s_clk);
 	}
 
 	phy->res_phy = devm_reset_control_get(phy->dev, "phy");
@@ -198,6 +256,9 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 		dev_err(phy->dev, "%s, cannot get mode\n", __func__);
 		return ret;
 	}
+
+	if (device_property_read_bool(phy->dev, "qti,multiplexed-phy"))
+		phy_mux_sel(phy);
 
 	return 0;
 }
@@ -256,6 +317,8 @@ static int qca_uni_pcie_remove(struct platform_device *pdev)
 	struct qca_uni_pcie_phy  *phy = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(phy->pipe_clk);
+	clk_disable_unprepare(phy->lane_m_clk);
+	clk_disable_unprepare(phy->lane_s_clk);
 
 	return 0;
 }

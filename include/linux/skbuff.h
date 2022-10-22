@@ -838,6 +838,10 @@ struct sk_buff {
 	__u8			fast_forwarded:1;
 	/* Linear packets processed by dev_fast_xmit() */
 	__u8			fast_xmit:1;
+	/* Flag to check if skb is allocated from recycler */
+	__u8			is_from_recycler:1;
+	/* Flag for fast recycle in fast xmit path */
+	__u8			fast_recycled:1;
 	/* 1 or 3 bit hole */
 
 #ifdef CONFIG_NET_SCHED
@@ -1045,6 +1049,7 @@ void kfree_skb_list(struct sk_buff *segs);
 void skb_dump(const char *level, const struct sk_buff *skb, bool full_pkt);
 void skb_tx_error(struct sk_buff *skb);
 void consume_skb(struct sk_buff *skb);
+void consume_skb_list_fast(struct sk_buff_head *skb_list);
 void __consume_stateless_skb(struct sk_buff *skb);
 void  __kfree_skb(struct sk_buff *skb);
 extern struct kmem_cache *skbuff_head_cache;
@@ -1167,6 +1172,7 @@ static inline int skb_pad(struct sk_buff *skb, int pad)
 	return __skb_pad(skb, pad, true);
 }
 #define dev_kfree_skb(a)	consume_skb(a)
+#define dev_kfree_skb_list_fast(a)	consume_skb_list_fast(a)
 
 int skb_append_pagefrags(struct sk_buff *skb, struct page *page,
 			 int offset, size_t size);

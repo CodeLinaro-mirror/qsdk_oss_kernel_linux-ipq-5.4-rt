@@ -196,9 +196,11 @@
 #define GCC_PCIE3X1_0_PIPE_CLK_SRC			186
 #define GCC_PCIE3X1_1_PIPE_CLK_SRC			187
 #define GCC_USB0_PIPE_CLK_SRC				188
-#define GPLL0						189
+#define GPLL0_MAIN					189
+#define GPLL0						190
+#define GPLL2_MAIN					191
 #define GPLL2						190
-#define GPLL4						191
-#define GPLL6						192
+#define GPLL4_MAIN					192
+#define GPLL4						193
 
 #endif

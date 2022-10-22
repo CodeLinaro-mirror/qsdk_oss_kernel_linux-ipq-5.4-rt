@@ -872,6 +872,8 @@ dtb-$(CONFIG_ARCH_QCOM) += \
 	devsoc-01.1.dtb \
 	devsoc-01.2.dtb \
 	devsoc-01.4.dtb \
+	devsoc-01.6.dtb \
+	devsoc-01.7.dtb \
 	ipq6018-cp01-c1.dtb \
 	ipq6018-cp01-c3.dtb \
 	ipq6018-cp01-c4.dtb \
@@ -926,6 +928,8 @@ dtb-$(CONFIG_ARCH_QCOM) += \
 	ipq9574-al02-c14.dtb \
 	ipq9574-al02-c15.dtb \
 	ipq9574-al02-c16.dtb \
+	ipq9574-al02-c17.dtb \
+	ipq9574-al02-c18.dtb \
 	ipq9574-db-al01-c1.dtb \
 	ipq9574-db-al01-c2.dtb \
 	ipq9574-db-al01-c3.dtb \

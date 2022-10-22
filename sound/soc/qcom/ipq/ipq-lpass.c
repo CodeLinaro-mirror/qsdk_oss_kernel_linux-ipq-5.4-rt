@@ -37,6 +37,7 @@
 
 static void __iomem *sg_ipq_lpass_base;
 static enum ipq_hw_type ipq_hw;
+static uint32_t slave;
 
 static void ipq_lpass_reg_update(void __iomem *register_addr, uint32_t mask,
 					uint32_t value, bool f_writeonly)
@@ -1222,8 +1223,8 @@ void ipq_lpass_lpaif_muxsetup(uint32_t intf, uint32_t mode)
 		val = (ipq_hw == IPQ9574) ? 0 : 3;
 		src = 0;
 	} else {
-		val = (ipq_hw == IPQ9574) ? 0 : 1;
-		src = (ipq_hw == IPQ9574) ? 0 : 1;
+		val = (ipq_hw == IPQ9574 && slave == 1) ? 0 : 1;
+		src = 1;
 	}
 
 	switch(intf) {
@@ -1856,6 +1857,8 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct lpass_res *resource;
 	const struct of_device_id *match;
+	uint32_t slave_lb;
+	struct device_node *np;
 	int ret;
 
 	match = of_match_device(ipq_lpass_id_table, &pdev->dev);
@@ -1872,11 +1875,21 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 
 	sg_ipq_lpass_base = devm_ioremap_resource(&pdev->dev, res);
 
+	if (ipq_hw == IPQ9574) {
+
+		np = of_find_node_by_name(NULL, "pcm");
+		if (np) {
+			/* slave should be set in DTS on master side in slave mode */
+			of_property_read_u32(np, "slave", &slave_lb);
+			slave = slave_lb;
+		}
+	}
+
 	if (IS_ERR(sg_ipq_lpass_base))
 		return PTR_ERR(sg_ipq_lpass_base);
 	if (ipq_hw == IPQ9574) {
 /*
- * clock init for Alder
+ * clock init for IPQ9574
  */
 		resource->sway_clk = devm_clk_get(dev, "sway");
 		if (IS_ERR(resource->sway_clk))
@@ -1910,22 +1923,27 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 			goto err_clk_sway;
 		}
 
-		ret = clk_set_rate(resource->sway_clk , 133333334);
-		if (ret) {
-			dev_err(dev, "SWAY rate set failed (%d)\n", ret);
-			goto err_clk_sway;
-		}
-
 		ret = clk_prepare_enable(resource->axi_core_clk);
 		if (ret) {
 			dev_err(dev, "cannot prepare/enable axi_core_clk clock\n");
 			goto err_clk_axi;
 		}
+		/* slave mode, it considered as Clock is provided by an
+		 * external off-chip source. so no need to set the clock.
+		 */
+		if (slave != 1)
+		{
+			ret = clk_set_rate(resource->sway_clk , 133333333);
+			if (ret) {
+				dev_err(dev, "SWAY rate set failed (%d)\n", ret);
+				goto err_clk_sway;
+			}
 
-		ret = clk_set_rate(resource->axi_core_clk, 133333334);
-		if (ret) {
-			dev_err(dev, "AXI rate set failed (%d)\n", ret);
-			goto err_clk_axi;
+			ret = clk_set_rate(resource->axi_core_clk, 133333333);
+			if (ret) {
+				dev_err(dev, "AXI rate set failed (%d)\n", ret);
+				goto err_clk_axi;
+			}
 		}
 
 		ret = clk_prepare_enable(resource->snoc_cfg_clk);
