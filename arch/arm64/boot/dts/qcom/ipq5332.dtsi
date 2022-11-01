@@ -1277,19 +1277,47 @@
 					<&gcc GCC_Q6SS_PCLKDBG_CLK>,
 					<&gcc GCC_WCSS_ECAHB_CLK>,
 					<&gcc GCC_WCSS_AXIS_CLK>,
-					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>;
+					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
+					<&gcc GCC_CE_AHB_CLK>;
 
-			clock-names = "q6_tsctr_1to2_clk",
-					"q6ss_trig_clk",
-					"q6_axis_clk",
+			clock-names = "q6_tsctr_1to2",
+					"q6ss_trig",
+					"q6_axis",
 					"q6_ahb_s",
-					"q6ss_atbm_clk",
+					"q6ss_atbm",
 					"q6_ahb",
 					"q6_axim",
-					"q6ss_pclkdbg_clk",
+					"q6ss_pclkdbg",
 					"wcss_ecahb",
-					"wcss_axi_s_clk",
-					"sys_noc_wcss_ahb";
+					"wcss_axi_s",
+					"sys_noc_wcss_ahb",
+					"ce_ahb";
+
+			assigned-clocks =  <&gcc GCC_Q6_TSCTR_1TO2_CLK>,
+					<&gcc GCC_Q6SS_TRIG_CLK>,
+					<&gcc GCC_Q6_AXIS_CLK>,
+					<&gcc GCC_Q6_AHB_S_CLK>,
+					<&gcc GCC_Q6SS_ATBM_CLK>,
+					<&gcc GCC_Q6_AHB_CLK>,
+					<&gcc GCC_Q6_AXIM_CLK>,
+					<&gcc GCC_Q6SS_PCLKDBG_CLK>,
+					<&gcc GCC_WCSS_ECAHB_CLK>,
+					<&gcc GCC_WCSS_AXIS_CLK>,
+					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
+					<&gcc GCC_CE_AHB_CLK>;
+
+			assigned-clock-rates = <300000000>,
+						<120000000>,
+						<266666667>,
+						<133333333>,
+						<240000000>,
+						<133333333>,
+						<533333333>,
+						<120000000>,
+						<133333333>,
+						<266666667>,
+						<133333333>,
+						<133333333>;
 
 			qcom,halt-regs = <&tcsr_q6_block 0xa000 0xd000 0x0>;
 
