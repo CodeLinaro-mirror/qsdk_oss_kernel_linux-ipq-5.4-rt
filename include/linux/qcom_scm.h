@@ -264,6 +264,10 @@ extern int qti_scm_load_otp(u32 peripheral);
 extern bool qti_scm_pil_cfg_available(void);
 extern int qti_scm_pil_cfg(u32 peripheral, u32 args);
 extern int qti_scm_toggle_bt_eco(u32 peripheral, u32 args);
+extern int qti_scm_get_device_attestation_ephimeral_key(u32 svc_id,
+		u32 cmd_id, void *key_buf, u32 key_buf_len, u32 *key_len);
+extern int __qti_scm_get_device_attestation_ephimeral_key(struct device *dev,
+		u32 svc_id, u32 cmd_id, void *key_buf, u32 key_buf_len, u32 *key_len);
 extern int qti_scm_get_device_attestation_response(u32 svc_id, u32 cmd_id,
 			void *req_buf, u32 req_buf_len, void *extclaim_buf,
 			u32 extclaim_buf_len, void *resp_buf, u32 resp_buf_len,
@@ -272,10 +276,13 @@ extern int __qti_scm_get_device_attestation_response(struct device *dev,
 		u32 svc_id, u32 cmd_id, void *req_buf, u32 req_buf_len,
 		void *extclaim_buf, u32 extclaim_buf_len, void *resp_buf,
 				u32 resp_buf_len, u32 *attest_resp_len);
-extern int qti_scm_get_device_attestation_ephimeral_key(u32 svc_id,
-		u32 cmd_id, void *key_buf, u32 key_buf_len, u32 *key_len);
-extern int __qti_scm_get_device_attestation_ephimeral_key(struct device *dev,
-		u32 svc_id, u32 cmd_id, void *key_buf, u32 key_buf_len, u32 *key_len);
+extern int qti_scm_get_device_provision_response(u32 svc_id, u32 cmd_id,
+		void *provreq_buf, u32 provreq_buf_len, void *provresp_buf,
+		u32 provresp_buf_len, u32 *prov_resp_size);
+extern int __qti_scm_get_device_provision_response(struct device *dev, u32 svc_id,
+		u32 cmd_id, void *provreq_buf, u32 provreq_buf_len,
+		void *provresp_buf, u32 provresp_buf_len, u32 *prov_resp_size);
+
 #else
 
 #include <linux/errno.h>

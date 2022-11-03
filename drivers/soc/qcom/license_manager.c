@@ -32,10 +32,12 @@ static unsigned long int get_attest_key = 0;
 static unsigned long int get_report = 0;
 char qwes_req_buf[MAX_INPUT_FILE_LEN];
 char qwes_ext_claim_buf[MAX_INPUT_FILE_LEN];
+char provreq_buf_path[MAX_INPUT_FILE_LEN];
 
 #define CFG_MAX_DIG_COUNT	2
 #define QWES_ATTEST_RESP_FILE	"/tmp/attest_resp.bin"
 #define QWES_M3_KEY_RESP_FILE	"/tmp/m3key.bin"
+#define DEVICE_PROV_RESP_FILE	"/tmp/prov_resp.bin"
 
 module_param(use_license_from_rootfs, uint, 0644);
 MODULE_PARM_DESC(use_license_from_rootfs, "Use license files from rootfs: 0,1");
@@ -158,6 +160,40 @@ void free_license_table(void)
 
 }
 
+int scm_get_device_provision_response(void *provreq_buf, u32 provreq_buf_size,
+		void *provresp_buf, u32 provresp_buf_size , u32 *provresp_size)
+{
+	struct file *f;
+	int flags = O_RDWR | O_CREAT | O_TRUNC;
+	loff_t pos = 0;
+	int ret;
+
+	ret = qti_scm_get_device_provision_response(QWES_SVC_ID, QWES_DEVICE_PROVISION,
+				provreq_buf, provreq_buf_size, provresp_buf,
+				provresp_buf_size, provresp_size);
+	if (ret) {
+		pr_err("%s : device provision scm call failed\n", __func__);
+		return ret;
+	}
+
+	f = filp_open(DEVICE_PROV_RESP_FILE, flags, 0600);
+	if (IS_ERR(f)) {
+		pr_err("filp_open(%s) for device provision response"
+				" failed\n", DEVICE_PROV_RESP_FILE);
+		return ret;
+	}
+	pr_info(" %s : attest_resp_size is %x\n", __func__, *provresp_size);
+	ret = kernel_write(f, provresp_buf, *provresp_size+1, &pos);
+
+	if (ret < 0) {
+		pr_debug("Error writing device provision response file: %s\n",
+				DEVICE_PROV_RESP_FILE);
+	}
+	filp_close(f, NULL);
+	return ret;
+
+}
+
 int scm_get_device_attestation_response(void *req_buf, u32 req_buf_size,
 		void *extclaim_buf, u32 extclaim_buf_size, void *resp_buf,
 				u32 resp_buf_size, u32 *attest_resp_size)
@@ -171,8 +207,7 @@ int scm_get_device_attestation_response(void *req_buf, u32 req_buf_size,
 			QWES_ATTEST_REPORT, req_buf, req_buf_size, extclaim_buf,
 			extclaim_buf_size, resp_buf, resp_buf_size, attest_resp_size);
 	if (ret) {
-		pr_err("%s : qwes init attestatio scm failed with error code %d\n",
-								__func__, ret);
+		pr_err("%s : qwes get attestation respone scm call failed\n", __func__);
 		return ret;
 	}
 
@@ -180,13 +215,13 @@ int scm_get_device_attestation_response(void *req_buf, u32 req_buf_size,
 	if (IS_ERR(f)) {
 		pr_err("filp_open(%s) for attestation respone"
 				" failed\n", QWES_ATTEST_RESP_FILE);
-		return -EINVAL;
+		return ret;
 	}
 	pr_info(" %s : attest_resp_size is %x\n", __func__, *attest_resp_size);
 	ret = kernel_write(f, resp_buf, *attest_resp_size+1, &pos);
 
 	if (ret < 0) {
-		pr_debug("Error writing attest respo file: %s\n",
+		pr_debug("Error writing attest response file: %s\n",
 						QWES_ATTEST_RESP_FILE);
 	}
 	filp_close(f, NULL);
@@ -207,8 +242,7 @@ int scm_get_device_attestation_ephimeral_key(void *key_buf, u32 key_buf_len,
 	rc = qti_scm_get_device_attestation_ephimeral_key(QWES_SVC_ID,
 				QWES_INIT_ATTEST, key_buf, key_buf_len, key_len);
 	if (rc) {
-		pr_err("%s : qwes init attestatio scm failed with error code %d\n",
-								__func__, rc);
+		pr_err("%s : qwes init attestation scm failed\n", __func__);
 		return rc;
 	}
 
@@ -223,7 +257,7 @@ int scm_get_device_attestation_ephimeral_key(void *key_buf, u32 key_buf_len,
 	if (IS_ERR(f)) {
 		pr_err("filp_open(%s) for M3 key "
 				" failed\n", QWES_M3_KEY_RESP_FILE);
-		return -EINVAL;
+		return rc;
 	}
 	rc = kernel_write(f, key_buf, *key_len+1, &pos);
 
@@ -416,7 +450,7 @@ static ssize_t device_get_attestation_response_store(struct device_driver *drive
 		}
 		resp_buf = kzalloc(QWES_RESP_BUFF_MAX_SIZE, GFP_KERNEL);
 		if (!resp_buf) {
-			pr_err("%s: Memory allocation failed for key buffer\n",
+			pr_err("%s: Memory allocation failed for resp buffer\n",
 					__func__);
 			return -EINVAL;
 		}
@@ -494,6 +528,83 @@ resp_buf_alloc_err:
 	return ret;
 }
 static DRIVER_ATTR_RW(device_get_attestation_response);
+
+
+static ssize_t get_device_provision_response_show(struct device_driver *driver,
+                char *buff)
+{
+        return snprintf(buff, MAX_INPUT_FILE_LEN, "%s", provreq_buf_path);
+}
+
+static ssize_t get_device_provision_response_store(struct device_driver *driver,
+		const char *buff, size_t count)
+{
+	void *provreq_buf = NULL;
+	void *provresp_buf = NULL;
+	void *data = NULL;
+	u32 *provresp_size = NULL;
+	uint32_t provreq_buf_size = 0;
+	loff_t size = 0;
+	int ret;
+
+	if (buff) {
+		snprintf(provreq_buf_path, strlen(buff), "%s", buff);
+	}
+	if (strlen(provreq_buf_path) <= 0) {
+		return -EINVAL;
+	}
+	else {
+		ret = kernel_read_file_from_path(provreq_buf_path, &data,
+				&size, 0, READING_POLICY);
+		if (ret < 0) {
+			pr_err("%s File open failed\n", __func__);
+			return -EINVAL;
+		}
+		provresp_buf = kzalloc(QWES_RESP_BUFF_MAX_SIZE, GFP_KERNEL);
+		if (!provresp_buf) {
+			pr_err("%s: Memory allocation failed for provresp_buf\n",
+					__func__);
+			vfree(data);
+			return -EINVAL;
+		}
+
+		provresp_size = kzalloc(sizeof(u32), GFP_KERNEL);
+		if (!provresp_size) {
+			pr_err("%s: Memory allocation failed for provresp_buf_"
+					"size\n", __func__);
+			vfree(data);
+			goto provresp_buf_alloc_err;
+		}
+
+		provreq_buf_size = size;
+		provreq_buf = kzalloc(provreq_buf_size, GFP_KERNEL);
+		if (!provreq_buf) {
+			pr_err("%s: Memory allocation failed for attest"
+					"request buffer\n", __func__);
+			vfree(data);
+			goto provresp_size_alloc_err;
+		}
+		if (data != NULL) {
+			memcpy(provreq_buf, data, provreq_buf_size);
+		}
+		pr_info("%s : provreq_buf_size is %x\n", __func__,
+				(unsigned int)size);
+		vfree(data);
+
+		ret = scm_get_device_provision_response(provreq_buf, provreq_buf_size,
+				provresp_buf, QWES_RESP_BUFF_MAX_SIZE, provresp_size);
+
+		kfree(provreq_buf);
+	}
+
+provresp_size_alloc_err:
+	kfree(provresp_size);
+
+provresp_buf_alloc_err:
+	kfree(provresp_buf);
+	return count;
+}
+static DRIVER_ATTR_RW(get_device_provision_response);
 
 static void qmi_handle_license_download_req(struct qmi_handle *handle,
 			struct sockaddr_qrtr *sq,
@@ -747,6 +858,13 @@ static int license_manager_probe(struct platform_device *pdev)
 	}
 	ret = driver_create_file(pdev->dev.driver,
 			&driver_attr_device_get_attestation_response);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create sysfs entry\n");
+		return ret;
+	}
+
+	ret = driver_create_file(pdev->dev.driver,
+			&driver_attr_get_device_provision_response);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to create sysfs entry\n");
 		return ret;

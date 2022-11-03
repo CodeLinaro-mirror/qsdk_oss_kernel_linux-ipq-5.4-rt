@@ -1116,7 +1116,7 @@ int __qti_scm_get_device_attestation_ephimeral_key(struct device *dev,
 			&desc, &res);
 
 	if(res.a1 != 0) {
-		pr_err("ERROR :TME Response error code is : %x\n",
+		pr_err("%s : Response error code is : %#x\n", __func__,
 					(unsigned int)res.a1);
 	}
 
@@ -1211,17 +1211,8 @@ int __qti_scm_get_device_attestation_response(struct device *dev,
 	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, svc_id, cmd_id,
 			&desc, &res);
 
-	dma_unmap_single(dev, dma_req_buf, req_buf_len, DMA_FROM_DEVICE);
-	if(extclaim_buf != NULL) {
-		dma_unmap_single(dev, dma_claim_buf, extclaim_buf_len,
-			DMA_FROM_DEVICE);
-	}
-	dma_unmap_single(dev, dma_resp_buf, resp_buf_len, DMA_FROM_DEVICE);
-	dma_unmap_single(dev, dma_resp_len, sizeof(unsigned int),
-					DMA_FROM_DEVICE);
-
 	if(res.a1 != 0) {
-		pr_err("TME Response error code is : %x\n",
+		pr_err("%s: Response error code is : %x\n", __func__,
 					(unsigned int)res.a1);
 	}
 
@@ -1239,6 +1230,86 @@ dma_unmap_extclaim_buf:
 
 dma_unmap_req_buf:
 	dma_unmap_single(dev, dma_req_buf, req_buf_len, DMA_FROM_DEVICE);
+
+	return ret ? : res.a1;
+}
+
+/**
+ *__qti_scm_get_device_provision_response() - Get device provisioning response from TME-L
+ *
+ * @svc_id: SCM service id
+ * @cmd_id: SCM command id
+ * provreq_buf: Provsion request buffer, it contains a provision request.
+ * provreq_buf_len: Provision request buffer length.
+ * provresp_buf: Provision response buffer passed to TME to store the Provision response.
+ *           TME will used this buffer to populate the provision response.
+ * provresp_buf_len: size allocated to provision response buffer.
+ * attest_resp_len: Length of the provision response. This is populated by TME
+ *                  after storing the provision response.
+ *
+ * This function can be used to get the provision response from TME-L by
+ * passing the provision report through prov_req.bin file.
+ */
+int __qti_scm_get_device_provision_response(struct device *dev, u32 svc_id,
+                u32 cmd_id, void *provreq_buf, u32 provreq_buf_len,
+                void *provresp_buf, u32 provresp_buf_len, u32 *prov_resp_size)
+{
+	int ret;
+	dma_addr_t dma_req_buf;
+	dma_addr_t dma_resp_buf;
+	dma_addr_t dma_prov_resp_size;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+
+	dma_req_buf = dma_map_single(dev, provreq_buf, provreq_buf_len,
+			DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_req_buf);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		return ret;
+	}
+
+	dma_resp_buf = dma_map_single(dev, provresp_buf, provresp_buf_len,
+			DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_resp_buf);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		goto dma_unmap_req_buf;
+	}
+
+	dma_prov_resp_size = dma_map_single(dev, prov_resp_size,
+			sizeof(unsigned int), DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_prov_resp_size);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		goto dma_unmap_resp_buf;
+	}
+
+	desc.args[0] = dma_req_buf;
+	desc.args[1] = provreq_buf_len;
+	desc.args[2] = dma_resp_buf;
+	desc.args[3] = provresp_buf_len;
+	desc.args[4] = dma_prov_resp_size;
+
+	desc.arginfo = SCM_ARGS(5, QCOM_SCM_VAL, QCOM_SCM_VAL,
+			QCOM_SCM_VAL, QCOM_SCM_VAL, QCOM_SCM_RW);
+
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, svc_id, cmd_id,
+			&desc, &res);
+
+	if(res.a1 != 0) {
+		pr_err("%s: Response error code is : %#x\n", __func__,
+				(unsigned int)res.a1);
+	}
+
+	dma_unmap_single(dev, dma_prov_resp_size, sizeof(unsigned int),
+			DMA_FROM_DEVICE);
+
+dma_unmap_resp_buf:
+	dma_unmap_single(dev, dma_resp_buf, provresp_buf_len, DMA_FROM_DEVICE);
+
+dma_unmap_req_buf:
+	dma_unmap_single(dev, dma_req_buf, provreq_buf_len, DMA_FROM_DEVICE);
 
 	return ret ? : res.a1;
 }

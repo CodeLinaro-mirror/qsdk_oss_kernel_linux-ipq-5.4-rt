@@ -1819,6 +1819,98 @@ dma_unmap_req_buf:
 }
 
 /**
+ *__qti_scm_get_device_provision_response() - Get device provisioning response from TME-L
+ *
+ * @svc_id: SCM service id
+ * @cmd_id: SCM command id
+ * provreq_buf: Provsion request buffer, it contains a provision request.
+ * provreq_buf_len: Provision request buffer length.
+ * provresp_buf: Provision response buffer passed to TME to store the Provision response.
+ *           TME will used this buffer to populate the provision response.
+ * provresp_buf_len: size allocated to provision response buffer.
+ * attest_resp_len: Length of the provision response. This is populated by TME
+ *                  after storing the provision response.
+ *
+ * This function can be used to get the provision response from TME-L by
+ * passing the provision report through prov_req.bin file.
+ */
+int __qti_scm_get_device_provision_response(struct device *dev, u32 svc_id,
+		u32 cmd_id, void *provreq_buf, u32 provreq_buf_len,
+		void *provresp_buf, u32 provresp_buf_len, u32 *prov_resp_size)
+{
+	int ret;
+	struct scm_desc desc = {0};
+	struct qwes_report {
+		uint32_t dma_req_buf;
+		uint32_t req_buf_len;
+		uint32_t dma_resp_buf;
+		uint32_t resp_buf_len;
+		uint32_t prov_resp_size;
+	}qwes;
+
+	dma_addr_t dma_req_buf;
+	dma_addr_t dma_resp_buf;
+	dma_addr_t dma_prov_resp_size;
+
+	dma_req_buf = dma_map_single(dev, provreq_buf, provreq_buf_len,
+			DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_req_buf);
+	if (ret != 0) {
+		pr_err("%s: DMA Mapping Error : %d\n", __func__, ret);
+		return ret;
+	}
+
+	dma_resp_buf = dma_map_single(dev, provresp_buf, provresp_buf_len,
+			DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_resp_buf);
+	if (ret != 0) {
+		pr_err("%s: DMA Mapping Error : %d\n", __func__, ret);
+		goto dma_unmap_req_buf;
+	}
+
+	dma_prov_resp_size = dma_map_single(dev, prov_resp_size,
+			sizeof(unsigned int), DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_req_buf);
+	if (ret != 0) {
+		pr_err("%s: DMA Mapping Error : %d\n", __func__, ret);
+		goto dma_unmap_resp_buf;
+	}
+
+	if (is_scm_armv8()) {
+		desc.args[0] = dma_req_buf;
+		desc.args[1] = provreq_buf_len;
+		desc.args[2] = dma_resp_buf;
+		desc.args[3] = provresp_buf_len;
+		desc.args[4] = dma_prov_resp_size;
+
+		desc.arginfo = SCM_ARGS(5, QCOM_SCM_VAL, QCOM_SCM_VAL,
+				QCOM_SCM_VAL, QCOM_SCM_VAL, QCOM_SCM_RW);
+		ret = qti_scm_call2(dev, SCM_SIP_FNID(svc_id, cmd_id), &desc);
+		if(!ret)
+			ret = le32_to_cpu(desc.ret[0]);
+	} else {
+		qwes.dma_req_buf = dma_req_buf;
+		qwes.req_buf_len = provreq_buf_len;
+		qwes.dma_resp_buf = dma_resp_buf;
+		qwes.resp_buf_len = provresp_buf_len;
+		qwes.prov_resp_size = dma_prov_resp_size;
+		ret = qcom_scm_call(dev, svc_id, cmd_id, &qwes,
+				sizeof(struct qwes_report), NULL, 0);
+	}
+	dma_unmap_single(dev, dma_prov_resp_size, sizeof(unsigned int),
+			DMA_FROM_DEVICE);
+
+dma_unmap_resp_buf:
+	dma_unmap_single(dev, dma_resp_buf, provresp_buf_len, DMA_FROM_DEVICE);
+
+dma_unmap_req_buf:
+	dma_unmap_single(dev, dma_req_buf, provreq_buf_len, DMA_FROM_DEVICE);
+
+	return ret;
+
+}
+
+/**
  * __qti_scm_get_smmustate () - Get SMMU state
  * @svc_id: SCM service id
  * @cmd_id: SCM command id

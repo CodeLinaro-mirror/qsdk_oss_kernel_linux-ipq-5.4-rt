@@ -763,6 +763,21 @@ int qti_scm_get_device_attestation_response(u32 svc_id, u32 cmd_id, void *req_bu
 }
 EXPORT_SYMBOL(qti_scm_get_device_attestation_response);
 
+int qti_scm_get_device_provision_response(u32 svc_id, u32 cmd_id, void *provreq_buf,
+			u32 provreq_buf_len, void *provresp_buf, u32 provresp_buf_len,
+			u32 *prov_resp_size)
+{
+	int ret;
+
+	ret = __qti_scm_get_device_provision_response(__scm->dev, svc_id, cmd_id,
+			provreq_buf, provreq_buf_len, provresp_buf,
+			provresp_buf_len, prov_resp_size);
+
+	return ret;
+
+}
+EXPORT_SYMBOL(qti_scm_get_device_provision_response);
+
 int qti_scm_wcss_boot(u32 svc_id, u32 cmd_id, void *cmd_buf)
 {
 	int ret;
