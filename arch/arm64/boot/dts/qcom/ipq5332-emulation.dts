@@ -65,10 +65,6 @@
 	};
 
 	firmware {
-		scm {
-			status = "disabled";
-		};
-
 		qfprom {
 			status = "disabled";
 		};
@@ -509,6 +505,10 @@
 
 		timer@b120000 {
 			clock-frequency = <240000>;
+		};
+
+		scm {
+			status = "disabled";
 		};
 
 		usb3@8A00000 {
