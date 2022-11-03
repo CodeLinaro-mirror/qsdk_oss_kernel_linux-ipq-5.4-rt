@@ -65,8 +65,6 @@ static unsigned int age_write_permession = WRITE_DISABLE;
 static u32 *trymode_inprogress;
 
 static int try_feature;
-module_param(try_feature, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-MODULE_PARM_DESC(try_feature, "Enable Try feature");
 
 static unsigned long int trybit;
 #define CFG_MAX_DIG_COUNT	2
@@ -295,7 +293,8 @@ struct sbl_if_dualboot_info_type_v2 *read_bootconfig_mtd(
 		return NULL;
 	}
 
-	if (bootconfig_mtd->magic_start != SMEM_DUAL_BOOTINFO_MAGIC_START) {
+	if ((bootconfig_mtd->magic_start != SMEM_DUAL_BOOTINFO_MAGIC_START) &&
+		(bootconfig_mtd->magic_start != SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE)) {
 		pr_alert("Magic not found in \"%s\"\n", master->name);
 		kfree(bootconfig_mtd);
 		return NULL;
@@ -341,7 +340,8 @@ struct sbl_if_dualboot_info_type_v2 *read_bootconfig_emmc(struct gendisk *disk,
 
 	memcpy(bootconfig_emmc, data, 512);
 
-	if (bootconfig_emmc->magic_start != SMEM_DUAL_BOOTINFO_MAGIC_START) {
+	if ((bootconfig_emmc->magic_start != SMEM_DUAL_BOOTINFO_MAGIC_START) &&
+		(bootconfig_emmc->magic_start != SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE)) {
 		pr_alert("Magic not found\n");
 		kfree(bootconfig_emmc);
 		return NULL;
@@ -541,7 +541,9 @@ static int __init bootconfig_partition_init(void)
 		}
 	}
 
-	if (1 == try_feature) {
+	if ((SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE == bootconfig1->magic_start) ||
+		(SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE == bootconfig2->magic_start)) {
+		try_feature = 1;
 		printk("\nBootconfig: Try feature is enabled\n");
 
 		proc_create_data("trybit", S_IRUGO, upgrade_info_dir,
