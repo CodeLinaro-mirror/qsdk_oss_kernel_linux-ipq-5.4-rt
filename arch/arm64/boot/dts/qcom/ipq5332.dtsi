@@ -1084,7 +1084,7 @@
 			qcom,tgt-mem-mode = <0>;
 		#endif
 			qcom,rproc = <&q6v5_wcss>;
-			qcom,bdf-addr = <0x4BA00000 0x4BA00000 0x4BA00000
+			qcom,bdf-addr = <0x4B500000 0x4B500000 0x4B500000
 					 0x0 0x0 0x0>;
 			interrupts = <0 559 1>, /* misc-pulse1 */
 				<0 560 1>, /* misc-latch */
