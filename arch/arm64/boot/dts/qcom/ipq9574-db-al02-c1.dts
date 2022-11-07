@@ -436,6 +436,7 @@
 			qcom,txdesc-fc-grp-map = <1 2 3 4 5 6>;	/* Per GMAC flow control group map */
 			qcom,rxfill-map = <4 5 6 7>;		/* Per-core Rx fill ring map */
 			qcom,rxdesc-map = <20 21 22 23>;	/* Per-core Rx desc ring map */
+			qcom,rx-queue-start = <0>;		/* Rx queue start */
 			qcom,rx-ring-queue-map = <0 8 16 24>,	/* Priority 0 queues per-core Rx ring map */
 					<1 9 17 25>,		/* Priority 1 queues per-core Rx ring map */
 					<2 10 18 26>,		/* Priority 2 queues per-core Rx ring map */

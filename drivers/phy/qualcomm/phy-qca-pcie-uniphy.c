@@ -59,8 +59,10 @@ struct qca_uni_pcie_phy {
 	struct clk *pipe_clk;
 	struct clk *lane_m_clk;
 	struct clk *lane_s_clk;
+	struct clk *phy_ahb_clk;
 	struct reset_control *res_phy;
 	struct reset_control *res_phy_phy;
+	struct reset_control *res_phy_ahb;
 	u32 is_phy_gen3;
 	u32 mode;
 	u32 is_x2;
@@ -78,6 +80,7 @@ static int qca_uni_pcie_phy_power_off(struct phy *x)
 
 	reset_control_assert(phy->res_phy);
 	reset_control_assert(phy->res_phy_phy);
+	reset_control_assert(phy->res_phy_ahb);
 
 	return 0;
 }
@@ -86,11 +89,13 @@ static int qca_uni_pcie_phy_reset(struct qca_uni_pcie_phy *phy)
 {
 	reset_control_assert(phy->res_phy);
 	reset_control_assert(phy->res_phy_phy);
+	reset_control_assert(phy->res_phy_ahb);
 
 	usleep_range(100, 150);
 
 	reset_control_deassert(phy->res_phy);
 	reset_control_deassert(phy->res_phy_phy);
+	reset_control_deassert(phy->res_phy_ahb);
 
 	return 0;
 }
@@ -150,6 +155,7 @@ static int qca_uni_pcie_phy_power_on(struct phy *x)
 	clk_prepare_enable(phy->pipe_clk);
 	clk_prepare_enable(phy->lane_m_clk);
 	clk_prepare_enable(phy->lane_s_clk);
+	clk_prepare_enable(phy->phy_ahb_clk);
 	usleep_range(30, 50);
 	qca_uni_pcie_phy_init(phy);
 	return 0;
@@ -225,6 +231,12 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 		return PTR_ERR(phy->lane_s_clk);
 	}
 
+	phy->phy_ahb_clk = devm_clk_get_optional(phy->dev, "phy_ahb_clk");
+	if (IS_ERR(phy->phy_ahb_clk)) {
+		dev_err(phy->dev, "cannot get phy_ahb clock");
+		return PTR_ERR(phy->phy_ahb_clk);
+	}
+
 	phy->res_phy = devm_reset_control_get(phy->dev, "phy");
 	if (IS_ERR(phy->res_phy)) {
 		dev_err(phy->dev, "cannot get phy reset controller");
@@ -235,6 +247,12 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 	if (IS_ERR(phy->res_phy_phy)) {
 		dev_err(phy->dev, "cannot get phy_phy reset controller");
 		return PTR_ERR(phy->res_phy_phy);
+	}
+
+	phy->res_phy_ahb = devm_reset_control_get_optional(phy->dev, "phy_ahb");
+	if (IS_ERR(phy->res_phy_ahb)) {
+		dev_err(phy->dev, "cannot get phy_ahb reset controller");
+		return PTR_ERR(phy->res_phy_ahb);
 	}
 
 	ret = of_property_read_string(phy->dev->of_node, "phy-type", &name);
@@ -319,6 +337,7 @@ static int qca_uni_pcie_remove(struct platform_device *pdev)
 	clk_disable_unprepare(phy->pipe_clk);
 	clk_disable_unprepare(phy->lane_m_clk);
 	clk_disable_unprepare(phy->lane_s_clk);
+	clk_disable_unprepare(phy->phy_ahb_clk);
 
 	return 0;
 }

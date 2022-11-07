@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
 /*
- * DEVSOC-01.7 board device tree source
+ * IPQ5332 MI01.7 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
@@ -8,16 +8,16 @@
 
 /dts-v1/;
 
-#include "devsoc-01.1.dts"
+#include "ipq5332-mi01.1.dts"
 
 #ifdef __IPQ_MEM_PROFILE_512_MB__
-#include "devsoc-512MB-memory.dtsi"
+#include "ipq5332-512MB-memory.dtsi"
 #else
-#include "devsoc-default-memory.dtsi"
+#include "ipq5332-default-memory.dtsi"
 #endif
 
 / {
-	model = "Qualcomm Technologies, Inc. DevSoC/AP-DEVSOC01.7";
-	compatible = "qcom,devsoc-ap-devsoc01.7", "qcom,devsoc";
+	model = "Qualcomm Technologies, Inc. IPQ5332/AP-MI01.7";
+	compatible = "qcom,ipq5332-ap-mi01.7", "qcom,ipq5332";
 };
 

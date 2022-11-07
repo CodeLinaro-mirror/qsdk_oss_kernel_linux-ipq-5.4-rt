@@ -56,10 +56,10 @@
 #define CPU_IPQ9550 511
 #define CPU_IPQ9510 521
 
-#define CPU_DEVSOC32 592
-#define CPU_DEVSOC22 593
-#define CPU_DEVSOC12 594
-#define CPU_DEVSOC02 595
+#define CPU_IPQ5332 592
+#define CPU_IPQ5322 593
+#define CPU_IPQ5312 594
+#define CPU_IPQ5302 595
 
 static inline int read_ipq_soc_version_major(void)
 {
@@ -275,37 +275,37 @@ static inline int cpu_is_ipq5019(void)
 #endif
 }
 
-static inline int cpu_is_devsoc32(void)
+static inline int cpu_is_ipq5332(void)
 {
 #ifdef CONFIG_ARCH_QCOM
-	return read_ipq_cpu_type() == CPU_DEVSOC32;
+	return read_ipq_cpu_type() == CPU_IPQ5332;
 #else
 	return 0;
 #endif
 }
 
-static inline int cpu_is_devsoc22(void)
+static inline int cpu_is_ipq5322(void)
 {
 #ifdef CONFIG_ARCH_QCOM
-	return read_ipq_cpu_type() == CPU_DEVSOC22;
+	return read_ipq_cpu_type() == CPU_IPQ5322;
 #else
 	return 0;
 #endif
 }
 
-static inline int cpu_is_devsoc12(void)
+static inline int cpu_is_ipq5312(void)
 {
 #ifdef CONFIG_ARCH_QCOM
-	return read_ipq_cpu_type() == CPU_DEVSOC12;
+	return read_ipq_cpu_type() == CPU_IPQ5312;
 #else
 	return 0;
 #endif
 }
 
-static inline int cpu_is_devsoc02(void)
+static inline int cpu_is_ipq5302(void)
 {
 #ifdef CONFIG_ARCH_QCOM
-	return read_ipq_cpu_type() == CPU_DEVSOC02;
+	return read_ipq_cpu_type() == CPU_IPQ5302;
 #else
 	return 0;
 #endif
@@ -467,11 +467,11 @@ static inline int cpu_is_ipq50xx(void)
 #endif
 }
 
-static inline int cpu_is_devsoc(void)
+static inline int cpu_is_ipq53xx(void)
 {
 #ifdef CONFIG_ARCH_QCOM
-	return  cpu_is_devsoc32() || cpu_is_devsoc22() ||
-		cpu_is_devsoc12() || cpu_is_devsoc02();
+	return  cpu_is_ipq5332() || cpu_is_ipq5322() ||
+		cpu_is_ipq5312() || cpu_is_ipq5302();
 #else
 	return 0;
 #endif
@@ -494,7 +494,7 @@ static inline int cpu_is_nss_crypto_enabled(void)
 	return  cpu_is_ipq807x() || cpu_is_ipq60xx() ||
 		cpu_is_ipq50xx() || cpu_is_ipq9570() ||
 		cpu_is_ipq9550() || cpu_is_ipq9574() ||
-		cpu_is_ipq9554();
+		cpu_is_ipq9554() || cpu_is_ipq53xx();
 #else
 	return 0;
 #endif
@@ -505,7 +505,8 @@ static inline int cpu_is_internal_wifi_enabled(void)
 #ifdef CONFIG_ARCH_QCOM
 	return  cpu_is_ipq807x() || cpu_is_ipq60xx() ||
 		cpu_is_ipq50xx() || cpu_is_ipq9514() ||
-		cpu_is_ipq9554() || cpu_is_ipq9574();
+		cpu_is_ipq9554() || cpu_is_ipq9574() ||
+		cpu_is_ipq53xx();
 #else
 	return 0;
 #endif
@@ -515,7 +516,8 @@ static inline int cpu_is_uniphy1_enabled(void)
 {
 #ifdef CONFIG_ARCH_QCOM
 	return  cpu_is_ipq807x() || cpu_is_ipq60xx() ||
-		cpu_is_ipq9570() || cpu_is_ipq9574();
+		cpu_is_ipq9570() || cpu_is_ipq9574() ||
+		cpu_is_ipq53xx();
 #else
 	return 0;
 #endif

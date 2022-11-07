@@ -962,9 +962,9 @@
 	qcom,tgt-mem-mode = <1>;
 #endif
 	qcom,board_id = <0x23>;
-	qcom,bdf-addr = <0x0 0x4C000000 0x4C000000 0x0 0x0>;
+	qcom,bdf-addr = <0x0 0x4C000000 0x4C000000 0x0 0x0 0x0>;
 #ifdef __CNSS2__
-	qcom,caldb-addr = <0x0 0x4CF00000 0 0 0>;
+	qcom,caldb-addr = <0x0 0x4CF00000 0 0 0 0>;
 #else
 	qcom,caldb-addr = <0x4CF00000>;
 	m3-dump-addr = <0x4CD00000>;
@@ -985,9 +985,9 @@
 	qcom,tgt-mem-mode = <1>;
 #endif
 	qcom,board_id = <0x60>;
-	qcom,bdf-addr = <0x0 0x4D100000 0x4CF00000 0x0 0x0>;
+	qcom,bdf-addr = <0x0 0x4D100000 0x4CF00000 0x0 0x0 0x0>;
 #ifdef __CNSS2__
-	qcom,caldb-addr = <0x0 0x4E000000 0 0 0>;
+	qcom,caldb-addr = <0x0 0x4E000000 0 0 0 0>;
 #else
 	qcom,caldb-addr = <0x4E000000>;
 	m3-dump-addr = <0x4DE00000>;

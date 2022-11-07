@@ -311,15 +311,16 @@ static int ipq_lpass_setup_bit_clock(uint32_t clk_rate)
  * set clock rate for PRI & SEC
  * PRI is slave mode and seondary is master
  */
-	ipq_lpass_lpaif_muxsetup(INTERFACE_PRIMARY, TDM_MODE_SLAVE);
+	ipq_lpass_lpaif_muxsetup(INTERFACE_PRIMARY, TDM_MODE_SLAVE,
+				INVERT_INT_CLK, LPAIF_SLAVE_MODE_MUXSEL);
 
 	if (ipq_lpass_set_clk_rate(INTERFACE_SECONDARY, clk_rate) != 0){
 		pr_err("%s: Bit clk set Failed \n",
 				__func__);
 		return -EINVAL;
 	} else {
-		ipq_lpass_lpaif_muxsetup(INTERFACE_SECONDARY,
-				TDM_MODE_MASTER);
+		ipq_lpass_lpaif_muxsetup(INTERFACE_SECONDARY, TDM_MODE_MASTER,
+				INVERT_INT_EXT_CLK, LPAIF_MASTER_MODE_MUXSEL);
 	}
 
 	return 0;

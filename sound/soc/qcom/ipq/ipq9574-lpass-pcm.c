@@ -36,40 +36,30 @@
 #include <linux/wait.h>
 #include <linux/io.h>
 #include <linux/of_device.h>
+#include <linux/of_irq.h>
+#include <linux/of_address.h>
 
 #include "ipq-lpass.h"
-#include "ipq-lpass-tdm-pcm.h"
+#include "ipq9574-lpass-pcm.h"
 
 #define DEFAULT_CLK_RATE		2048000
 #define PCM_VOICE_LOOPBACK_BUFFER_SIZE	0x1000
 #define PCM_VOICE_LOOPBACK_INTR_SIZE	0x800
-
 /*
  * Global Constant Definitions
  */
 void __iomem *ipq_lpass_lpaif_base;
-void __iomem *ipq_lpass_lpm_base;
 
 /*
  * Static Variable Definitions
  */
-static atomic_t data_avail;
-static atomic_t rx_add;
-static struct lpass_dma_buffer *rx_dma_buffer;
-static struct lpass_dma_buffer *tx_dma_buffer;
 static struct platform_device *pcm_pdev;
 static spinlock_t pcm_lock;
-static struct ipq_lpass_pcm_params *pcm_params;
-static uint32_t voice_loopback;
-static uint32_t slave;
-static uint32_t instance_id;
-static enum ipq_hw_type ipq_hw;
-
-static DECLARE_WAIT_QUEUE_HEAD(pcm_q);
+static uint32_t pcm_dual_instance = 0;
+static struct ipq_lpass_pcm_global_config pcm_conf[IPQ_LPASS_MAX_PCM_INTERFACE];
 
 static struct ipq_lpass_props ipq9574_lpass_pcm_cfg = {
-	/* playback (TX) */
-	.npcm			=	2,
+	.npcm			=	IPQ_LPASS_MAX_PCM_INTERFACE,
 	{
 		{
 			.sync_src               =       TDM_MODE_MASTER,
@@ -92,30 +82,28 @@ static struct ipq_lpass_props ipq9574_lpass_pcm_cfg = {
 	},
 	{
 		{
-			/* playback (TX) */
 			.tx_idx                    =       DMA_CHANNEL0,
 			.tx_dir                    =       LPASS_HW_DMA_SINK,
 			.tx_intr_id                =       INTERRUPT_CHANNEL0,
 			.tx_ifconfig               =       INTERFACE_PRIMARY,
 
-			/* Capture (RX) */
 			.rx_idx                    =       DMA_CHANNEL0,
 			.rx_dir                    =       LPASS_HW_DMA_SOURCE,
 			.rx_intr_id                =       INTERRUPT_CHANNEL0,
 			.rx_ifconfig               =       INTERFACE_PRIMARY,
+			.read_intr_status          =       LPASS_DMA_CH0_STATUS,
 		},
 		{
-			/* playback (TX) */
-			.tx_idx                    =       DMA_CHANNEL0,
+			.tx_idx                    =       DMA_CHANNEL1,
 			.tx_dir                    =       LPASS_HW_DMA_SINK,
-			.tx_intr_id                =       INTERRUPT_CHANNEL0,
+			.tx_intr_id                =       INTERRUPT_CHANNEL1,
 			.tx_ifconfig               =       INTERFACE_SECONDARY,
 
-			/* Capture (RX) */
-			.rx_idx                    =       DMA_CHANNEL0,
+			.rx_idx                    =       DMA_CHANNEL1,
 			.rx_dir                    =       LPASS_HW_DMA_SOURCE,
-			.rx_intr_id                =       INTERRUPT_CHANNEL0,
+			.rx_intr_id                =       INTERRUPT_CHANNEL1,
 			.rx_ifconfig               =       INTERFACE_SECONDARY,
+			.read_intr_status          =       LPASS_DMA_CH1_STATUS,
 		},
 	},
 };
@@ -150,9 +138,10 @@ static irqreturn_t ipq_lpass_pcm_irq_handler(int intrsrc, void *data)
 	uint32_t buffer_idx;
 	struct lpass_irq_buffer *buffer = (struct lpass_irq_buffer *)data;
 	struct lpass_dma_buffer *rx_buffer = buffer->rx_buffer;
+	uint32_t intr_id = pcm_conf[buffer->pcm_index].rx_dma_buffer->intr_id;
 
 	ipq_lpass_dma_read_interrupt_status(ipq_lpass_lpaif_base,
-						INTERRUPT_CHANNEL0, &status);
+						intr_id, &status);
 	while (status) {
 /*
  * Both Tx and Rx interrupt use same IRQ number
@@ -160,26 +149,27 @@ static irqreturn_t ipq_lpass_pcm_irq_handler(int intrsrc, void *data)
  * since RX and Tx configure same buffer size
  * and interrupt size
  */
-		if (status & (0x8000)) {
+		if (status & pcm_conf[buffer->pcm_index].dma_read_intr_status) {
 			ipq_lpass_dma_get_curr_addr(ipq_lpass_lpaif_base,
-						rx_buffer->idx,
-						rx_buffer->dir,
-						&curr_addr);
+					rx_buffer->idx,
+					rx_buffer->dir,
+					&curr_addr);
 
 			buffer_idx = ipq_lpass_pcm_get_dataptr(rx_buffer,
-								curr_addr);
+					curr_addr);
 
-			atomic_set(&rx_add, buffer_idx);
-			atomic_set(&data_avail, 1);
-			wake_up_interruptible(&pcm_q);
+			atomic_set(&pcm_conf[buffer->pcm_index].rx_add,
+								buffer_idx);
+			atomic_set(&pcm_conf[buffer->pcm_index].data_avail, 1);
+			wake_up_interruptible(&pcm_conf[buffer->pcm_index].pcm_q);
 		}
 
 		ipq_lpass_dma_clear_interrupt(ipq_lpass_lpaif_base,
-					INTERRUPT_CHANNEL0, status);
+				intr_id, status);
 		status = 0;
 
 		ipq_lpass_dma_read_interrupt_status(ipq_lpass_lpaif_base,
-						INTERRUPT_CHANNEL0, &status);
+				intr_id, &status);
 	}
 	return IRQ_HANDLED;
 }
@@ -218,13 +208,13 @@ uint32_t ipq_lpass_pcm_validate_params(struct ipq_lpass_pcm_params *params,
 	}
 
 	if (params->slot_count >
-			IPQ_PCM_MAX_SLOTS_PER_FRAME){
+			IPQ_PCM_MAX_SLOTS_PER_FRAME) {
 		pr_err("%s: Invalid nslots per frame %d.\n",
 				__func__, params->slot_count);
 		return -EINVAL;
 	}
 
-	if (256 < (params->slot_count * params->bit_width)){
+	if (256 < (params->slot_count * params->bit_width)) {
 		pr_err("%s: Invalid nbits per frame %d.\n",
 				 __func__,
 				params->slot_count * params->bit_width );
@@ -260,13 +250,13 @@ static void ipq_lpass_dma_config_init(struct lpass_dma_buffer *buffer)
 	if (buffer->bit_width != 8)
 		wps_count = (buffer->num_channels *
 				buffer->bytes_per_sample) >> 2;
-	if (0 == wps_count){
+	if (0 == wps_count) {
 		wps_count = 1;
 	}
 
 	if (buffer->watermark != 1) {
 		if (0 == (buffer->period_count_in_word32 &
-				PCM_DMA_BUFFER_16BYTE_ALIGNMENT)){
+				PCM_DMA_BUFFER_16BYTE_ALIGNMENT)) {
 			dma_config.burst_size = 16;
 		} else if (0 == (buffer->period_count_in_word32 &
 				PCM_DMA_BUFFER_8BYTE_ALIGNMENT)){
@@ -334,48 +324,51 @@ static uint32_t ipq_lpass_prepare_dma_buffer(uint32_t actual_buffer_size,
 	return circular_buff_size;
 }
 
-static void __iomem *ipq_lpass_phy_virt_lpm(uint32_t phy_addr)
+static void __iomem *ipq_lpass_phy_virt_lpm(uint32_t phy_addr,
+				uint32_t lpm_base, void __iomem *base_addr)
 {
-	return (ipq_lpass_lpm_base + (phy_addr - IPQ_LPASS_LPM_BASE));
+	return (base_addr + (phy_addr - lpm_base));
 }
 
 
-static int ipq9574_lpass_setup_bit_clock(uint32_t clk_rate, struct ipq_lpass_pcm_config config)
+static int ipq9574_lpass_setup_bit_clock(uint32_t clk_rate,
+				struct ipq_lpass_pcm_config config)
 {
+/*
+* set clock rate for PCM Interface
+* Enable by default pcm interfaces as master mode
+*
+*/
+	uint32_t intf;
 
-	/*
-	 * set clock rate for PRI & SEC
-	 * PRI and secondary both are master mode
-	 *
-	 */
-	 uint32_t intf;
-	 if(config.pcm_index == PRIMARY)
+	if (config.pcm_index == PRIMARY)
 		intf = INTERFACE_PRIMARY;
-	 else
-	 	intf = INTERFACE_SECONDARY;
+	else
+		intf = INTERFACE_SECONDARY;
 
-	 if(config.sync_src == TDM_MODE_MASTER)
-	 {
-		ipq_lpass_lpaif_muxsetup(intf, TDM_MODE_MASTER);
+	if (config.sync_src == TDM_MODE_MASTER) {
+		ipq_lpass_lpaif_muxsetup(intf, TDM_MODE_MASTER,
+				NO_INVERSION, LPAIF_MASTER_MODE_MUXSEL);
 
-		if (ipq_lpass_set_clk_rate(intf, clk_rate) != 0){
+		if (ipq_lpass_set_clk_rate(intf, clk_rate) != 0) {
 			pr_err("%s: Bit clk set Failed \n", __func__);
 			return -EINVAL;
 		}
 	} else {
-
-		ipq_lpass_lpaif_muxsetup(intf, TDM_MODE_SLAVE);
+		ipq_lpass_lpaif_muxsetup(intf, TDM_MODE_SLAVE,
+				NO_INVERSION, LPAIF_SLAVE_MODE_MUXSEL);
 	}
 	return 0;
 }
 
-static void ipq9574_lpass_pcm_update_config( struct ipq_lpass_props *data, struct ipq_lpass_pcm_config *config)
+static void ipq9574_lpass_pcm_update_config( struct ipq_lpass_props *data,
+			struct ipq_lpass_pcm_config *config, int pcm_index)
 {
 	struct ipq_lpass_pcm_tdm_config *pcm_config;
 	struct ipq_lpass_wr_rd_dma_config *dma_config;
 
-	pcm_config = &data->pcm_config[instance_id];
-	if(slave == 1)
+	pcm_config = &data->pcm_config[pcm_index];
+	if (pcm_conf[pcm_index].slave == 1)
 		 pcm_config->sync_src = TDM_MODE_SLAVE;
 	config->sync_src = pcm_config->sync_src;
 	config->pcm_index = pcm_config->pcm_index;
@@ -385,18 +378,20 @@ static void ipq9574_lpass_pcm_update_config( struct ipq_lpass_props *data, struc
 	config->sync_delay = pcm_config->sync_delay;
 	config->ctrl_data_oe = pcm_config->ctrl_data_oe;
 
-	dma_config = &data->dma_config[instance_id];
-	rx_dma_buffer->idx = dma_config->rx_idx;
-	rx_dma_buffer->dir = dma_config->rx_dir;
-	rx_dma_buffer->ifconfig = dma_config->rx_ifconfig;
-	rx_dma_buffer->intr_id = dma_config->rx_intr_id;
-	tx_dma_buffer->watermark = DEAFULT_PCM_WATERMARK;
+	dma_config = &data->dma_config[pcm_index];
+	pcm_conf[pcm_index].rx_dma_buffer->idx = dma_config->rx_idx;
+	pcm_conf[pcm_index].rx_dma_buffer->dir = dma_config->rx_dir;
+	pcm_conf[pcm_index].rx_dma_buffer->ifconfig = dma_config->rx_ifconfig;
+	pcm_conf[pcm_index].rx_dma_buffer->intr_id = dma_config->rx_intr_id;
+	pcm_conf[pcm_index].rx_dma_buffer->watermark = DEAFULT_PCM_WATERMARK;
+	pcm_conf[pcm_index].dma_read_intr_status = dma_config->read_intr_status;
 
-	tx_dma_buffer->idx = dma_config->tx_idx;
-	tx_dma_buffer->dir = dma_config->tx_dir;
-	tx_dma_buffer->ifconfig = dma_config->tx_ifconfig;
-	tx_dma_buffer->intr_id = dma_config->tx_intr_id;
-	tx_dma_buffer->watermark = DEAFULT_PCM_WATERMARK;
+	pcm_conf[pcm_index].tx_dma_buffer->idx = dma_config->tx_idx;
+	pcm_conf[pcm_index].tx_dma_buffer->dir = dma_config->tx_dir;
+	pcm_conf[pcm_index].tx_dma_buffer->ifconfig = dma_config->tx_ifconfig;
+	pcm_conf[pcm_index].tx_dma_buffer->intr_id = dma_config->tx_intr_id;
+	pcm_conf[pcm_index].tx_dma_buffer->watermark = DEAFULT_PCM_WATERMARK;
+
 }
 
 
@@ -410,7 +405,6 @@ static void ipq9574_lpass_pcm_update_config( struct ipq_lpass_props *data, struc
 int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 {
 	struct ipq_lpass_pcm_config config;
-	int ret;
 	uint32_t clk_rate;
 	uint32_t temp_lpm_base;
 	uint32_t int_samples_per_period;
@@ -420,19 +414,26 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 	uint32_t bytes_per_sample_intr;
 	uint32_t dword_per_sample_intr;
 	uint32_t no_of_buffers;
+	int pcm_index = params->pcm_index;
+	int ret;
 
-	if ((rx_dma_buffer == NULL ) || (tx_dma_buffer == NULL))
+	if ((pcm_conf[pcm_index].rx_dma_buffer == NULL ) ||
+			(pcm_conf[pcm_index].tx_dma_buffer == NULL)) {
+		pr_debug("Error : Dma Buffer not allocated \n");
 		return -EPERM;
-
+	}
 
 	ret = ipq_lpass_pcm_validate_params(params, &config);
-	if (ret)
+	if (ret) {
+		pr_debug("Error: Failed to validate pcm parameters\n");
 		return ret;
+	}
 
-	atomic_set(&data_avail, 0);
 
-	pcm_params = params;
-	temp_lpm_base = IPQ_LPASS_LPM_BASE;
+	atomic_set(&pcm_conf[pcm_index].data_avail, 0);
+	temp_lpm_base = pcm_conf[pcm_index].lpass_lpm_base_phy_addr;
+
+	pcm_conf[pcm_index].pcm_params = params;
 
 	int_samples_per_period = params->rate / 1000;
 	bytes_per_sample = BYTES_PER_CHANNEL(params->bit_width);
@@ -440,15 +441,17 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 					params->active_slot_count,
 					bytes_per_sample);
 
-	if (rx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM ||
-		tx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM) {
+	if (pcm_conf[pcm_index].rx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM
+		|| pcm_conf[pcm_index].tx_dma_buffer->dma_memory_type ==
+						DMA_MEMORY_LPM) {
 		circular_buffer = ipq_lpass_prepare_dma_buffer(
-					samples_per_interrupt,
-					LPASS_DMA_BUFFER_SIZE);
+			samples_per_interrupt, (pcm_dual_instance) == 1 ?
+			LPASS_DMA_BUFFER_DUAL_PCM_SIZE  : LPASS_DMA_BUFFER_SIZE);
+
 	} else {
 		circular_buffer = ipq_lpass_prepare_dma_buffer(
-					samples_per_interrupt,
-					rx_dma_buffer->max_size);
+				samples_per_interrupt,
+				pcm_conf[pcm_index].rx_dma_buffer->max_size);
 	}
 	if (circular_buffer == 0) {
 		pr_err("%s: Error at circular buffer calculation\n",
@@ -458,7 +461,7 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 
 	no_of_buffers = circular_buffer / (samples_per_interrupt );
 
-	if (voice_loopback == 1)
+	if (pcm_conf[pcm_index].voice_loopback == 1)
 		no_of_buffers = PCM_VOICE_LOOPBACK_BUFFER_SIZE /
 					PCM_VOICE_LOOPBACK_INTR_SIZE;
 
@@ -469,7 +472,8 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 
 	dword_per_sample_intr = bytes_per_sample_intr >> 2;
 
-	ipq9574_lpass_pcm_update_config(&ipq9574_lpass_pcm_cfg, &config);
+	ipq9574_lpass_pcm_update_config(&ipq9574_lpass_pcm_cfg, &config,
+								pcm_index);
 
 	ret = ipq9574_lpass_setup_bit_clock(clk_rate, config);
 	if (ret)
@@ -477,60 +481,73 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 /*
  * DMA Rx buffer
  */
-	rx_dma_buffer->bytes_per_sample = bytes_per_sample;
-	rx_dma_buffer->bit_width = params->bit_width;
-	rx_dma_buffer->int_samples_per_period = int_samples_per_period;
-	rx_dma_buffer->num_channels = params->active_slot_count;
-	rx_dma_buffer->single_buf_size =
-		(voice_loopback == 1)? PCM_VOICE_LOOPBACK_INTR_SIZE :
-						samples_per_interrupt;
+	pcm_conf[pcm_index].rx_dma_buffer->bytes_per_sample = bytes_per_sample;
+	pcm_conf[pcm_index].rx_dma_buffer->bit_width = params->bit_width;
+	pcm_conf[pcm_index].rx_dma_buffer->int_samples_per_period =
+						int_samples_per_period;
+	pcm_conf[pcm_index].rx_dma_buffer->num_channels =
+						params->active_slot_count;
+	pcm_conf[pcm_index].rx_dma_buffer->single_buf_size =
+		(pcm_conf[pcm_index].voice_loopback == 1)?
+			PCM_VOICE_LOOPBACK_INTR_SIZE :samples_per_interrupt;
 /*
  * set the period count in double words
  */
-	rx_dma_buffer->period_count_in_word32 =
-			rx_dma_buffer->single_buf_size / sizeof(uint32_t);
+	pcm_conf[pcm_index].rx_dma_buffer->period_count_in_word32 =
+		pcm_conf[pcm_index].rx_dma_buffer->single_buf_size /
+							sizeof(uint32_t);
 /*
  * total buffer size for all DMA buffers
  */
-	rx_dma_buffer->dma_buffer_size =
-		(voice_loopback == 1) ? PCM_VOICE_LOOPBACK_BUFFER_SIZE :
-						circular_buffer;
-	rx_dma_buffer->no_of_buffers = no_of_buffers;
-	if (rx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM) {
-		rx_dma_buffer->dma_base_address = temp_lpm_base;
-		rx_dma_buffer->dma_last_curr_addr = temp_lpm_base;
-		rx_dma_buffer->dma_buffer = NULL;
+	pcm_conf[pcm_index].rx_dma_buffer->dma_buffer_size =
+		(pcm_conf[pcm_index].voice_loopback == 1) ?
+			PCM_VOICE_LOOPBACK_BUFFER_SIZE : circular_buffer;
+	pcm_conf[pcm_index].rx_dma_buffer->no_of_buffers = no_of_buffers;
+	if (pcm_conf[pcm_index].rx_dma_buffer->dma_memory_type ==
+					DMA_MEMORY_LPM) {
+		pcm_conf[pcm_index].rx_dma_buffer->dma_base_address =
+						temp_lpm_base;
+		pcm_conf[pcm_index].rx_dma_buffer->dma_last_curr_addr =
+						temp_lpm_base;
+		pcm_conf[pcm_index].rx_dma_buffer->dma_buffer = NULL;
 	}
-	if (voice_loopback == 0)
-		temp_lpm_base += LPASS_DMA_BUFFER_SIZE;
-	atomic_set(&rx_add, 0);
+	if (pcm_conf[pcm_index].voice_loopback == 0)
+		temp_lpm_base += (pcm_dual_instance == 1 ) ?
+			LPASS_DMA_BUFFER_DUAL_PCM_SIZE : LPASS_DMA_BUFFER_SIZE;
+	atomic_set(&pcm_conf[pcm_index].rx_add, 0);
 
 /*
  * DMA Tx buffer
  */
-	tx_dma_buffer->bytes_per_sample = bytes_per_sample;
-	tx_dma_buffer->bit_width = params->bit_width;
-	tx_dma_buffer->int_samples_per_period = int_samples_per_period;
-	tx_dma_buffer->num_channels = params->active_slot_count;
-	tx_dma_buffer->single_buf_size =
-		(voice_loopback == 1)? PCM_VOICE_LOOPBACK_INTR_SIZE :
-						samples_per_interrupt;
+	pcm_conf[pcm_index].tx_dma_buffer->bytes_per_sample = bytes_per_sample;
+	pcm_conf[pcm_index].tx_dma_buffer->bit_width = params->bit_width;
+	pcm_conf[pcm_index].tx_dma_buffer->int_samples_per_period =
+					int_samples_per_period;
+	pcm_conf[pcm_index].tx_dma_buffer->num_channels =
+					params->active_slot_count;
+	pcm_conf[pcm_index].tx_dma_buffer->single_buf_size =
+		(pcm_conf[pcm_index].voice_loopback == 1)?
+			PCM_VOICE_LOOPBACK_INTR_SIZE : samples_per_interrupt;
 /*
  * set the period count in double words
  */
-	tx_dma_buffer->period_count_in_word32 =
-			tx_dma_buffer->single_buf_size / sizeof(uint32_t);
+	pcm_conf[pcm_index].tx_dma_buffer->period_count_in_word32 =
+			pcm_conf[pcm_index].tx_dma_buffer->single_buf_size
+							/ sizeof(uint32_t);
 /*
  * total buffer size for all DMA buffers
  */
-	tx_dma_buffer->dma_buffer_size =
-		(voice_loopback == 1) ? PCM_VOICE_LOOPBACK_BUFFER_SIZE :
-						circular_buffer;
-	tx_dma_buffer->no_of_buffers = no_of_buffers;
-	if (tx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM) {
-		tx_dma_buffer->dma_base_address = temp_lpm_base;
-		tx_dma_buffer->dma_last_curr_addr = temp_lpm_base;
-		tx_dma_buffer->dma_buffer = NULL;
+	pcm_conf[pcm_index].tx_dma_buffer->dma_buffer_size =
+		(pcm_conf[pcm_index].voice_loopback == 1) ?
+			PCM_VOICE_LOOPBACK_BUFFER_SIZE : circular_buffer;
+	pcm_conf[pcm_index].tx_dma_buffer->no_of_buffers = no_of_buffers;
+	if (pcm_conf[pcm_index].tx_dma_buffer->dma_memory_type
+					== DMA_MEMORY_LPM) {
+		pcm_conf[pcm_index].tx_dma_buffer->dma_base_address =
+						temp_lpm_base;
+		pcm_conf[pcm_index].tx_dma_buffer->dma_last_curr_addr =
+						temp_lpm_base;
+		pcm_conf[pcm_index].tx_dma_buffer->dma_buffer = NULL;
 	}
 
 /*
@@ -538,8 +555,8 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
  * Secondary PCM support only TX mode
  */
 
-	ipq_lpass_dma_config_init(rx_dma_buffer);
-	ipq_lpass_dma_config_init(tx_dma_buffer);
+	ipq_lpass_dma_config_init(pcm_conf[pcm_index].rx_dma_buffer);
+	ipq_lpass_dma_config_init(pcm_conf[pcm_index].tx_dma_buffer);
 	ipq_lpass_pcm_reset(ipq_lpass_lpaif_base,
 				config.pcm_index, LPASS_HW_DMA_SINK);
 	ipq_lpass_pcm_reset(ipq_lpass_lpaif_base,
@@ -562,8 +579,8 @@ int ipq_pcm_init(struct ipq_lpass_pcm_params *params)
 	ipq_lpass_pcm_reset_release(ipq_lpass_lpaif_base,
 				config.pcm_index, LPASS_HW_DMA_SOURCE);
 
-	ipq_lpass_dma_enable(rx_dma_buffer);
-	ipq_lpass_dma_enable(tx_dma_buffer);
+	ipq_lpass_dma_enable(pcm_conf[pcm_index].rx_dma_buffer);
+	ipq_lpass_dma_enable(pcm_conf[pcm_index].tx_dma_buffer);
 
 	ipq_lpass_pcm_enable(ipq_lpass_lpaif_base,
 				config.pcm_index, LPASS_HW_DMA_SOURCE);
@@ -583,7 +600,7 @@ EXPORT_SYMBOL(ipq_pcm_init);
  * RETURN VALUE: returns the rx and tx buffer pointers and the size to fill or
  *		read
  */
-uint32_t ipq_pcm_data(uint8_t **rx_buf, uint8_t **tx_buf)
+uint32_t ipq_pcm_data(uint8_t **rx_buf, uint8_t **tx_buf, int pcm_index)
 {
 	unsigned long flag;
 	uint32_t size;
@@ -591,28 +608,40 @@ uint32_t ipq_pcm_data(uint8_t **rx_buf, uint8_t **tx_buf)
 	uint32_t offset;
 	uint32_t txcurr_addr;
 	uint32_t rxcurr_addr;
+	uint32_t lpm_base;
 
-	wait_event_interruptible(pcm_q, atomic_read(&data_avail) != 0);
-	atomic_set(&data_avail, 0);
-	buffer_index = atomic_read(&rx_add);
+	wait_event_interruptible(pcm_conf[pcm_index].pcm_q,
+			atomic_read(&pcm_conf[pcm_index].data_avail) != 0);
+	lpm_base = pcm_conf[pcm_index].lpass_lpm_base_phy_addr;
 
-	offset = (rx_dma_buffer->dma_buffer_size /
-			rx_dma_buffer->no_of_buffers) * buffer_index;
+	atomic_set(&pcm_conf[pcm_index].data_avail, 0);
+	buffer_index = atomic_read(&pcm_conf[pcm_index].rx_add);
+
+	offset = (pcm_conf[pcm_index].rx_dma_buffer->dma_buffer_size /
+		pcm_conf[pcm_index].rx_dma_buffer->no_of_buffers) * buffer_index;
 
 	spin_lock_irqsave(&pcm_lock, flag);
-	if (rx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM){
-		rxcurr_addr = rx_dma_buffer->dma_base_address + offset;
-		*rx_buf = (uint8_t *)ipq_lpass_phy_virt_lpm(rxcurr_addr);
+	if (pcm_conf[pcm_index].rx_dma_buffer->dma_memory_type ==
+						DMA_MEMORY_LPM) {
+		rxcurr_addr = pcm_conf[pcm_index].rx_dma_buffer->dma_base_address
+								+ offset;
+		*rx_buf = (uint8_t *)ipq_lpass_phy_virt_lpm(rxcurr_addr, lpm_base,
+				pcm_conf[pcm_index].ipq_lpass_lpm_base);
 	} else {
-		*rx_buf = rx_dma_buffer->dma_buffer + offset;
+		*rx_buf = pcm_conf[pcm_index].rx_dma_buffer->dma_buffer + offset;
 	}
-	if (tx_dma_buffer->dma_memory_type == DMA_MEMORY_LPM){
-		txcurr_addr = tx_dma_buffer->dma_base_address + offset;
-		*tx_buf = (uint8_t *)ipq_lpass_phy_virt_lpm(txcurr_addr);
+
+	if (pcm_conf[pcm_index].tx_dma_buffer->dma_memory_type ==
+						DMA_MEMORY_LPM) {
+		txcurr_addr = pcm_conf[pcm_index].tx_dma_buffer->dma_base_address
+								+ offset;
+		*tx_buf = (uint8_t *)ipq_lpass_phy_virt_lpm(txcurr_addr, lpm_base,
+				pcm_conf[pcm_index].ipq_lpass_lpm_base);
 	} else {
-		*tx_buf = tx_dma_buffer->dma_buffer + offset;
+		*tx_buf = pcm_conf[pcm_index].tx_dma_buffer->dma_buffer + offset;
 	}
-	size = rx_dma_buffer->single_buf_size;
+
+	size = pcm_conf[pcm_index].rx_dma_buffer->single_buf_size;
 	spin_unlock_irqrestore(&pcm_lock, flag);
 
 	return size;
@@ -620,23 +649,27 @@ uint32_t ipq_pcm_data(uint8_t **rx_buf, uint8_t **tx_buf)
 EXPORT_SYMBOL(ipq_pcm_data);
 
 /*
- * FUNCTION: ipq_lpass_pcm_done
+ * FUNCTION: ipq_pcm_done
  *
  * DESCRIPTION: this api tells the PCM that the upper layer has finished
  *		updating the Tx buffer
  *
  * RETURN VALUE: none
  */
-void ipq_pcm_done(void)
+void ipq_pcm_done(int pcm_index)
 {
-	atomic_set(&data_avail, 0);
+	atomic_set(&pcm_conf[pcm_index].data_avail, 0);
 }
 EXPORT_SYMBOL(ipq_pcm_done);
 
-void ipq_pcm_send_event(void)
+void ipq_pcm_send_event(int pcm_index)
 {
-	atomic_set(&data_avail, 1);
-	wake_up_interruptible(&pcm_q);
+	atomic_set(&pcm_conf[pcm_index].data_avail, 1);
+	if (pcm_index == PRIMARY)
+		wake_up_interruptible(&pcm_conf[pcm_index].pcm_q);
+	else
+		wake_up_interruptible(&pcm_conf[pcm_index].pcm_q);
+
 }
 EXPORT_SYMBOL(ipq_pcm_send_event);
 
@@ -687,13 +720,13 @@ static void ipq_lpass_clear_dma_buffer( struct device *dev,
  */
 void ipq_pcm_deinit(struct ipq_lpass_pcm_params *params)
 {
-	ipq_lpass_pcm_dma_deinit(rx_dma_buffer);
-	ipq_lpass_pcm_dma_deinit(tx_dma_buffer);
+	ipq_lpass_pcm_dma_deinit(pcm_conf[params->pcm_index].rx_dma_buffer);
+	ipq_lpass_pcm_dma_deinit(pcm_conf[params->pcm_index].tx_dma_buffer);
 }
 EXPORT_SYMBOL(ipq_pcm_deinit);
 
 static const struct of_device_id qca_raw_match_table[] = {
-	{ .compatible = "qca,ipq9574-lpass-pcm", .data = (void *)IPQ9574 },
+	{ .compatible = "qca,ipq9574-lpass-pcm", .data = &ipq9574_lpass_pcm_cfg },
 	{},
 };
 
@@ -707,15 +740,21 @@ static const struct of_device_id qca_raw_match_table[] = {
 static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 {
 	uint32_t irq;
-	uint32_t voice_lb = 0;
-	uint32_t instance = 0;
-	uint32_t slave_lb = 0;
+	uint32_t voice_lb = 0, slave_lb = 0;
 	struct resource *res;
 	const struct of_device_id *match;
+	struct device_node *node;
 	uint32_t single_buf_size_max;
 	uint32_t max_size;
 	struct lpass_irq_buffer *irq_buffer;
+	struct device_node *np;
+	struct pinctrl *pintctrl;
+	struct pinctrl_state *pin_state;
 	const char *playback_memory, *capture_memory;
+	const char *pcm0_status = NULL;
+	const char *pcm1_status = NULL;
+	char irq_name[5];
+	int pcm_index = 0;
 	int ret;
 
 	match = of_match_device(qca_raw_match_table, &pdev->dev);
@@ -724,55 +763,50 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 	if (!pdev)
 		return -EINVAL;
 
-	ipq_hw = (enum ipq_hw_type)match->data;
 	pcm_pdev = pdev;
 
+	pintctrl = devm_pinctrl_get(&pdev->dev);
+
+	np = of_find_node_by_name(NULL, "pcm0");
+	if (np) {
+		of_property_read_string(np, "status", &pcm0_status);
+	}
+	np = of_find_node_by_name(NULL, "pcm1");
+	if (np) {
+		of_property_read_string(np, "status", &pcm1_status);
+	}
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if(res) {
+	if (res) {
 		ipq_lpass_lpaif_base =ioremap(res->start, resource_size(res));
+
 		if (!ipq_lpass_lpaif_base)
 		{
 			pr_err("%s: Failed to ioremap Lapif Base Address\n",
 					__func__);
 			return PTR_ERR(ipq_lpass_lpaif_base);
 		}
-
-		ipq_lpass_lpm_base = ioremap_nocache(IPQ_LPASS_LPM_BASE,
-				IPQ_LPASS_LPM_SIZE);
-
-		if (IS_ERR(ipq_lpass_lpm_base))
-			return PTR_ERR(ipq_lpass_lpm_base);
+		pr_info("%s : Lpaif version : 0x%x\n",
+				__func__,readl(ipq_lpass_lpaif_base));
 	}
+
+	if ((pcm0_status != NULL && pcm1_status != NULL) &&
+			!strncmp(pcm0_status, "ok", 2) && !strncmp(pcm1_status, "ok", 2)) {
+		pcm_conf[PRIMARY].lpass_lpm_base_phy_addr =
+						IPQ_LPASS_LPM_PCM0_BASE;
+		pcm_conf[PRIMARY].ipq_lpass_lpm_base =
+			ioremap_nocache(IPQ_LPASS_LPM_PCM0_BASE,
+					IPQ_LPASS_LPM_PCM0_SIZE);
+		pcm_conf[SECONDARY].lpass_lpm_base_phy_addr =
+						IPQ_LPASS_LPM_PCM1_BASE;
+		pcm_conf[SECONDARY].ipq_lpass_lpm_base =
+			ioremap_nocache(IPQ_LPASS_LPM_PCM1_BASE,
+				IPQ_LPASS_LPM_PCM1_SIZE);
+		pcm_dual_instance = 1;
+	}
+
 	if (!pdev->dev.coherent_dma_mask)
 		pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
-
-	pr_info("%s : Lpaif version : 0x%x\n",
-			 __func__,readl(ipq_lpass_lpaif_base));
-
-	/* Allocate memory for rx  and tx instance */
-	rx_dma_buffer = kzalloc(sizeof(struct lpass_dma_buffer), GFP_KERNEL);
-	if (rx_dma_buffer == NULL) {
-		pr_err("%s: Error in allocating mem for rx_dma_buffer\n",
-				__func__);
-		return -ENOMEM;
-	}
-
-	tx_dma_buffer = kzalloc(sizeof(struct lpass_dma_buffer), GFP_KERNEL);
-	if (tx_dma_buffer == NULL) {
-		pr_err("%s: Error in allocating mem for tx_dma_buffer\n",
-				__func__);
-		kfree(rx_dma_buffer);
-		return -ENOMEM;
-	}
-
-	irq_buffer = kzalloc(sizeof(struct lpass_irq_buffer), GFP_KERNEL);
-	if (irq_buffer == NULL) {
-		pr_err("%s: Error in allocating mem for irq_buffer\n",
-				__func__);
-		kfree(rx_dma_buffer);
-		kfree(tx_dma_buffer);
-		return -ENOMEM;
-	}
 
 	/* allocate DMA buffers of max size */
 	single_buf_size_max = IPQ_PCM_SAMPLES_PER_PERIOD(
@@ -783,105 +817,177 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 
 	max_size = single_buf_size_max * MAX_PCM_DMA_BUFFERS;
 
-	memset(rx_dma_buffer, 0, sizeof(*rx_dma_buffer));
-	memset(tx_dma_buffer, 0, sizeof(*tx_dma_buffer));
+	for_each_available_child_of_node(pdev->dev.of_node, node) {
 
-	of_property_read_u32(pdev->dev.of_node, "voice_loopback", &voice_lb);
-	voice_loopback = voice_lb;
+		pcm_index = node->name[strlen(node->name)-1] - '0';
+		if (!(pcm_index >= 0 && pcm_index < IPQ_LPASS_MAX_PCM_INTERFACE)) {
+			pr_err("%s : Failed to extract a pcm index \n", __func__);
+			return -EINVAL;
+		}
 
-	of_property_read_u32(pdev->dev.of_node, "instance_id", &instance);
-	instance_id = instance;
+		if (pcm_dual_instance == 0) {
+			pcm_conf[pcm_index].ipq_lpass_lpm_base =
+			ioremap_nocache(IPQ_LPASS_LPM_BASE, IPQ_LPASS_LPM_SIZE);
+			pcm_conf[pcm_index].lpass_lpm_base_phy_addr =
+							IPQ_LPASS_LPM_BASE;
+		}
+		if (pcm_index == 0) {
+			pin_state = pinctrl_lookup_state(pintctrl, "primary");
 
-	of_property_read_u32(pdev->dev.of_node, "slave", &slave_lb);
-	slave = slave_lb;
+			if (IS_ERR(pin_state)) {
+				pr_err("audio pinctrl state not available\n");
+				return PTR_ERR(pin_state);
+			}
+			pinctrl_select_state(pintctrl, pin_state);
+		}
+		else if (pcm_index == 1) {
+			pin_state = pinctrl_lookup_state(pintctrl, "secondary");
 
-	if (voice_loopback) {
-	/* Setting LPM if voice_loopback enabled */
-		tx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
-		rx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
-	} else {
-		ret = of_property_read_string(pdev->dev.of_node,
+			if (IS_ERR(pin_state)) {
+				pr_err("audio pinctrl state not available\n");
+				return PTR_ERR(pin_state);
+			}
+			pinctrl_select_state(pintctrl, pin_state);
+		}
+
+		snprintf(irq_name, 5, "out%d", pcm_index);
+		init_waitqueue_head(&pcm_conf[pcm_index].pcm_q);
+
+		of_property_read_u32(node, "voice_loopback", &voice_lb);
+		pcm_conf[pcm_index].voice_loopback = voice_lb;
+
+		of_property_read_u32(node, "slave", &slave_lb);
+		pcm_conf[pcm_index].slave = slave_lb;
+
+
+		pcm_conf[pcm_index].rx_dma_buffer =
+			kzalloc(sizeof(struct lpass_dma_buffer), GFP_KERNEL);
+		if (pcm_conf[pcm_index].rx_dma_buffer == NULL) {
+			pr_err("%s: Error in allocating mem for rx_dma_buffer\n",
+					__func__);
+			return -ENOMEM;
+		}
+		pcm_conf[pcm_index].tx_dma_buffer =
+			kzalloc(sizeof(struct lpass_dma_buffer), GFP_KERNEL);
+		if ( pcm_conf[pcm_index].tx_dma_buffer == NULL) {
+			pr_err("%s: Error in allocating mem for tx_dma_buffer\n",
+					__func__);
+			return -ENOMEM;
+		}
+
+		irq_buffer = kzalloc(sizeof(struct lpass_irq_buffer), GFP_KERNEL);
+		if (irq_buffer == NULL) {
+			pr_err("%s: Error in allocating mem for irq_buffer\n",
+					__func__);
+			kfree(pcm_conf[pcm_index].rx_dma_buffer);
+			kfree(pcm_conf[pcm_index].tx_dma_buffer);
+			return -ENOMEM;
+		}
+
+		memset(pcm_conf[pcm_index].rx_dma_buffer, 0,
+				sizeof(*pcm_conf[pcm_index].rx_dma_buffer));
+		memset(pcm_conf[pcm_index].tx_dma_buffer, 0,
+				sizeof(*pcm_conf[pcm_index].tx_dma_buffer));
+
+		if (pcm_conf[pcm_index].voice_loopback) {
+			pcm_conf[pcm_index].tx_dma_buffer->dma_memory_type =
+							DMA_MEMORY_LPM;
+			pcm_conf[pcm_index].rx_dma_buffer->dma_memory_type =
+							DMA_MEMORY_LPM;
+		} else {
+			ret = of_property_read_string(node,
 					"capture_memory", &capture_memory);
-		if (ret) {
-			pr_err("lpass: couldn't read capture_memory: %d"
+			if (ret) {
+				pr_err("lpass: couldn't read capture_memory: %d"
 					" configure LPM as default\n", ret);
-			rx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
-		} else {
-			if (!strncmp(capture_memory, "lpm", 3)) {
-				rx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
-			} else if (!strncmp(capture_memory, "ddr", 3)) {
-				rx_dma_buffer->dma_memory_type = DMA_MEMORY_DDR;
+				pcm_conf[pcm_index].rx_dma_buffer->dma_memory_type
+							= DMA_MEMORY_LPM;
 			} else {
-				rx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
+				if (!strncmp(capture_memory, "lpm", 3)) {
+					pcm_conf[pcm_index].rx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_LPM;
+				} else if (!strncmp(capture_memory, "ddr", 3)) {
+					pcm_conf[pcm_index].rx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_DDR;
+				} else {
+					pcm_conf[pcm_index].rx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_LPM;
+				}
 			}
-		}
 
-		ret = of_property_read_string(pdev->dev.of_node,
+			ret = of_property_read_string(node,
 					"playback_memory", &playback_memory);
-		if (ret) {
-			pr_err("lpass: couldn't read playback_memory: %d"
-					" configure LPM as default\n", ret);
-			tx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
-		} else {
-			if (!strncmp(playback_memory, "lpm", 3)) {
-				tx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
-			} else if (!strncmp(playback_memory, "ddr", 3)) {
-				tx_dma_buffer->dma_memory_type = DMA_MEMORY_DDR;
+			if (ret) {
+				pr_err("lpass: couldn't read playback_memory: %d"
+						" configure LPM as default\n", ret);
+				pcm_conf[pcm_index].tx_dma_buffer->dma_memory_type
+								= DMA_MEMORY_LPM;
 			} else {
-				tx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
+				if (!strncmp(playback_memory, "lpm", 3)) {
+					pcm_conf[pcm_index].tx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_LPM;
+				} else if (!strncmp(playback_memory, "ddr", 3)) {
+					pcm_conf[pcm_index].tx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_DDR;
+				} else {
+					pcm_conf[pcm_index].tx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_LPM;
+				}
 			}
 		}
-	}
 
-	if (rx_dma_buffer->dma_memory_type == DMA_MEMORY_DDR) {
-		rx_dma_buffer->max_size = max_size;
-		ret = ipq_lpass_allocate_dma_buffer(&pdev->dev, rx_dma_buffer);
-		if (ret) {
-			pr_err("lpass: rx: no enough memory"
-				" use LPM instead : %d\n", ret);
-			rx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
+		if (pcm_conf[pcm_index].rx_dma_buffer->dma_memory_type ==
+							DMA_MEMORY_DDR) {
+			pcm_conf[pcm_index]. rx_dma_buffer->max_size = max_size;
+			ret = ipq_lpass_allocate_dma_buffer(&pdev->dev,
+					pcm_conf[pcm_index].rx_dma_buffer);
+			if (ret) {
+				pr_err("lpass: rx: no enough memory"
+						" use LPM instead : %d\n", ret);
+				pcm_conf[pcm_index].rx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_LPM;
+			}
+		} else {
+			pcm_conf[pcm_index].rx_dma_buffer->dma_buffer = NULL;
 		}
-	} else {
-		rx_dma_buffer->dma_buffer = NULL;
-	}
 
-	if (tx_dma_buffer->dma_memory_type == DMA_MEMORY_DDR) {
-		tx_dma_buffer->max_size = max_size;
-		ret = ipq_lpass_allocate_dma_buffer(&pdev->dev, tx_dma_buffer);
-		if (ret) {
-			pr_err("lpass: tx: no enough memory"
-				" use LPM instead : %d\n", ret);
-			tx_dma_buffer->dma_memory_type = DMA_MEMORY_LPM;
+		if (pcm_conf[pcm_index].tx_dma_buffer->dma_memory_type ==
+						DMA_MEMORY_DDR) {
+			pcm_conf[pcm_index].tx_dma_buffer->max_size = max_size;
+			ret = ipq_lpass_allocate_dma_buffer(&pdev->dev,
+					pcm_conf[pcm_index].tx_dma_buffer);
+			if (ret) {
+				pr_err("lpass: tx: no enough memory"
+						" use LPM instead : %d\n", ret);
+				pcm_conf[pcm_index].tx_dma_buffer->
+						dma_memory_type = DMA_MEMORY_LPM;
+			}
+		} else {
+			pcm_conf[pcm_index].tx_dma_buffer->dma_buffer = NULL;
 		}
-	} else {
-		tx_dma_buffer->dma_buffer = NULL;
-	}
+		irq_buffer->pcm_index = pcm_index;
 
-	irq_buffer->rx_buffer = rx_dma_buffer;
-	irq_buffer->tx_buffer = tx_dma_buffer;
-	platform_set_drvdata(pdev, irq_buffer);
-
-/*
- * Set interrupt
- */
-	irq = platform_get_irq_byname(pdev, "out0");
-	if (irq < 0) {
-		dev_err(&pdev->dev, "Failed to get irq by name (%d)\n",
-				irq);
-	} else {
-		ret = devm_request_irq(&pdev->dev,
+		irq_buffer->rx_buffer = pcm_conf[pcm_index].rx_dma_buffer;
+		irq_buffer->tx_buffer = pcm_conf[pcm_index].tx_dma_buffer;
+		platform_set_drvdata(pdev, irq_buffer);
+		irq = of_irq_get_byname(node, irq_name);
+		if (irq < 0) {
+			dev_err(&pdev->dev, "Failed to get irq by name (%d)\n",
+					irq);
+		} else {
+			ret = devm_request_irq(&pdev->dev,
 					irq,
 					ipq_lpass_pcm_irq_handler,
 					0,
 					"ipq-lpass",
 					irq_buffer);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"request_irq failed with ret: %d\n", ret);
-		return ret;
+			if (ret) {
+				dev_err(&pdev->dev,
+					"request_irq failed with ret: %d\n", ret);
+				return ret;
+			}
 		}
 	}
-
 	spin_lock_init(&pcm_lock);
 
 	return 0;
@@ -896,23 +1002,27 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
  */
 static int ipq_lpass_pcm_driver_remove(struct platform_device *pdev)
 {
+	int index = 0;
 	struct lpass_irq_buffer *resource = platform_get_drvdata(pdev);
 
-	ipq_pcm_deinit(pcm_params);
+	for (index = 0; index < IPQ_LPASS_MAX_PCM_INTERFACE; index++) {
 
-	if(rx_dma_buffer != NULL) {
-		ipq_lpass_clear_dma_buffer(&pcm_pdev->dev, rx_dma_buffer);
+		ipq_pcm_deinit(pcm_conf[index].pcm_params);
+		if (pcm_conf[index].rx_dma_buffer != NULL) {
+			ipq_lpass_clear_dma_buffer(&pcm_pdev->dev,
+					pcm_conf[index].rx_dma_buffer);
+		}
+		if (pcm_conf[index].tx_dma_buffer != NULL) {
+			ipq_lpass_clear_dma_buffer(&pcm_pdev->dev,
+					pcm_conf[index].tx_dma_buffer);
+		}
+
+		if (pcm_conf[index].rx_dma_buffer)
+			kfree(pcm_conf[index].rx_dma_buffer);
+
+		if (pcm_conf[index].tx_dma_buffer)
+			kfree(pcm_conf[index].tx_dma_buffer);
 	}
-	if(tx_dma_buffer != NULL) {
-		ipq_lpass_clear_dma_buffer(&pcm_pdev->dev, tx_dma_buffer);
-	}
-
-	if (rx_dma_buffer)
-		kfree(rx_dma_buffer);
-
-	if (tx_dma_buffer)
-		kfree(tx_dma_buffer);
-
 	if (resource)
 		kfree(resource);
 

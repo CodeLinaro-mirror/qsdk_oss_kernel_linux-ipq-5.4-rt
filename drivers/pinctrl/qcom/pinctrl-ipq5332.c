@@ -58,7 +58,7 @@
 		.intr_detection_width = 2,	\
 	}
 
-static const struct pinctrl_pin_desc devsoc_pins[] = {
+static const struct pinctrl_pin_desc ipq5332_pins[] = {
 	PINCTRL_PIN(0, "GPIO_0"),
 	PINCTRL_PIN(1, "GPIO_1"),
 	PINCTRL_PIN(2, "GPIO_2"),
@@ -170,7 +170,7 @@ DECLARE_MSM_GPIO_PINS(50);
 DECLARE_MSM_GPIO_PINS(51);
 DECLARE_MSM_GPIO_PINS(52);
 
-enum devsoc_functions {
+enum ipq5332_functions {
 	msm_mux_PTA_0,
 	msm_mux_PTA_1,
 	msm_mux_PTA_2,
@@ -644,7 +644,7 @@ static const char * const xfem7_groups[] = {
 	"gpio7",
 };
 
-static const struct msm_function devsoc_functions[] = {
+static const struct msm_function ipq5332_functions[] = {
 	FUNCTION(PTA_0),
 	FUNCTION(PTA_1),
 	FUNCTION(PTA_2),
@@ -760,7 +760,7 @@ static const struct msm_function devsoc_functions[] = {
 	FUNCTION(xfem7),
 };
 
-static const struct msm_pingroup devsoc_groups[] = {
+static const struct msm_pingroup ipq5332_groups[] = {
 	PINGROUP(0, atest_char0, wci0, wci0, xfem0, _, _, _, _, _),
 	PINGROUP(1, atest_char1, wci1, wci1, xfem1, _, _, _, _, _),
 	PINGROUP(2, atest_char2, wci2, wci2, xfem2, _, _, _, _, _),
@@ -852,47 +852,47 @@ static const struct msm_pingroup devsoc_groups[] = {
 		 _, _),
 };
 
-static const struct msm_pinctrl_soc_data devsoc_pinctrl = {
-	.pins = devsoc_pins,
-	.npins = ARRAY_SIZE(devsoc_pins),
-	.functions = devsoc_functions,
-	.nfunctions = ARRAY_SIZE(devsoc_functions),
-	.groups = devsoc_groups,
-	.ngroups = ARRAY_SIZE(devsoc_groups),
+static const struct msm_pinctrl_soc_data ipq5332_pinctrl = {
+	.pins = ipq5332_pins,
+	.npins = ARRAY_SIZE(ipq5332_pins),
+	.functions = ipq5332_functions,
+	.nfunctions = ARRAY_SIZE(ipq5332_functions),
+	.groups = ipq5332_groups,
+	.ngroups = ARRAY_SIZE(ipq5332_groups),
 	.ngpios = 53,
 };
 
-static int devsoc_pinctrl_probe(struct platform_device *pdev)
+static int ipq5332_pinctrl_probe(struct platform_device *pdev)
 {
-	return msm_pinctrl_probe(pdev, &devsoc_pinctrl);
+	return msm_pinctrl_probe(pdev, &ipq5332_pinctrl);
 }
 
-static const struct of_device_id devsoc_pinctrl_of_match[] = {
-	{ .compatible = "qcom,devsoc-pinctrl", },
+static const struct of_device_id ipq5332_pinctrl_of_match[] = {
+	{ .compatible = "qcom,ipq5332-pinctrl", },
 	{ },
 };
 
-static struct platform_driver devsoc_pinctrl_driver = {
+static struct platform_driver ipq5332_pinctrl_driver = {
 	.driver = {
-		.name = "devsoc-pinctrl",
-		.of_match_table = devsoc_pinctrl_of_match,
+		.name = "ipq5332-pinctrl",
+		.of_match_table = ipq5332_pinctrl_of_match,
 	},
-	.probe = devsoc_pinctrl_probe,
+	.probe = ipq5332_pinctrl_probe,
 	.remove = msm_pinctrl_remove,
 };
 
-static int __init devsoc_pinctrl_init(void)
+static int __init ipq5332_pinctrl_init(void)
 {
-	return platform_driver_register(&devsoc_pinctrl_driver);
+	return platform_driver_register(&ipq5332_pinctrl_driver);
 }
-arch_initcall(devsoc_pinctrl_init);
+arch_initcall(ipq5332_pinctrl_init);
 
-static void __exit devsoc_pinctrl_exit(void)
+static void __exit ipq5332_pinctrl_exit(void)
 {
-	platform_driver_unregister(&devsoc_pinctrl_driver);
+	platform_driver_unregister(&ipq5332_pinctrl_driver);
 }
-module_exit(devsoc_pinctrl_exit);
+module_exit(ipq5332_pinctrl_exit);
 
-MODULE_DESCRIPTION("QTI devsoc pinctrl driver");
+MODULE_DESCRIPTION("QTI ipq5332 pinctrl driver");
 MODULE_LICENSE("GPL v2");
-MODULE_DEVICE_TABLE(of, devsoc_pinctrl_of_match);
+MODULE_DEVICE_TABLE(of, ipq5332_pinctrl_of_match);

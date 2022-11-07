@@ -12,6 +12,9 @@
  *
  */
 #include "license_manager.h"
+#include <linux/qcom_scm.h>
+#include <linux/io.h>
+#include <linux/device.h>
 
 struct qmi_handle *lm_clnt_hdl;
 
@@ -25,6 +28,15 @@ void license_table_creation(uint32_t lic_file_count);
 void free_license_table(void);
 
 static unsigned int use_license_from_rootfs = 0;
+static unsigned long int get_attest_key = 0;
+static unsigned long int get_report = 0;
+char qwes_req_buf[MAX_INPUT_FILE_LEN];
+char qwes_ext_claim_buf[MAX_INPUT_FILE_LEN];
+
+#define CFG_MAX_DIG_COUNT	2
+#define QWES_ATTEST_RESP_FILE	"/tmp/attest_resp.bin"
+#define QWES_M3_KEY_RESP_FILE	"/tmp/m3key.bin"
+
 module_param(use_license_from_rootfs, uint, 0644);
 MODULE_PARM_DESC(use_license_from_rootfs, "Use license files from rootfs: 0,1");
 
@@ -146,6 +158,83 @@ void free_license_table(void)
 
 }
 
+int scm_get_device_attestation_response(void *req_buf, u32 req_buf_size,
+		void *extclaim_buf, u32 extclaim_buf_size, void *resp_buf,
+				u32 resp_buf_size, u32 *attest_resp_size)
+{
+	struct file *f;
+	int flags = O_RDWR | O_CREAT | O_TRUNC;
+	loff_t pos = 0;
+	int ret;
+
+	ret = qti_scm_get_device_attestation_response(QWES_SVC_ID,
+			QWES_ATTEST_REPORT, req_buf, req_buf_size, extclaim_buf,
+			extclaim_buf_size, resp_buf, resp_buf_size, attest_resp_size);
+	if (ret) {
+		pr_err("%s : qwes init attestatio scm failed with error code %d\n",
+								__func__, ret);
+		return ret;
+	}
+
+	f = filp_open(QWES_ATTEST_RESP_FILE, flags, 0600);
+	if (IS_ERR(f)) {
+		pr_err("filp_open(%s) for attestation respone"
+				" failed\n", QWES_ATTEST_RESP_FILE);
+		return -EINVAL;
+	}
+	pr_info(" %s : attest_resp_size is %x\n", __func__, *attest_resp_size);
+	ret = kernel_write(f, resp_buf, *attest_resp_size+1, &pos);
+
+	if (ret < 0) {
+		pr_debug("Error writing attest respo file: %s\n",
+						QWES_ATTEST_RESP_FILE);
+	}
+	filp_close(f, NULL);
+	return ret;
+
+}
+
+int scm_get_device_attestation_ephimeral_key(void *key_buf, u32 key_buf_len,
+		u32 *key_len)
+{
+	struct file *f;
+	char buf[MAX_SIZE_OF_KEY_BUF_LEN] = {0};
+	int flags = O_RDWR | O_CREAT | O_TRUNC;
+	loff_t pos = 0;
+	u32 index;
+	int rc;
+
+	rc = qti_scm_get_device_attestation_ephimeral_key(QWES_SVC_ID,
+				QWES_INIT_ATTEST, key_buf, key_buf_len, key_len);
+	if (rc) {
+		pr_err("%s : qwes init attestatio scm failed with error code %d\n",
+								__func__, rc);
+		return rc;
+	}
+
+	pr_info(" %s : Key Length is  : %X\n", __func__, *key_len);
+
+	for (index = 0; index <= *key_len; index = index + sizeof(u32)) {
+		snprintf(buf+strlen(buf), MAX_SIZE_OF_KEY_BUF_LEN - strlen(buf),
+				"%X ", *(unsigned int *)(key_buf + index));
+	}
+
+	f = filp_open(QWES_M3_KEY_RESP_FILE, flags, 0600);
+	if (IS_ERR(f)) {
+		pr_err("filp_open(%s) for M3 key "
+				" failed\n", QWES_M3_KEY_RESP_FILE);
+		return -EINVAL;
+	}
+	rc = kernel_write(f, key_buf, *key_len+1, &pos);
+
+	if (rc < 0) {
+		pr_debug("Error writing M3 Key file: %s\n", QWES_M3_KEY_RESP_FILE);
+	}
+	filp_close(f, NULL);
+	pr_info("%s : Key in response buffer is : %s\n", __func__, buf);
+	return rc;
+}
+
 static void qmi_handle_license_termination_mode_req(struct qmi_handle *handle,
 			struct sockaddr_qrtr *sq,
 			struct qmi_txn *txn,
@@ -215,6 +304,196 @@ static void qmi_handle_license_termination_mode_req(struct qmi_handle *handle,
 free_resp_mem:
 	kfree(resp);
 }
+
+static ssize_t device_attestation_ephimeral_key_show(struct device_driver *driver,
+		char *buff)
+{
+	return snprintf(buff, CFG_MAX_DIG_COUNT, "%ld", get_attest_key);
+}
+
+static ssize_t device_attestation_ephimeral_key_store(struct device_driver *driver,
+		const char *buff, size_t count)
+{
+	void *key_buf = NULL;
+	u32 *key_len = NULL;
+	int ret = 0;
+
+	if (kstrtoul(buff, 0, &get_attest_key))
+		return -EINVAL;
+
+	if (get_attest_key == 1) {
+		key_buf = kzalloc(QWES_M3_KEY_BUFF_MAX_SIZE, GFP_KERNEL);
+		if (!key_buf) {
+			pr_err("%s: Memory allocation failed for key buffer\n",
+					__func__);
+			return -EINVAL;
+		}
+		key_len = kzalloc(sizeof(u32), GFP_KERNEL);
+		if (!key_len) {
+			pr_err("%s: Memory allocation failed for key length\n",
+					__func__);
+			ret = -EINVAL;
+			goto key_buf_alloc_err;
+		}
+
+		ret = scm_get_device_attestation_ephimeral_key(key_buf,
+				QWES_M3_KEY_BUFF_MAX_SIZE, key_len);
+		kfree(key_len);
+		ret = count;
+	}
+	else {
+		pr_err("%s : Invalid sysfs entry input\n", __func__);
+		return -EINVAL;
+	}
+
+
+key_buf_alloc_err:
+	kfree(key_buf);
+	return ret;
+}
+static DRIVER_ATTR_RW(device_attestation_ephimeral_key);
+
+static ssize_t device_attestation_request_buff_show(struct device_driver *driver,
+		char *buff)
+{
+	return snprintf(buff, MAX_INPUT_FILE_LEN, "%s", qwes_req_buf);
+}
+
+static ssize_t device_attestation_request_buff_store(struct device_driver *driver,
+		const char *buff, size_t count)
+{
+	if (buff) {
+		snprintf(qwes_req_buf, strlen(buff), "%s", buff);
+	}
+	return count;
+
+}
+static DRIVER_ATTR_RW(device_attestation_request_buff);
+
+static ssize_t device_external_claim_buff_show(struct device_driver *driver,
+                char *buff)
+{
+	return  snprintf(buff, MAX_INPUT_FILE_LEN, "%s", qwes_ext_claim_buf);
+}
+
+static ssize_t device_external_claim_buff_store(struct device_driver *driver,
+                const char *buff, size_t count)
+{
+	if (buff) {
+		snprintf(qwes_ext_claim_buf, strlen(buff), "%s", buff);
+	}
+	return count;
+
+}
+static DRIVER_ATTR_RW(device_external_claim_buff);
+
+static ssize_t device_get_attestation_response_show(struct device_driver *driver,
+		char *buff)
+{
+	return snprintf(buff, CFG_MAX_DIG_COUNT, "%ld", get_report);
+}
+
+static ssize_t device_get_attestation_response_store(struct device_driver *driver,
+		const char *buff, size_t count)
+{
+	void *req_buf = NULL;
+	void *resp_buf = NULL;
+	void *extclaim_buf = NULL;
+	void *data = NULL;
+	u32 req_buf_size = 0;
+	u32 extclaim_buf_size = 0;
+	u32 *attest_resp_size = NULL;
+	loff_t size = 0;
+	int ret = 0;
+
+	if (kstrtoul(buff, 0, &get_report)) {
+		return -EINVAL;
+	}
+	if (get_report == 1) {
+
+		if (strlen(qwes_req_buf) <= 0) {
+			return -EINVAL;
+		}
+		resp_buf = kzalloc(QWES_RESP_BUFF_MAX_SIZE, GFP_KERNEL);
+		if (!resp_buf) {
+			pr_err("%s: Memory allocation failed for key buffer\n",
+					__func__);
+			return -EINVAL;
+		}
+
+		attest_resp_size = kzalloc(sizeof(u32), GFP_KERNEL);
+		if (!attest_resp_size) {
+			pr_err("%s: Memory allocation failed for attest resp"
+							"length\n", __func__);
+			goto resp_buf_alloc_err;
+		}
+		if (strlen(qwes_req_buf) > 0) {
+			ret = kernel_read_file_from_path(qwes_req_buf, &data,
+							&size, 0, READING_POLICY);
+			if (ret < 0) {
+				pr_err("%s File open failed\n", __func__);
+				goto attest_resp_size_alloc_err;
+			}
+			req_buf_size = size;
+			req_buf = kzalloc(req_buf_size, GFP_KERNEL);
+			if (!req_buf) {
+				pr_err("%s: Memory allocation failed for attest"
+						"request buffer\n", __func__);
+				vfree(data);
+				goto attest_resp_size_alloc_err;
+			}
+			if (data != NULL) {
+				memcpy(req_buf, data, req_buf_size);
+			}
+			pr_info("%s : req_buf size is %x\n", __func__,
+							(unsigned int)size);
+			vfree(data);
+		}
+		if (strlen(qwes_ext_claim_buf) > 0) {
+			data = NULL;
+			ret = kernel_read_file_from_path(qwes_ext_claim_buf,
+						&data, &size, 0, READING_POLICY);
+			if (ret < 0) {
+				pr_err("%s File open failed\n", __func__);
+				goto req_buf_alloc_err;
+			}
+			extclaim_buf_size = size;
+			extclaim_buf = kzalloc(extclaim_buf_size, GFP_KERNEL);
+			if (!extclaim_buf) {
+				pr_err("%s: Memory allocation failed for"
+						"extclaim buffer\n", __func__);
+				vfree(data);
+				goto req_buf_alloc_err;
+			}
+			if (data != NULL) {
+				memcpy(extclaim_buf, data, extclaim_buf_size);
+			}
+			pr_info("%s : extclaim_buf size is %x\n", __func__,
+							(unsigned int)size);
+			vfree(data);
+		}
+		ret = scm_get_device_attestation_response(req_buf, req_buf_size,
+				extclaim_buf, extclaim_buf_size, resp_buf,
+				QWES_RESP_BUFF_MAX_SIZE, attest_resp_size);
+		if (extclaim_buf != NULL) {
+			kfree(extclaim_buf);
+		}
+		ret = count;
+	}
+	else {
+		pr_err("%s : Invalid sysfs entry input\n", __func__);
+		return -EINVAL;
+	}
+
+req_buf_alloc_err:
+	kfree(req_buf);
+attest_resp_size_alloc_err:
+	kfree(attest_resp_size);
+resp_buf_alloc_err:
+	kfree(resp_buf);
+	return ret;
+}
+static DRIVER_ATTR_RW(device_get_attestation_response);
 
 static void qmi_handle_license_download_req(struct qmi_handle *handle,
 			struct sockaddr_qrtr *sq,
@@ -447,6 +726,31 @@ static int license_manager_probe(struct platform_device *pdev)
 	svc = kzalloc(sizeof(struct lm_svc_ctx), GFP_KERNEL);
 	if (!svc)
 		return -ENOMEM;
+
+	ret = driver_create_file(pdev->dev.driver,
+			&driver_attr_device_attestation_ephimeral_key);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create sysfs entry\n");
+		return ret;
+	}
+	ret = driver_create_file(pdev->dev.driver,
+			&driver_attr_device_attestation_request_buff);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create sysfs entry\n");
+		return ret;
+	}
+	ret = driver_create_file(pdev->dev.driver,
+			&driver_attr_device_external_claim_buff);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create sysfs entry\n");
+		return ret;
+	}
+	ret = driver_create_file(pdev->dev.driver,
+			&driver_attr_device_get_attestation_response);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create sysfs entry\n");
+		return ret;
+	}
 
 	device_license_termination = of_property_read_bool(node,
 						"device-license-termination");

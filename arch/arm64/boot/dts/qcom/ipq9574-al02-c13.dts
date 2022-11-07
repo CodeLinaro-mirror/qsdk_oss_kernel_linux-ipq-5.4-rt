@@ -52,29 +52,29 @@
  * PCI1. PCI2 and PCI3 QCN9224s will use 32 MSI interrupts
  */
 &wifi1 {
-	/* QCN9000 tgt-mem-mode=0 layout - 53MB
+	/* QCN9000 tgt-mem-mode=5 layout - 21MB
 	 * +=========+==============+=========+
 	 * |  Region | Start Offset |   Size  |
 	 * +---------+--------------+---------+
-	 * | HREMOTE |  0x5C500000  |   35MB  |
+	 * | HREMOTE |  0x5C500000  |   9MB   |
 	 * +---------+--------------+---------+
-	 * | M3 Dump |  0x5E800000  |   1MB   |
+	 * | M3 Dump |  0x5CE00000  |   1MB   |
 	 * +---------+--------------+---------+
-	 * |   ETR   |  0x5E900000  |   1MB   |
+	 * |   ETR   |  0x5CF00000  |   1MB   |
 	 * +---------+--------------+---------+
-	 * |  Caldb  |  0x5EA00000  |   8MB   |
+	 * |  Caldb  |  0x5D000000  |   8MB   |
 	 * +---------+--------------+---------+
-	 * | Pageable|  0x5F200000  |   8MB   |
+	 * | Pageable|  0x5D800000  |   3MB   |
 	 * +==================================+
 	 */
 	base-addr = <0x5C500000>;
-	m3-dump-addr = <0x5E800000>;
-	etr-addr = <0x5E900000>;
-	caldb-addr = <0x5EA00000>;
-	pageable-addr = <0x5F200000>;
-	hremote-size = <0x2300000>;
-	pageable-size = <0x800000>;
-	tgt-mem-mode = <0x0>;
+	m3-dump-addr = <0x5CE00000>;
+	etr-addr = <0x5CF00000>;
+	caldb-addr = <0x5D000000>;
+	pageable-addr = <0x5D800000>;
+	hremote-size = <0x900000>;
+	pageable-size = <0x300000>;
+	tgt-mem-mode = <0x5>;
 	hremote_node = <&qcn9000_pcie0>;
 	caldb-size = <0x800000>;
 	board_id = <0xaa>;

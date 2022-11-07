@@ -406,7 +406,7 @@ static int qti_tzlog_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	tz_hvc_log->is_diag_id = !(of_device_is_compatible(np, "qti,tzlog-devsoc") ||
+	tz_hvc_log->is_diag_id = !(of_device_is_compatible(np, "qti,tzlog-ipq5332") ||
 				   of_device_is_compatible(np, "qti,tzlog-ipq6018") ||
 				   of_device_is_compatible(np, "qti,tzlog-ipq9574") ||
 				   qti_scm_is_tz_log_encryption_supported());
@@ -599,7 +599,7 @@ static int qti_tzlog_remove(struct platform_device *pdev)
 
 static const struct of_device_id qti_tzlog_of_match[] = {
 	{ .compatible = "qti,tzlog" },
-	{ .compatible = "qti,tzlog-devsoc" },
+	{ .compatible = "qti,tzlog-ipq5332" },
 	{ .compatible = "qti,tzlog-ipq6018" },
 	{ .compatible = "qti,tzlog-ipq9574" },
 	{}

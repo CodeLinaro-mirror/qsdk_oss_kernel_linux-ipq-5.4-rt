@@ -1572,7 +1572,7 @@ const struct ctx_save_props ctx_save_props_ipq5018 = {
 				(3 * SZ_1K) + (457 * SZ_1K) + (12 * SZ_1K)),
 };
 
-const struct ctx_save_props ctx_save_props_devsoc = {
+const struct ctx_save_props ctx_save_props_ipq5332 = {
 	.tlv_msg_offset = (500 * SZ_1K),
 
 	/* 300K for TME-L Crashdump
@@ -1762,8 +1762,8 @@ static const struct of_device_id ctx_save_of_table[] = {
 		.data = (void *)&ctx_save_props_ipq5018,
 	},
 	{
-		.compatible = "qti,ctxt-save-devsoc",
-		.data = (void *)&ctx_save_props_devsoc,
+		.compatible = "qti,ctxt-save-ipq5332",
+		.data = (void *)&ctx_save_props_ipq5332,
 	},
 	{
 		.compatible = "qti,ctxt-save-ipq6018",

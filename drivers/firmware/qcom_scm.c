@@ -35,6 +35,7 @@ struct qcom_scm {
 	struct clk *bus_clk;
 	struct reset_controller_dev reset;
 
+	void __iomem *dload_reg;
 	u64 dload_mode_addr;
 	u32 hvc_log_cmd_id;
 	u32 smmu_state_cmd_id;
@@ -340,7 +341,13 @@ int qcom_scm_pas_init_image(u32 peripheral, const void *metadata, size_t size)
 	if (ret)
 		goto free_metadata;
 
-	ret = __qcom_scm_pas_init_image(__scm->dev, peripheral, mdata_phys);
+	if (__qcom_scm_is_call_available(__scm->dev, QCOM_SCM_SVC_PIL,
+					QCOM_SCM_PAS_INIT_IMAGE_V2_CMD))
+		ret = __qcom_scm_pas_init_image_v2(__scm->dev, peripheral,
+							mdata_phys, size);
+	else
+		ret = __qcom_scm_pas_init_image(__scm->dev, peripheral,
+								mdata_phys);
 
 	qcom_scm_clk_disable();
 
@@ -494,7 +501,7 @@ static void qcom_scm_set_download_mode(bool enable)
 		dev_err(__scm->dev, "failed to set download mode: %d\n", ret);
 }
 
-static int qcom_scm_find_dload_address(struct device *dev, u64 *addr)
+static int qcom_scm_find_dload_address(struct device *dev, struct qcom_scm *scm)
 {
 	struct device_node *tcsr;
 	struct device_node *np = dev->of_node;
@@ -515,7 +522,12 @@ static int qcom_scm_find_dload_address(struct device *dev, u64 *addr)
 	if (ret < 0)
 		return ret;
 
-	*addr = res.start + offset;
+	scm->dload_mode_addr = res.start + offset;
+	scm->dload_reg = devm_ioremap(dev, res.start, resource_size(&res));
+	if (!scm->dload_reg) {
+		pr_err("%s: Error mapping memory region!\n", __func__);
+		return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -681,7 +693,7 @@ int qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 }
 EXPORT_SYMBOL(qti_fuseipq_scm_call);
 
-int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg)
+int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf)
 {
 	int ret;
 
@@ -689,7 +701,8 @@ int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg)
 	if (ret)
 		return ret;
 
-	ret = __qti_scm_dload(__scm->dev, svc_id, cmd_id, cmd_buf, dload_reg);
+	ret = __qti_scm_dload(__scm->dev, svc_id, cmd_id, cmd_buf,
+			      __scm->dload_mode_addr, __scm->dload_reg);
 
 	qcom_scm_clk_disable();
 
@@ -698,22 +711,57 @@ int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg)
 }
 EXPORT_SYMBOL(qti_scm_dload);
 
-int qti_scm_set_kernel_boot_complete(u32 svc_id, u32 val)
+int qti_scm_set_trybit(u32 svc_id)
 {
 	int ret;
+	unsigned int val;
 
 	ret = qcom_scm_clk_enable();
 	if (ret)
 		return ret;
 
-	ret = __qti_scm_set_kernel_boot_complete(__scm->dev, svc_id, val);
+	val = readl(__scm->dload_reg);
+	val |= QTI_TRYBIT;
+	ret = __qti_scm_set_trybit(__scm->dev, svc_id, val, __scm->dload_mode_addr);
 
 	qcom_scm_clk_disable();
 
 	return ret;
 
 }
-EXPORT_SYMBOL(qti_scm_set_kernel_boot_complete);
+EXPORT_SYMBOL(qti_scm_set_trybit);
+
+int qti_read_dload_reg()
+{
+	return readl(__scm->dload_reg);
+}
+EXPORT_SYMBOL(qti_read_dload_reg);
+
+int qti_scm_get_device_attestation_ephimeral_key(u32 svc_id, u32 cmd_id,
+			void *key_buf, u32 key_buf_len, u32 *key_len)
+{
+	int ret;
+	ret = __qti_scm_get_device_attestation_ephimeral_key(__scm->dev,
+			svc_id, cmd_id, key_buf, key_buf_len, key_len);
+	return ret;
+
+}
+EXPORT_SYMBOL(qti_scm_get_device_attestation_ephimeral_key);
+
+int qti_scm_get_device_attestation_response(u32 svc_id, u32 cmd_id, void *req_buf,
+			u32 req_buf_len, void *extclaim_buf, u32 extclaim_buf_len,
+			void *resp_buf, u32 resp_buf_len, u32 *attest_resp_len)
+{
+	int ret;
+
+	ret = __qti_scm_get_device_attestation_response(__scm->dev, svc_id, cmd_id,
+			req_buf, req_buf_len, extclaim_buf, extclaim_buf_len, resp_buf,
+			resp_buf_len, attest_resp_len);
+
+	return ret;
+
+}
+EXPORT_SYMBOL(qti_scm_get_device_attestation_response);
 
 int qti_scm_wcss_boot(u32 svc_id, u32 cmd_id, void *cmd_buf)
 {
@@ -1072,7 +1120,7 @@ static int qcom_scm_probe(struct platform_device *pdev)
 	if (!scm)
 		return -ENOMEM;
 
-	ret = qcom_scm_find_dload_address(&pdev->dev, &scm->dload_mode_addr);
+	ret = qcom_scm_find_dload_address(&pdev->dev, scm);
 	if (ret < 0)
 		return ret;
 

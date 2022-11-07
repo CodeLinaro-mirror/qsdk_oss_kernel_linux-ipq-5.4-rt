@@ -170,7 +170,8 @@
 					bias-pull-up;
 				};
 			};
-			audio_pins: audio_pinmux {
+
+			audio_pins_pri: audio_pinmux_pri {
 				mux_1 {
 					pins = "gpio41";
 					function = "audio_pri";
@@ -198,29 +199,31 @@
 					drive-strength = <16>;
 					bias-pull-down;
 				};
+			};
 
-				mux_5 {
+			audio_pins_sec: audio_pinmux_sec {
+				mux_1 {
 					pins = "gpio47";
 					function = "audio_sec";
 					drive-strength = <16>;
 					bias-pull-down;
 				};
 
-				mux_6 {
+				mux_2 {
 					pins = "gpio46";
 					function = "audio_sec";
 					drive-strength = <16>;
 					bias-pull-down;
 				};
 
-				mux_7 {
+				mux_3 {
 					pins = "gpio45";
 					function = "audio_sec";
 					drive-strength = <16>;
 					bias-pull-down;
 				};
 
-				mux_8 {
+				mux_4 {
 					pins = "gpio44";
 					function = "audio_sec";
 					drive-strength = <16>;
@@ -293,8 +296,10 @@
 		};
 
 		pcm: pcm@0xA3C0000{
-			pinctrl-0 = <&audio_pins>;
-			pinctrl-names = "default";
+			pinctrl-0 = <&audio_pins_pri>;
+			pinctrl-1 = <&audio_pins_sec>;
+			pinctrl-names = "primary",
+					 "secondary";
 			status = "disabled";
 		};
 
@@ -383,6 +388,11 @@
 			local-mac-address = [000000000000];
 			qcom,phy-mdio-addr = <0>;
 			phy-mode = "sgmii";
+		};
+
+		license_manager {
+			compatible = "qti,license-manager-service";
+			device-license-termination;
 		};
 
 		qpic_bam: dma@7984000 {
@@ -659,6 +669,7 @@
 			qcom,txcmpl_point_offload_ring = <0>;		/* Txcmpl point offlaod ring */
 			qcom,rxfill_point_offload_ring = <0>;		/* Rxfill point offlaod ring */
 			qcom,rxdesc_point_offload_ring = <0>;		/* Rxdesc point offlaod ring */
+			qcom,rx-queue-start = <0>;		/* Rx queue start */
 			qcom,rx-ring-queue-map = <0 8 16 24>,	/* Priority 0 queues per-core Rx ring map */
 					<1 9 17 25>,		/* Priority 1 queues per-core Rx ring map */
 					<2 10 18 26>,		/* Priority 2 queues per-core Rx ring map */

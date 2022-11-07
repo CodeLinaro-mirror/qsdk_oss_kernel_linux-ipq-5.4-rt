@@ -181,21 +181,8 @@
 };
 
 &soc {
-	qfprom_nvmem: qfprom_nvmem@a0000 {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		compatible = "qcom,qfprom";
-		reg = <0xa0000 0x1000>;
-		tsens_calib_sel: calib@3E0 {
-			reg = <0x3E0 0x4>;
-		};
-		tsens_calib_offset: calib@3A4 {
-			reg = <0x3A4 0xC>;
-		};
-	};
-
 	tsens: thermal-sensor@4a9000 {
-		compatible = "qcom,devsoc-tsens";
+		compatible = "qcom,ipq5332-tsens";
 		reg = <0x4a9000 0x1000>, /* TM */
 		      <0x4a8000 0x1000>; /* SROT */
 		nvmem-cells = <&tsens_calib_sel>, <&tsens_calib_offset>;

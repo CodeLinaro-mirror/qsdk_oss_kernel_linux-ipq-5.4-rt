@@ -320,6 +320,11 @@
 			status = "ok";
 			pinctrl-0 = <&i2c_3_pins>;
 			pinctrl-names = "default";
+
+			bmp390@77 {
+				compatible = "bosch,bmp390";
+				reg = <0x77>;
+			};
 		};
 
 		usb: usb3@8A00000 {
@@ -370,8 +375,12 @@
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
 					qrtr_node_id = <0x31>;
+					qti,disable-rddm-prealloc;
+					qti,rddm-seg-len = <0x1000>;
 					memory-region = <0>,<&mhi_region1>;
-					boot-args = <0x0 0x0 0x0 0x0 0x0 0x0>;
+					boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
+							0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
+							0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
 					license-file = "";
 				};
 #else
@@ -414,8 +423,12 @@
 				qcom,mhi@2 {
 					reg = <0 0 0 0 0>;
 					qrtr_node_id = <0x32>;
+					qti,disable-rddm-prealloc;
+					qti,rddm-seg-len = <0x1000>;
 					memory-region = <0>,<&mhi_region2>;
-					boot-args = <0x0 0x0 0x0 0x0 0x0 0x0>;
+					boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
+							0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
+							0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
 					license-file = "";
 				};
 #else
@@ -458,8 +471,12 @@
 				qcom,mhi@3 {
 					reg = <0 0 0 0 0>;
 					qrtr_node_id = <0x33>;
+					qti,disable-rddm-prealloc;
+					qti,rddm-seg-len = <0x1000>;
 					memory-region = <0>,<&mhi_region3>;
-					boot-args = <0x0 0x0 0x0 0x0 0x0 0x0>;
+					boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
+							0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
+							0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
 					license-file = "";
 				};
 #else
@@ -582,9 +599,9 @@
 			qcom,rx-map-priority-level = <1>;	/* Rx priority level per core */
 			qcom,ppeds-num = <3>;			/* Number of PPEDS nodes */
 			/* PPE-DS node format: <Rx-fill Tx-cmpl Rx Tx Queue-base Queue-count> */
-			qcom,ppeds-map = <1 1 1 1 4 4>,		/* PPEDS Node#0 ring and queue map */
-					<2 2 2 2 8 4>,		/* PPEDS Node#1 ring and queue map */
-					<3 3 3 3 12 4>;		/* PPEDS Node#2 ring and queue map */
+			qcom,ppeds-map = <1 1 1 1 32 8>,	/* PPEDS Node#0 ring and queue map */
+					<2 2 2 2 40 8>,		/* PPEDS Node#1 ring and queue map */
+					<3 3 3 3 48 8>;		/* PPEDS Node#2 ring and queue map */
 			qcom,txdesc-map = <8 9 10 11>,		/* Port0 per-core Tx ring map */
 					<12 13 14 15>,		/* Port1 per-core Tx ring map */
 					<16 17 18 19>,		/* Port2 per-core Tx ring map */
@@ -599,6 +616,7 @@
 			qcom,txcmpl_point_offload_ring = <0>;		/* Txcmpl point offlaod ring */
 			qcom,rxfill_point_offload_ring = <0>;		/* Rxfill point offlaod ring */
 			qcom,rxdesc_point_offload_ring = <0>;		/* Rxdesc point offlaod ring */
+			qcom,rx-queue-start = <0>;		/* Rx queue start */
 			qcom,rx-ring-queue-map = <0 8 16 24>,	/* Priority 0 queues per-core Rx ring map */
 					<1 9 17 25>,		/* Priority 1 queues per-core Rx ring map */
 					<2 10 18 26>,		/* Priority 2 queues per-core Rx ring map */

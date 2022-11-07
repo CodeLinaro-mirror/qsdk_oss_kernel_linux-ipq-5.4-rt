@@ -294,6 +294,25 @@ bool __qcom_scm_pas_supported(struct device *dev, u32 peripheral)
 	return ret ? false : !!res.a1;
 }
 
+int __qcom_scm_pas_init_image_v2(struct device *dev, u32 peripheral,
+			      dma_addr_t metadata_phys, size_t size)
+{
+	int ret;
+	struct qcom_scm_desc desc = {0};
+	struct arm_smccc_res res;
+
+	desc.args[0] = peripheral;
+	desc.args[1] = metadata_phys;
+	desc.args[2] = size;
+	desc.arginfo = QCOM_SCM_ARGS(3, QCOM_SCM_VAL, QCOM_SCM_RW,
+							QCOM_SCM_VAL);
+
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_SVC_PIL,
+			    QCOM_SCM_PAS_INIT_IMAGE_V2_CMD, &desc, &res);
+
+	return ret ? : res.a1;
+}
+
 int __qcom_scm_pas_init_image(struct device *dev, u32 peripheral,
 			      dma_addr_t metadata_phys)
 {
@@ -755,7 +774,8 @@ int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 	return ret ? : res.a1;
 }
 
-int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg)
+int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf,
+		    u64 dload_mode_addr, void __iomem *dload_reg)
 {
 	struct qcom_scm_desc desc = {0};
 	struct arm_smccc_res res;
@@ -763,20 +783,16 @@ int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf, v
 	unsigned int enable;
 
 	enable = cmd_buf ? *((unsigned int *)cmd_buf) : 0;
-	desc.args[0] = TCSR_BOOT_MISC_REG;
+	desc.args[0] = dload_mode_addr;
+	desc.args[1] = readl(dload_reg);
 	if (enable == SET_MAGIC_WARMRESET)
-		desc.args[1] = DLOAD_MODE_ENABLE_WARMRESET;
+		desc.args[1] |= DLOAD_MODE_ENABLE_WARMRESET;
 	else if (enable == ABNORMAL_MAGIC)
-		desc.args[1] = DLOAD_MODE_DISABLE_ABNORMALRESET;
-	else
-		desc.args[1] = enable ? DLOAD_MODE_ENABLE : DLOAD_MODE_DISABLE;
-
-	if (dload_reg) {
-		if (desc.args[1] == DLOAD_MODE_DISABLE)
-	                desc.args[1] = readl(dload_reg) & ~DLOAD_MODE_ENABLE;
-		else
-			desc.args[1] |= readl(dload_reg);
-	}
+		desc.args[1] |= DLOAD_MODE_DISABLE_ABNORMALRESET;
+	else if (enable == SET_MAGIC)
+		desc.args[1] |= DLOAD_MODE_ENABLE;
+	else if (enable == CLEAR_MAGIC)
+		desc.args[1] &= DLOAD_MODE_DISABLE;
 
 	desc.arginfo = QCOM_SCM_ARGS(2, QCOM_SCM_VAL, QCOM_SCM_VAL);
 	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_SVC_IO,
@@ -1056,6 +1072,178 @@ int __qti_scm_tz_hvc_log(struct device *dev, u32 svc_id, u32 cmd_id,
 }
 
 /**
+ * __qti_scm_get_device_attestation_ephimeral_key() - Get M3 public ephimeral key from TME-L
+ *
+ * @svc_id: SCM service id
+ * @cmd_id: SCM command id
+ * key_buf: key buffer to store the M3 public ephimeral key and this is populated by TME-L
+ * key_buf_len: key buffer length
+ * key_len : Size of the M3 Ephimeral public key. This is populated by TME-L after
+ *           storing the key in the key buffer.
+ *
+ * This function can be used to get the M3 public ephimeral key from the TME-L.
+ */
+int __qti_scm_get_device_attestation_ephimeral_key(struct device *dev,
+		u32 svc_id, u32 cmd_id, void *key_buf, u32 key_buf_len,
+		u32 *key_len)
+{
+	int ret;
+	dma_addr_t dma_key_buf;
+	dma_addr_t dma_key_len;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+
+	dma_key_buf = dma_map_single(dev, key_buf, key_buf_len,
+				DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_key_buf);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		return ret;
+	}
+	dma_key_len = dma_map_single(dev, key_len, sizeof(unsigned int),
+				DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_key_len);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		goto dma_unmap_key_buf;
+	}
+	desc.args[0] = dma_key_buf;
+	desc.args[1] = key_buf_len;
+	desc.args[2] = dma_key_len;
+
+	desc.arginfo = SCM_ARGS(3, QCOM_SCM_VAL, QCOM_SCM_VAL, QCOM_SCM_RW);
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, svc_id, cmd_id,
+			&desc, &res);
+
+	if(res.a1 != 0) {
+		pr_err("ERROR :TME Response error code is : %x\n",
+					(unsigned int)res.a1);
+	}
+
+	dma_unmap_single(dev, dma_key_len, sizeof(unsigned int),
+				DMA_FROM_DEVICE);
+
+dma_unmap_key_buf:
+	dma_unmap_single(dev, dma_key_buf, key_buf_len, DMA_FROM_DEVICE);
+
+	return ret ? : res.a1;
+
+}
+
+/**
+ * __qti_scm_get_device_attestation_response() - Get attestation response from TME-L
+ *
+ * @svc_id: SCM service id
+ * @cmd_id: SCM command id
+ * req_buf: attestation request buffer, it contains a attestation request.
+ * req_buf_len: attestation request buffer length
+ * extclaim_buf: External claim buffer, it also contains attestation request when the
+                 attestation request is more than 2KB.
+ * extclaim_buf_len: size of external buffer.
+ * resp_buf: Response Buffer passed to TME to store the Attestation report response.
+ *           TME will used this buffer to populate the Attestation report.
+ * resp_buf_len: size of the response buffer.
+ * attest_resp_len: Length of the Attestation report response. This is populated by TME
+ *                  after storing the attestation response.
+ *
+ * This function can be used to get the attestation response binary from TME-L by
+ * passing the attestation report through req_buf and extclaim_buf.
+ */
+int __qti_scm_get_device_attestation_response(struct device *dev,
+		u32 svc_id, u32 cmd_id, void *req_buf, u32 req_buf_len,
+		void *extclaim_buf, u32 extclaim_buf_len, void *resp_buf,
+		u32 resp_buf_len, u32 *attest_resp_len)
+{
+	int ret;
+	dma_addr_t dma_req_buf;
+	dma_addr_t dma_claim_buf = 0;
+	dma_addr_t dma_resp_buf;
+	dma_addr_t dma_resp_len;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+
+	dma_req_buf = dma_map_single(dev, req_buf, req_buf_len,
+						DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_req_buf);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		return ret;
+	}
+
+	if(extclaim_buf != NULL) {
+		dma_claim_buf = dma_map_single(dev, extclaim_buf,
+				extclaim_buf_len, DMA_FROM_DEVICE);
+		ret = dma_mapping_error(dev, dma_claim_buf);
+		if (ret != 0) {
+			pr_err("DMA Mapping Error : %d\n", ret);
+			goto dma_unmap_req_buf;
+		}
+	}
+
+	dma_resp_buf = dma_map_single(dev, resp_buf, resp_buf_len,
+				DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_resp_buf);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		goto dma_unmap_extclaim_buf;
+	}
+
+	dma_resp_len = dma_map_single(dev, attest_resp_len,
+				sizeof(unsigned int), DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_resp_len);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		goto dma_unmap_resp_buf;
+	}
+
+	desc.args[0] = dma_req_buf;
+	desc.args[1] = req_buf_len;
+	desc.args[2] = dma_claim_buf;
+	desc.args[3] = extclaim_buf_len;
+	desc.args[4] = dma_resp_buf;
+	desc.args[5] = resp_buf_len;
+	desc.args[6] = dma_resp_len;
+
+	desc.arginfo = SCM_ARGS(7, QCOM_SCM_VAL, QCOM_SCM_VAL,
+				QCOM_SCM_VAL, QCOM_SCM_VAL, QCOM_SCM_VAL,
+				QCOM_SCM_VAL, QCOM_SCM_RW);
+
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, svc_id, cmd_id,
+			&desc, &res);
+
+	dma_unmap_single(dev, dma_req_buf, req_buf_len, DMA_FROM_DEVICE);
+	if(extclaim_buf != NULL) {
+		dma_unmap_single(dev, dma_claim_buf, extclaim_buf_len,
+			DMA_FROM_DEVICE);
+	}
+	dma_unmap_single(dev, dma_resp_buf, resp_buf_len, DMA_FROM_DEVICE);
+	dma_unmap_single(dev, dma_resp_len, sizeof(unsigned int),
+					DMA_FROM_DEVICE);
+
+	if(res.a1 != 0) {
+		pr_err("TME Response error code is : %x\n",
+					(unsigned int)res.a1);
+	}
+
+	dma_unmap_single(dev, dma_resp_len, sizeof(unsigned int),
+			DMA_FROM_DEVICE);
+
+dma_unmap_resp_buf:
+	dma_unmap_single(dev, dma_resp_buf, resp_buf_len, DMA_FROM_DEVICE);
+
+dma_unmap_extclaim_buf:
+	if(extclaim_buf != NULL) {
+		dma_unmap_single(dev, dma_claim_buf, extclaim_buf_len,
+			DMA_FROM_DEVICE);
+	}
+
+dma_unmap_req_buf:
+	dma_unmap_single(dev, dma_req_buf, req_buf_len, DMA_FROM_DEVICE);
+
+	return ret ? : res.a1;
+}
+
+/**
  * __qti_scm_get_smmustate () - Get SMMU state
  * @svc_id: SCM service id
  * @cmd_id: SCM command id
@@ -1272,18 +1460,18 @@ int __qti_scm_toggle_bt_eco(struct device *dev, u32 peripheral, u32 arg)
 	return ret ? false : !!res.a1;
 }
 
-int __qti_scm_set_kernel_boot_complete(struct device *dev, u32 svc_id, u32 val)
+int __qti_scm_set_trybit(struct device *dev, u32 svc_id, u32 val, u64 dload_mode_addr)
 {
 	struct qcom_scm_desc desc = {0};
 	struct arm_smccc_res res;
 	int ret;
 
-	desc.args[0] = TCSR_BOOT_MISC_REG;
+	desc.args[0] = dload_mode_addr;
 	desc.args[1] = val;
 
 	desc.arginfo = QCOM_SCM_ARGS(2, QCOM_SCM_VAL, QCOM_SCM_VAL);
 	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_SVC_IO,
-			    QCOM_SCM_IO_WRITE, &desc, &res);
+				QCOM_SCM_IO_WRITE, &desc, &res);
 
 	return ret ? : res.a1;
 }

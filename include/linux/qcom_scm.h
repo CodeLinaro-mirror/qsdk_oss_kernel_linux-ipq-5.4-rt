@@ -21,6 +21,7 @@
 #define QTI_TZ_DIAG_LOG_ENCR_ID		0x0
 #define QTI_TZ_QSEE_LOG_ENCR_ID		0x1
 #define QTI_TZ_LOG_NO_UPDATE		-6
+#define QTI_TRYBIT     			BIT(12)
 enum qseecom_qceos_cmd_id {
 	QSEOS_APP_START_COMMAND	= 0x01,
 	QSEOS_APP_SHUTDOWN_COMMAND,
@@ -240,7 +241,7 @@ extern int qti_scm_tls_hardening(uint32_t req_addr, uint32_t req_size,
 				 u32 cmd_id);
 extern int qti_scm_aes(uint32_t req_addr, uint32_t req_size, u32 cmd_id);
 extern int qti_scm_aes_clear_key_handle(uint32_t key_handle, u32 cmd_id);
-extern int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf, void *dload_reg);
+extern int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf);
 extern int qti_scm_sdi(u32 svc_id, u32 cmd_id);
 extern int qti_scm_tz_log(void *ker_buf, u32 buf_len);
 extern int qti_scm_hvc_log(void *ker_buf, u32 buf_len);
@@ -263,6 +264,18 @@ extern int qti_scm_load_otp(u32 peripheral);
 extern bool qti_scm_pil_cfg_available(void);
 extern int qti_scm_pil_cfg(u32 peripheral, u32 args);
 extern int qti_scm_toggle_bt_eco(u32 peripheral, u32 args);
+extern int qti_scm_get_device_attestation_response(u32 svc_id, u32 cmd_id,
+			void *req_buf, u32 req_buf_len, void *extclaim_buf,
+			u32 extclaim_buf_len, void *resp_buf, u32 resp_buf_len,
+			u32 *attest_resp_len);
+extern int __qti_scm_get_device_attestation_response(struct device *dev,
+		u32 svc_id, u32 cmd_id, void *req_buf, u32 req_buf_len,
+		void *extclaim_buf, u32 extclaim_buf_len, void *resp_buf,
+				u32 resp_buf_len, u32 *attest_resp_len);
+extern int qti_scm_get_device_attestation_ephimeral_key(u32 svc_id,
+		u32 cmd_id, void *key_buf, u32 key_buf_len, u32 *key_len);
+extern int __qti_scm_get_device_attestation_ephimeral_key(struct device *dev,
+		u32 svc_id, u32 cmd_id, void *key_buf, u32 key_buf_len, u32 *key_len);
 #else
 
 #include <linux/errno.h>
@@ -385,4 +398,7 @@ extern int qti_scm_pdseg_memcpy(u32 peripheral, int phno, dma_addr_t dma,
 								size_t size);
 extern int qti_scm_int_radio_powerup(u32 peripheral);
 extern int qti_scm_int_radio_powerdown(u32 peripheral);
+extern int __qti_scm_set_trybit(struct device *dev, u32 svc_id, u32 val, u64 dload_mode_addr);
+extern int qti_scm_set_trybit(u32 svc_id);
+extern int qti_read_dload_reg(void);
 #endif

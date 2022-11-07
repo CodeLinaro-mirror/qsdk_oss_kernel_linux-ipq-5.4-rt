@@ -1840,7 +1840,7 @@ static int dcc_probe(struct platform_device *pdev)
 	};
 
 	if (BVAL(dcc_readl(drvdata, DCC_HW_INFO), 9) ||
-			of_device_is_compatible(pdev->dev.of_node, "qcom,dcc-v2-devsoc")) {
+			of_device_is_compatible(pdev->dev.of_node, "qcom,dcc-v2-ipq5332")) {
 		drvdata->mem_map_ver = DCC_MEM_MAP_VER3;
 		drvdata->nr_link_list = dcc_readl(drvdata, DCC_LL_NUM_INFO);
 		if (drvdata->nr_link_list == 0) {
@@ -1950,7 +1950,7 @@ static int dcc_remove(struct platform_device *pdev)
 
 static const struct of_device_id msm_dcc_match[] = {
 	{ .compatible = "qcom,dcc-v2"},
-	{ .compatible = "qcom,dcc-v2-devsoc"},
+	{ .compatible = "qcom,dcc-v2-ipq5332"},
 	{}
 };
 

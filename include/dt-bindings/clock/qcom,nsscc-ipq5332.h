@@ -4,8 +4,8 @@
  * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
-#ifndef _DT_BINDINGS_CLK_QCOM_NSS_CC_DEVSOC_H
-#define _DT_BINDINGS_CLK_QCOM_NSS_CC_DEVSOC_H
+#ifndef _DT_BINDINGS_CLK_QCOM_NSS_CC_IPQ5332_H
+#define _DT_BINDINGS_CLK_QCOM_NSS_CC_IPQ5332_H
 
 /* NSS_CC clocks */
 #define NSS_CC_CE_APB_CLK					0

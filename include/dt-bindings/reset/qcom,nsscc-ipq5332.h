@@ -4,8 +4,8 @@
  * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
-#ifndef _DT_BINDINGS_RESET_QCOM_NSS_CC_DEVSOC_H
-#define _DT_BINDINGS_RESET_QCOM_NSS_CC_DEVSOC_H
+#ifndef _DT_BINDINGS_RESET_QCOM_NSS_CC_IPQ5332_H
+#define _DT_BINDINGS_RESET_QCOM_NSS_CC_IPQ5332_H
 
 #define NSS_CC_CE_APB_CLK_ARES					0
 #define NSS_CC_CE_AXI_CLK_ARES					1

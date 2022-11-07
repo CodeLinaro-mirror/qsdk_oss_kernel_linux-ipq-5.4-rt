@@ -1,0 +1,192 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
+/*
+ * IPQ5332 DB-MI02.1 board device tree source
+ *
+ * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+
+#include "ipq5332.dtsi"
+
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+#include "ipq5332-512MB-memory.dtsi"
+#else
+#include "ipq5332-default-memory.dtsi"
+#endif
+
+/ {
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+	model = "Qualcomm Technologies, Inc. IPQ5332/DB-MI02.1";
+	compatible = "qcom,ipq5332-db-mi02.1", "qcom,ipq5332";
+	interrupt-parent = <&intc>;
+
+	aliases {
+		serial0 = &blsp1_uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0";
+		bootargs-append = " clk_ignore_unused";
+	};
+
+	soc {
+		pinctrl@1000000 {
+			emmc_pins: emmc_pins {
+				emmc_clk {
+					pins = "gpio13";
+					function = "sdc_clk";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+				emmc_cmd {
+					pins = "gpio12";
+					function = "sdc_cmd";
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+				emmc_data {
+					pins = "gpio8", "gpio9", "gpio10",
+						"gpio11";
+					function = "sdc_data";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+			};
+
+			qspi_nand_pins: qspi_nand_pins {
+				qspi_clock {
+					pins = "gpio13";
+					function = "qspi_clk";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+				qspi_cs {
+					pins = "gpio12";
+					function = "qspi_cs";
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+
+				qspi_data {
+					pins = "gpio8", "gpio9", "gpio10", "gpio11";
+					function = "qspi_data";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+			};
+
+			serial_0_pins: serial0-pinmux {
+				pins = "gpio18", "gpio19";
+				function = "blsp0_uart0";
+				drive-strength = <8>;
+				bias-pull-up;
+			};
+
+			i2c_0_pins: i2c0-pinmux {
+				pins = "gpio16", "gpio17";
+				function = "blsp0_i2c";
+				drive-strength = <8>;
+				bias-pull-up;
+			};
+		};
+
+		gcc: gcc@1800000 {
+			gcc-use-dummy;
+		};
+
+		nsscc: nsscc@39b00000 {
+			nsscc-use-dummy;
+		};
+
+		serial@78af000 {
+			pinctrl-0 = <&serial_0_pins>;
+			pinctrl-names = "default";
+			status = "ok";
+		};
+
+		i2c@78b5000 {
+			pinctrl-0 = <&i2c_0_pins>;
+			pinctrl-names = "default";
+			status = "ok";
+		};
+
+		dma@7984000 {
+			status = "ok";
+		};
+
+		nand: nand@79b0000 {
+			pinctrl-0 = <&qspi_nand_pins>;
+			pinctrl-names = "default";
+			status = "ok";
+		};
+
+		usb3@8A00000 {
+			status = "ok";
+
+			dwc_0: dwc3@8A00000 {
+				/delete-property/ #phy-cells;
+				/delete-property/ phys;
+				/delete-property/ phy-names;
+			};
+		};
+
+		hs_m31phy_0: hs_m31phy@7b000 {
+			status = "ok";
+		};
+
+		pcie0_phy: phy@4b0000 {
+			status = "ok";
+		};
+
+		pcie1_phy_x2: phy_x2@4b1000 {
+			status = "ok";
+		};
+
+		pcie2_phy: phy@4b1800 {
+			status = "ok";
+		};
+
+		pcie2: pcie@10000000 {
+			max-link-speed = <1>;
+			perst-gpio = <&tlmm 44 GPIO_ACTIVE_LOW>;
+			status = "ok";
+			pcie2_rp {
+				reg = <0 0 0 0 0>;
+
+				qcom,mhi@1 {
+					reg = <0 0 0 0 0>;
+				};
+			};
+		};
+
+		pcie1: pcie@18000000 {
+			max-link-speed = <1>;
+			perst-gpio = <&tlmm 47 GPIO_ACTIVE_LOW>;
+			status = "ok";
+			pcie1_rp {
+				reg = <0 0 0 0 0>;
+
+				qcom,mhi@1 {
+					reg = <0 0 0 0 0>;
+				};
+			};
+		};
+
+		pcie0: pcie@20000000 {
+			max-link-speed = <1>;
+			perst-gpio = <&tlmm 38 GPIO_ACTIVE_LOW>;
+			status = "ok";
+			pcie0_rp {
+				reg = <0 0 0 0 0>;
+
+				qcom,mhi@2 {
+					reg = <0 0 0 0 0>;
+				};
+			};
+		};
+	};
+};

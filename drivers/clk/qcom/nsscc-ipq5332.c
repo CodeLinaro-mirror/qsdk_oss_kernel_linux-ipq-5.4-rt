@@ -13,8 +13,8 @@
 #include <linux/of.h>
 #include <linux/regmap.h>
 
-#include <dt-bindings/clock/qcom,nsscc-devsoc.h>
-#include <dt-bindings/reset/qcom,nsscc-devsoc.h>
+#include <dt-bindings/clock/qcom,nsscc-ipq5332.h>
+#include <dt-bindings/reset/qcom,nsscc-ipq5332.h>
 
 #include "clk-alpha-pll.h"
 #include "clk-branch.h"
@@ -970,7 +970,7 @@ static const struct clk_ops clk_dummy_ops = {
 	},							\
 })
 
-static struct clk_regmap *nss_cc_devsoc_dummy_clocks[] = {
+static struct clk_regmap *nss_cc_ipq5332_dummy_clocks[] = {
 	[NSS_CC_CE_APB_CLK] = DEFINE_DUMMY_CLK(nss_cc_ce_apb_clk),
 	[NSS_CC_CE_AXI_CLK] = DEFINE_DUMMY_CLK(nss_cc_ce_axi_clk),
 	[NSS_CC_CE_CLK_SRC] = DEFINE_DUMMY_CLK(nss_cc_ce_clk_src),
@@ -1016,7 +1016,7 @@ static struct clk_regmap *nss_cc_devsoc_dummy_clocks[] = {
 	[NSS_CC_XGMAC1_PTP_REF_DIV_CLK_SRC] = DEFINE_DUMMY_CLK(nss_cc_xgmac1_ptp_ref_div_clk_src),
 };
 
-static struct clk_regmap *nss_cc_devsoc_clocks[] = {
+static struct clk_regmap *nss_cc_ipq5332_clocks[] = {
 	[NSS_CC_CE_APB_CLK] = &nss_cc_ce_apb_clk.clkr,
 	[NSS_CC_CE_AXI_CLK] = &nss_cc_ce_axi_clk.clkr,
 	[NSS_CC_CE_CLK_SRC] = &nss_cc_ce_clk_src.clkr,
@@ -1062,7 +1062,7 @@ static struct clk_regmap *nss_cc_devsoc_clocks[] = {
 	[NSS_CC_XGMAC1_PTP_REF_DIV_CLK_SRC] = &nss_cc_xgmac1_ptp_ref_div_clk_src.clkr,
 };
 
-static const struct qcom_reset_map nss_cc_devsoc_resets[] = {
+static const struct qcom_reset_map nss_cc_ipq5332_resets[] = {
 	[NSS_CC_CE_APB_CLK_ARES] = { 0x520, 2 },
 	[NSS_CC_CE_AXI_CLK_ARES] = { 0x524, 2 },
 	[NSS_CC_DEBUG_CLK_ARES] = { 0x644, 2 },
@@ -1095,7 +1095,7 @@ static const struct qcom_reset_map nss_cc_devsoc_resets[] = {
 	[NSS_CC_XGMAC1_PTP_REF_CLK_ARES] = { 0x43c, 2 },
 };
 
-static const struct regmap_config nss_cc_devsoc_regmap_config = {
+static const struct regmap_config nss_cc_ipq5332_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
 	.val_bits = 32,
@@ -1103,37 +1103,37 @@ static const struct regmap_config nss_cc_devsoc_regmap_config = {
 	.fast_io = true,
 };
 
-static const struct qcom_cc_desc nss_cc_devsoc_desc = {
-	.config = &nss_cc_devsoc_regmap_config,
-	.clks = nss_cc_devsoc_clocks,
-	.num_clks = ARRAY_SIZE(nss_cc_devsoc_clocks),
-	.resets = nss_cc_devsoc_resets,
-	.num_resets = ARRAY_SIZE(nss_cc_devsoc_resets),
+static const struct qcom_cc_desc nss_cc_ipq5332_desc = {
+	.config = &nss_cc_ipq5332_regmap_config,
+	.clks = nss_cc_ipq5332_clocks,
+	.num_clks = ARRAY_SIZE(nss_cc_ipq5332_clocks),
+	.resets = nss_cc_ipq5332_resets,
+	.num_resets = ARRAY_SIZE(nss_cc_ipq5332_resets),
 };
 
-static const struct qcom_cc_desc nss_cc_devsoc_dummy_desc = {
-	.config = &nss_cc_devsoc_regmap_config,
-	.clks = nss_cc_devsoc_dummy_clocks,
-	.num_clks = ARRAY_SIZE(nss_cc_devsoc_dummy_clocks),
-	.resets = nss_cc_devsoc_resets,
-	.num_resets = ARRAY_SIZE(nss_cc_devsoc_resets),
+static const struct qcom_cc_desc nss_cc_ipq5332_dummy_desc = {
+	.config = &nss_cc_ipq5332_regmap_config,
+	.clks = nss_cc_ipq5332_dummy_clocks,
+	.num_clks = ARRAY_SIZE(nss_cc_ipq5332_dummy_clocks),
+	.resets = nss_cc_ipq5332_resets,
+	.num_resets = ARRAY_SIZE(nss_cc_ipq5332_resets),
 };
 
-static const struct of_device_id nss_cc_devsoc_match_table[] = {
-	{ .compatible = "qcom,nsscc-devsoc" },
+static const struct of_device_id nss_cc_ipq5332_match_table[] = {
+	{ .compatible = "qcom,nsscc-ipq5332" },
 	{ }
 };
-MODULE_DEVICE_TABLE(of, nss_cc_devsoc_match_table);
+MODULE_DEVICE_TABLE(of, nss_cc_ipq5332_match_table);
 
-static int nss_cc_devsoc_probe(struct platform_device *pdev)
+static int nss_cc_ipq5332_probe(struct platform_device *pdev)
 {
-	struct qcom_cc_desc desc = nss_cc_devsoc_desc;
+	struct qcom_cc_desc desc = nss_cc_ipq5332_desc;
 	struct device_node *np = (&pdev->dev)->of_node;
 	struct regmap *regmap;
 	int ret;
 
 	if (of_property_read_bool(np, "nsscc-use-dummy"))
-		desc = nss_cc_devsoc_dummy_desc;
+		desc = nss_cc_ipq5332_dummy_desc;
 
 	regmap = qcom_cc_map(pdev, &desc);
 	if (IS_ERR(regmap))
@@ -1151,25 +1151,25 @@ static int nss_cc_devsoc_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static struct platform_driver nss_cc_devsoc_driver = {
-	.probe = nss_cc_devsoc_probe,
+static struct platform_driver nss_cc_ipq5332_driver = {
+	.probe = nss_cc_ipq5332_probe,
 	.driver = {
-		.name = "qcom,nsscc-devsoc",
-		.of_match_table = nss_cc_devsoc_match_table,
+		.name = "qcom,nsscc-ipq5332",
+		.of_match_table = nss_cc_ipq5332_match_table,
 	},
 };
 
-static int __init nss_cc_devsoc_init(void)
+static int __init nss_cc_ipq5332_init(void)
 {
-	return platform_driver_register(&nss_cc_devsoc_driver);
+	return platform_driver_register(&nss_cc_ipq5332_driver);
 }
-core_initcall(nss_cc_devsoc_init);
+core_initcall(nss_cc_ipq5332_init);
 
-static void __exit nss_cc_devsoc_exit(void)
+static void __exit nss_cc_ipq5332_exit(void)
 {
-	platform_driver_unregister(&nss_cc_devsoc_driver);
+	platform_driver_unregister(&nss_cc_ipq5332_driver);
 }
-module_exit(nss_cc_devsoc_exit);
+module_exit(nss_cc_ipq5332_exit);
 
 MODULE_DESCRIPTION("QTI NSS_CC MIAMI Driver");
 MODULE_LICENSE("GPL v2");

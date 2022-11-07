@@ -866,14 +866,16 @@ dtb-$(CONFIG_ARCH_QCOM) += \
 	ipq5018-mp03.6-c2.dtb \
 	ipq5018-mp05.1.dtb \
 	ipq5018-tb-mp04.dtb \
-	devsoc-emulation.dtb \
-	devsoc-emulation-fbc.dtb \
-	devsoc-emulation-ssoc.dtb \
-	devsoc-01.1.dtb \
-	devsoc-01.2.dtb \
-	devsoc-01.4.dtb \
-	devsoc-01.6.dtb \
-	devsoc-01.7.dtb \
+	ipq5332-emulation.dtb \
+	ipq5332-emulation-fbc.dtb \
+	ipq5332-emulation-ssoc.dtb \
+	ipq5332-mi01.1.dtb \
+	ipq5332-mi01.2.dtb \
+	ipq5332-mi01.4.dtb \
+	ipq5332-mi01.6.dtb \
+	ipq5332-mi01.7.dtb \
+	ipq5332-db-mi01.1.dtb \
+	ipq5332-db-mi02.1.dtb \
 	ipq6018-cp01-c1.dtb \
 	ipq6018-cp01-c3.dtb \
 	ipq6018-cp01-c4.dtb \

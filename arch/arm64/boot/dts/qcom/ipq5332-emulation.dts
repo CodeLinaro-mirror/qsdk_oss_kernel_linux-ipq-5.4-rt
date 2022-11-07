@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
 /*
- * Dev SoC Emulation board device tree source
+ * IPQ5332 Emulation board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
@@ -8,14 +8,14 @@
 
 /dts-v1/;
 
-#include "devsoc.dtsi"
-#include "devsoc-default-memory.dtsi"
+#include "ipq5332.dtsi"
+#include "ipq5332-default-memory.dtsi"
 
 / {
 	#address-cells = <0x2>;
 	#size-cells = <0x2>;
-	model = "Qualcomm Technologies, Inc. DevSoC-EMULATION";
-	compatible = "qcom,devsoc-ap-emulation", "qcom,devsoc";
+	model = "Qualcomm Technologies, Inc. IPQ5332/EMULATION";
+	compatible = "qcom,ipq5332-ap-emulation", "qcom,ipq5332";
 	interrupt-parent = <&intc>;
 
 	clocks {
@@ -413,6 +413,7 @@
 			qcom,txdesc-fc-grp-map = <1 2>;		/* Per GMAC flow control group map */
 			qcom,rxfill-map = <4 5 6 7>;		/* Per-core Rx fill ring map */
 			qcom,rxdesc-map = <12 13 14 15>;	/* Per-core Rx desc ring map */
+			qcom,rx-queue-start = <0>;		/* Rx queue start */
 			qcom,rx-ring-queue-map = <0 8 16 24>,	/* Priority 0 queues per-core Rx ring map */
 						<1 9 17 25>,	/* Priority 1 queues per-core Rx ring map */
 						<2 10 18 26>,	/* Priority 2 queues per-core Rx ring map */
@@ -598,4 +599,12 @@
 
 &q6v5_wcss {
 	qcom,emulation;
+	qcom,nosecure;
+	bootaddr = <0x4A900000>;
+	q6_wcss_pd1: remoteproc_pd1 {
+		qcom,emulation;
+		qcom,nosecure;
+		bootaddr = <0x4A900000>;
+		qcom,fw_shared;
+	};
 };

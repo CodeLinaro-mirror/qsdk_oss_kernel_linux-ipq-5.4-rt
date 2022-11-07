@@ -17,10 +17,6 @@
 	qcom,pmic-id = <0x0 0x0 0x0 0x0>;
 
 	firmware {
-		scm {
-			compatible = "qcom,scm-ipq8074", "qcom,scm";
-		};
-
 		qfprom {
 			compatible = "qcom,qfprom-sec";
 			img-addr = <0x4A400000>;
@@ -1012,6 +1008,11 @@
 			reg = <0x01945000 0xe000>;
 		};
 
+		tcsr_boot_misc: syscon@193d100 {
+			compatible = "syscon";
+			reg = <0x0193d100 0x4>;
+		};
+
 		tcsr_mutex_regs: syscon@193d000 {
 			compatible = "syscon";
 			reg = <0x01905000 0x8000>;
@@ -1022,6 +1023,11 @@
 			reg = <0x0b111000 0x6000>;
 			#clock-cells = <1>;
 			#mbox-cells = <1>;
+		};
+
+		scm {
+			compatible = "qcom,scm-ipq8074", "qcom,scm";
+			qcom,dload-mode = <&tcsr_boot_misc 0>;
 		};
 
 		q6v5_wcss: q6v5_wcss@cd00000 {
@@ -1478,9 +1484,9 @@
 			mem-region = <&q6_region>;
 			qcom,rproc = <&q6v5_wcss>;
 			qcom,bdf-addr = <0x4B0C0000 0x4B0C0000 0x4B0C0000
-					 0x4B0C0000 0x4B0C0000>;
+					 0x4B0C0000 0x4B0C0000 0x0>;
 			qcom,caldb-addr = <0x4BA00000 0x4BA00000 0x0
-					   0x4BA00000 0x4BA00000>;
+					   0x4BA00000 0x4BA00000 0x0>;
 			qcom,caldb-size = <0x480000>;
 			interrupts = <0 320 1>, /* o_wcss_apps_intr[0] =  */
 				<0 319 1>,
@@ -1607,9 +1613,9 @@
 		#if defined(__CNSS2__)
 			mem-region = <&q6_region>;
 			qcom,bdf-addr = <0x4B0C0000 0x4B0C0000 0x4B0C0000
-					 0x4B0C0000 0x4B0C0000>;
+					 0x4B0C0000 0x4B0C0000 0x0>;
 			qcom,caldb-addr = <0x4BA00000 0x4BA00000 0x0
-					   0x4BA00000 0x4BA00000>;
+					   0x4BA00000 0x4BA00000 0x0>;
 			qcom,caldb-size = <0x480000>;
 		#else
 			memory-region = <&q6_region>;

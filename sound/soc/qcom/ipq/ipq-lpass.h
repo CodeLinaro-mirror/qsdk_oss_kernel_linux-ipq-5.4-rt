@@ -3321,6 +3321,9 @@ typedef enum {
 #define TDM_MODE_SLAVE			0
 #define TDM_MODE_MASTER			1
 
+#define LPAIF_MASTER_MODE_MUXSEL	0
+#define LPAIF_SLAVE_MODE_MUXSEL		1
+
 enum
 {
 	TDM_DIR_INVALID = -1,
@@ -3355,6 +3358,14 @@ enum
 	TDM_NO_CTRL_DATA_OE = -1,
 	TDM_CTRL_DATA_OE_DISABLE = 0,
 	TDM_CTRL_DATA_OE_ENABLE = 1,
+};
+
+enum
+{
+	NO_INVERSION,
+	INVERT_INT_CLK,
+	INVERT_EXT_CLK,
+	INVERT_INT_EXT_CLK,
 };
 
 typedef enum {
@@ -3494,7 +3505,8 @@ void ipq_lpass_dma_read_interrupt_status(void __iomem *lpaif_base,
 void ipq_lpass_dma_reset(void __iomem *lpaif_base,
 				uint32_t dma_idx, uint32_t dma_dir);
 uint32_t ipq_lpass_set_clk_rate(uint32_t intf, uint32_t clk);
-void ipq_lpass_lpaif_muxsetup(uint32_t intf, uint32_t mode);
+void ipq_lpass_lpaif_muxsetup(uint32_t intf, uint32_t mode,
+						uint32_t val, uint32_t src);
 void ipq_lpass_dma_get_curr_addr(void __iomem *lpaif_base,
 					uint32_t dma_idx,uint32_t dma_dir,
 					uint32_t *curr_addr);

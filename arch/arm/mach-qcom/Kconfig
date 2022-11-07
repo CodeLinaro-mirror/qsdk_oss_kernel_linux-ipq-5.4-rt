@@ -13,10 +13,10 @@ menuconfig ARCH_QCOM
 
 if ARCH_QCOM
 
-config ARCH_DEVSOC
-	bool "Enable support for DEVSOC"
+config ARCH_IPQ5332
+	bool "Enable support for IPQ5332"
 	help
-	  This enables support for the DEVSOC chipset. If you dont
+	  This enables support for the IPQ5332 chipset. If you dont
 	  know what do here, say N
 
 config ARCH_IPQ6018
