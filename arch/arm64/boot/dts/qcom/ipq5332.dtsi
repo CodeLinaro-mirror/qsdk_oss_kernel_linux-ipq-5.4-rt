@@ -1278,7 +1278,8 @@
 					<&gcc GCC_WCSS_ECAHB_CLK>,
 					<&gcc GCC_WCSS_AXIS_CLK>,
 					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
-					<&gcc GCC_CE_AHB_CLK>;
+					<&gcc GCC_CE_AHB_CLK>,
+					<&gcc GCC_MEM_NOC_Q6_AXI_CLK>;
 
 			clock-names = "q6_tsctr_1to2",
 					"q6ss_trig",
@@ -1291,7 +1292,8 @@
 					"wcss_ecahb",
 					"wcss_axi_s",
 					"sys_noc_wcss_ahb",
-					"ce_ahb";
+					"ce_ahb",
+					"mem_noc_q6_axi";
 
 			assigned-clocks =  <&gcc GCC_Q6_TSCTR_1TO2_CLK>,
 					<&gcc GCC_Q6SS_TRIG_CLK>,
@@ -1304,7 +1306,8 @@
 					<&gcc GCC_WCSS_ECAHB_CLK>,
 					<&gcc GCC_WCSS_AXIS_CLK>,
 					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
-					<&gcc GCC_CE_AHB_CLK>;
+					<&gcc GCC_CE_AHB_CLK>,
+					<&gcc GCC_MEM_NOC_Q6_AXI_CLK>;
 
 			assigned-clock-rates = <300000000>,
 						<120000000>,
@@ -1317,7 +1320,8 @@
 						<133333333>,
 						<266666667>,
 						<133333333>,
-						<133333333>;
+						<133333333>,
+						<533333333>;
 
 			qcom,halt-regs = <&tcsr_q6_block 0xa000 0xd000 0x0>;
 
