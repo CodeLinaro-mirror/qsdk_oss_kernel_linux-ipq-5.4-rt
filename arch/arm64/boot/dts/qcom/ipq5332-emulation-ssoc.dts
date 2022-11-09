@@ -63,10 +63,6 @@
 	};
 
 	firmware {
-		scm {
-			status = "disabled";
-		};
-
 		qfprom {
 			status = "disabled";
 		};
@@ -135,6 +131,10 @@
 				bootaddr = <0x4A900000>;
 				qcom,fw_shared;
 			};
+		};
+
+		scm {
+			status = "disabled";
 		};
 	};
 
