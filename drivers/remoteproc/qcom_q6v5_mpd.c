@@ -2421,6 +2421,9 @@ static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 
 		ret = of_property_read_string(upd_np, "m3_firmware",
 				&m3_fw_name);
+		if (ret == -EINVAL)
+			ret = of_property_read_string(upd_np, "iu_firmware",
+					&m3_fw_name);
 		if (!ret && m3_fw_name) {
 			ret = request_firmware(&m3_fw, m3_fw_name,
 					&upd_pdev->dev);

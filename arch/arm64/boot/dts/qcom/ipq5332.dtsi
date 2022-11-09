@@ -1343,6 +1343,7 @@
 					<0xD190488 0x4>;
 				reg-names = "rmb",
 						"l2vic_int";
+				iu_firmware = "IPQ5332/iu_fw.mdt";
 				qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
 				interrupts-extended = <&wcss_smp2p_in 8 0>,
 							<&wcss_smp2p_in 9 0>,
