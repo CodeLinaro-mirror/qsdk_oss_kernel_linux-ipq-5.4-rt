@@ -790,7 +790,8 @@
 				<&gcc GCC_USB0_PIPE_CLK>;
 
 			clock-names = "master",
-
+				"sleep",
+				"mock_utmi",
 				"cfg_ahb_clk",
 				"aux_clk",
 				"lfps_clk",
