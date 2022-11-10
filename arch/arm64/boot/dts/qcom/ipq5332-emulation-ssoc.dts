@@ -160,7 +160,7 @@
 	qcom,rproc = <&q6_wcss_pd1>;
 	qcom,multipd_arch;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
-	qcom,bdf-addr = <0x4B700000 0x4B700000 0x4B700000 0x0 0x0 0x0>;
+	qcom,bdf-addr = <0x4B500000 0x4B500000 0x4B500000 0x0 0x0 0x0>;
 	mem-region = <&q6_region>;
 	status = "ok";
 };
