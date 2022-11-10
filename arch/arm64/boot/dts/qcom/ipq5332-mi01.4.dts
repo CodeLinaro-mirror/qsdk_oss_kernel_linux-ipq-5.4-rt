@@ -28,11 +28,168 @@
 	};
 
 	chosen {
+		linux,initrd-end = <0x57000000>;
+		linux,initrd-start = <0x55000000>;
+		bootargs = "root=/dev/ram0 rw init=/init";
 		stdout-path = "serial0";
 		bootargs-append = " clk_ignore_unused";
 	};
 
+	cpus {
+		CPU0: cpu@0 {
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,acc = <&acc0>;
+			/delete-property/ clocks;
+			/delete-property/ clock-latency;
+			/delete-property/ operating-points-v2;
+		};
+
+		CPU1: cpu@1 {
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,acc = <&acc1>;
+			/delete-property/ clocks;
+			/delete-property/ clock-latency;
+			/delete-property/ operating-points-v2;
+		};
+
+		CPU2: cpu@2 {
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,acc = <&acc2>;
+			/delete-property/ clocks;
+			/delete-property/ clock-latency;
+			/delete-property/ operating-points-v2;
+		};
+
+		CPU3: cpu@3 {
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,acc = <&acc3>;
+			/delete-property/ clocks;
+			/delete-property/ clock-latency;
+			/delete-property/ operating-points-v2;
+		};
+
+		/delete-node/ cpu_opp_table;
+	};
+
+	/*
+	 * Below nodes are applicable for all RDPs, hence enabled by
+	 * default in base dtsi file itself.
+	 * So, rather than marking these nodes with status = "disabled",
+	 * delete it. Once verified in silicon, we can remove the below
+	 * snippet.
+	 */
+
+	/* Below nodes are QSEE dependent */
+	/delete-node/ firmware;
+	/delete-node/ qti,tzlog;
+	/delete-node/ qti,scm_restart_reason;
+	/delete-node/ psci;
+	/delete-node/ ctx-save;
+	/delete-node/ qseecom;
+
+	/* Misc nodes */
+	/delete-node/ pmu;
+	/delete-node/ pmu-v7;
+	/delete-node/ qti,sps;
+	/delete-node/ qcom,test@0;
+	/delete-node/ qti,gadget_diag@0;
+
 	soc {
+
+		/*
+		 * Below nodes are applicable for all RDPs, hence enabled by
+		 * default in base dtsi file itself.
+		 * So, rather than marking these nodes with status = "disabled",
+		 * delete it. Once verified in silicon, we can remove the below
+		 * snippet.
+		 */
+
+		/* Misc nodes */
+		/delete-node/ prng@e3000;
+		/delete-node/ watchdog@b017000;
+		/delete-node/ qcom,msm-imem@8600000;
+
+		/* APSS clock node */
+		/delete-node/ qcom,apss_clk@b111000;
+
+		/delete-node/ syscon@193d100;
+		/delete-node/ syscon@1905000;
+		/delete-node/ hwlock;
+		/delete-node/ smem;
+		/delete-node/ scm;
+
+		/* QDSS & DCC nodes */
+		/delete-node/ dcc_v2@797f000;
+		/delete-node/ csr@4001000;
+		/delete-node/ stm@4002000;
+		/delete-node/ funnel@4041000;
+		/delete-node/ funnel@4042000;
+		/delete-node/ funnel@4045000;
+		/delete-node/ replicator@4046000;
+		/delete-node/ etf@4047000;
+		/delete-node/ tmc@4048000;
+		/delete-node/ cti@5098000;
+		/delete-node/ etm@509c000;
+		/delete-node/ cti@5099000;
+		/delete-node/ etm@509d000;
+		/delete-node/ cti@509a000;
+		/delete-node/ etm@509e000;
+		/delete-node/ cti@509b000;
+		/delete-node/ etm@509f000;
+		/delete-node/ funnel@50a1000;
+
+		/*
+		 * Below nodes are referenced by other nodes, deleting it
+		 * will lead to build error, so disable it.
+		 */
+		mailbox@b111000 {
+			status = "disabled";
+		};
+		wcss-smp2p {
+			status = "disabled";
+		};
+		syscon@1945000 {
+			status = "disabled";
+		};
+		remoteproc@d100000 {
+			status = "disabled";
+		};
+		dma@7884000 {
+			status = "disabled";
+		};
+
+		/* GIC MSI are not needed for the initial bringup */
+		interrupt-controller@b000000 {
+			/delete-node/ v2m@0;
+			/delete-node/ v2m@1;
+			/delete-node/ v2m@2;
+		};
+
+		/* Not needed for the initial bringup */
+		ess-instance {
+			status = "disabled";
+		};
+
+		acc0: clock-controller@b188000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0x0b188000 0x1000>;
+		};
+
+		acc1: clock-controller@b198000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0x0b198000 0x1000>;
+		};
+
+		acc2: clock-controller@b1a8000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0x0b1a8000 0x1000>;
+		};
+
+		acc3: clock-controller@b1b8000 {
+			compatible = "qcom,arm-cortex-acc";
+			reg = <0x0b1b8000 0x1000>;
+		};
+
 		pinctrl@1000000 {
 			emmc_pins: emmc_pins {
 				emmc_clk {
@@ -103,11 +260,11 @@
 			};
 		};
 
-		gcc: gcc@1800000 {
+		gcc@1800000 {
 			gcc-use-dummy;
 		};
 
-		nsscc: nsscc@39b00000 {
+		nsscc@39b00000 {
 			nsscc-use-dummy;
 		};
 
@@ -117,33 +274,33 @@
 			status = "ok";
 		};
 
-		i2c_1: i2c@78b6000 {
+		i2c@78b6000 {
 			pinctrl-0 = <&i2c_1_pins>;
 			pinctrl-names = "default";
 		};
 
 		dma@7984000 {
-			status = "ok";
+			status = "disabled";
 		};
 
-		nand: nand@79b0000 {
+		nand@79b0000 {
 			pinctrl-0 = <&qspi_nand_pins>;
 			pinctrl-names = "default";
-			status = "ok";
+			status = "disabled";
 		};
 
 		usb3@8A00000 {
-			status = "ok";
+			status = "disabled";
 
-			dwc_0: dwc3@8A00000 {
+			dwc3@8A00000 {
 				/delete-property/ #phy-cells;
 				/delete-property/ phys;
 				/delete-property/ phy-names;
 			};
 		};
 
-		hs_m31phy_0: hs_m31phy@7b000 {
-			status = "ok";
+		hs_m31phy@7b000 {
+			status = "disabled";
 		};
 
 		leds {
@@ -158,14 +315,16 @@
 			};
 		};
 
-		pcie1_phy_x2: phy_x2@4b1000 {
-			status = "ok";
+		phy_x2@4b1000 {
+			status = "disabled";
 		};
 
-		pcie1: pcie@18000000 {
+		pcie@18000000 {
+			/* Deleting to avoid build error, can be removed once GIC MSI is verified */
+			/delete-property/ msi-parent;
 			max-link-speed = <1>;
 			perst-gpio = <&tlmm 47 GPIO_ACTIVE_LOW>;
-			status = "ok";
+			status = "disabled";
 			pcie1_rp {
 				reg = <0 0 0 0 0>;
 
@@ -173,6 +332,15 @@
 					reg = <0 0 0 0 0>;
 				};
 			};
+		};
+
+		/* Deleting to avoid build error, can be removed once GIC MSI is verified */
+		pcie@10000000 {
+			/delete-property/ msi-parent;
+		};
+
+		pcie@20000000 {
+			/delete-property/ msi-parent;
 		};
 	};
 };
