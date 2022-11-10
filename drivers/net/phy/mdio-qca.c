@@ -80,6 +80,9 @@
 static DEFINE_MUTEX(switch_mdio_lock);
 /* macro for mht chipset end */
 
+#define PCNOC_BFDCD_CMD_RCGR	0x1831004
+#define GCC_MDIO_AHB_CBCR	0x1812004
+
 struct qca_mdio_data {
 	struct mii_bus *mii_bus;
 	struct clk *mdio_clk;
@@ -254,6 +257,46 @@ static int qca_phy_reset(struct platform_device *pdev)
 	}
 
 	return 0;
+}
+
+static void qca_mdio_clock_set(void)
+{
+	void __iomem *base = NULL;
+	u32 val;
+	int count;
+
+	base = ioremap_nocache(PCNOC_BFDCD_CMD_RCGR, REG_SIZE+4);
+	if (!base)
+		return;
+
+	writel(0x10f, base+4);
+	usleep_range(100000, 110000);
+
+	/* Wait for dirty to take effect */
+	for (count = 5000; count > 0; count--) {
+		val = readl(base);
+		if (val & BIT(4))
+			break;
+	}
+
+	val = readl(base);
+	val |= BIT(0);
+	writel(val, base);
+	usleep_range(100000, 110000);
+
+	iounmap(base);
+
+	base = ioremap_nocache(GCC_MDIO_AHB_CBCR, REG_SIZE);
+	if (!base)
+		return;
+
+	val = readl(base);
+	val |= BIT(0);
+	writel(val, base);
+	usleep_range(100000, 110000);
+
+	iounmap(base);
+	pr_warn("Configure MDIO clock by writting register\n");
 }
 
 static void qca_tcsr_ldo_rdy_set(bool ready)
@@ -623,6 +666,8 @@ static int qca_mdio_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_out;
 	}
+	qca_mdio_clock_set();
+
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
