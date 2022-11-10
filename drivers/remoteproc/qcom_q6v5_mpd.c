@@ -161,9 +161,8 @@
 
 #define AHB_ASID		0x1
 
-#define Q6_AXIM_CLK		7
-#define Q6_AXIM_CLK_TURBO_FREQ	533333333
-#define Q6_AXIM_CLK_NOMIN_FREQ	480000000
+#define TURBO_FREQ	533333333
+#define NOMIN_FREQ	480000000
 
 static const struct wcss_data q6_ipq5332_res_init;
 static int debug_wcss;
@@ -248,6 +247,8 @@ struct q6_wcss {
 	struct clk *gcc_ce_ahb_clk;
 	struct clk_bulk_data *clks;			//clks to get and use
 	int num_clks;
+	struct clk_bulk_data *cfg_clks;			//get configurable clocks and use
+	int num_cfg_clks;
 
 	struct qcom_rproc_glink glink_subdev;
 	struct qcom_rproc_ssr ssr_subdev;
@@ -746,6 +747,7 @@ void disable_ipq5332_clocks(struct q6_wcss *wcss)
 
 	if (!wcss->is_emulation) {
 		clk_bulk_disable_unprepare(wcss->num_clks, wcss->clks);
+		clk_bulk_disable_unprepare(wcss->num_cfg_clks, wcss->cfg_clks);
 		return;
 	}
 
@@ -922,10 +924,47 @@ int enable_ipq5332_wcss_clocks(struct q6_wcss *wcss)
 	return 0;
 }
 
+static int enable_ipq5332_q6_configurable_clocks(struct q6_wcss *wcss)
+{
+	int ret, i;
+	unsigned long rate = TURBO_FREQ;
+	struct device *dev = wcss->dev;
+
+	for (i = 0; i < wcss->num_cfg_clks; i++) {
+		/* In case of fbc, u-boot adds cpu id property in dts.
+		 * so that cpu_is_**() API will give valid cpuid and
+		 * clock will be configured based on skew.
+		 * qcom_scm_is_available() is true in case of fbc and
+		 * false in standalone. In standalone, clock configured
+		 * to turbo mode.
+		 */
+		if (qcom_scm_is_available()) {
+			if (cpu_is_ipq5332() || cpu_is_ipq5322())
+				rate = TURBO_FREQ;
+			else
+				rate = NOMIN_FREQ;
+		}
+
+		ret = clk_set_rate(wcss->cfg_clks[i].clk, rate);
+		if (ret) {
+			dev_err(dev, "failed to set rate for %s",
+				wcss->cfg_clks[i].id);
+			return ret;
+		}
+
+		ret = clk_prepare_enable(wcss->cfg_clks[i].clk);
+		if (ret) {
+			dev_err(dev, "failed to enable %s",
+				wcss->cfg_clks[i].id);
+			return ret;
+		}
+	}
+	return 0;
+}
+
 int enable_ipq5332_clocks(struct q6_wcss *wcss)
 {
 	int ret, loop = 0;
-	unsigned long rate = Q6_AXIM_CLK_TURBO_FREQ;
 
 	ret = reset_control_assert(wcss->wcss_q6_reset);
 	if (ret) {
@@ -1042,29 +1081,17 @@ int enable_ipq5332_clocks(struct q6_wcss *wcss)
 		}
 		clk_disable_unprepare(wcss->gcc_ce_ahb_clk);
 
-		/* In case of fbc, u-boot adds cpu id property in dts.
-		 * so that cpu_is_**() API will give valid cpuid and
-		 * clock will be configured based on skew.
-		 * qcom_scm_is_available() is true in case of fbc and
-		 * false in standalone. In standalone, clock configured
-		 * to turbo mode.
-		 */
-		if (qcom_scm_is_available()) {
-			if (cpu_is_ipq5332() || cpu_is_ipq5322())
-				rate = Q6_AXIM_CLK_TURBO_FREQ;
-			else
-				rate = Q6_AXIM_CLK_NOMIN_FREQ;
-		}
-		ret = clk_set_rate(wcss->clks[Q6_AXIM_CLK].clk, rate);
-		if (ret) {
-			dev_err(wcss->dev, "failed to set rate for %s",
-						wcss->clks[Q6_AXIM_CLK].id);
-			return ret;
-		}
-
 		ret = clk_bulk_prepare_enable(wcss->num_clks, wcss->clks);
 		if (ret) {
 			dev_err(wcss->dev, "failed to enable clocks, err=%d\n", ret);
+			return ret;
+		};
+
+		ret = enable_ipq5332_q6_configurable_clocks(wcss);
+		if (ret) {
+			dev_err(wcss->dev,
+				"failed to enable configurable clocks, err=%d\n",
+				ret);
 			return ret;
 		};
 	}
@@ -2936,20 +2963,30 @@ static int ipq5332_init_q6_clock(struct q6_wcss *wcss)
 	int ret, i;
 	const char *clks[] = { "wcss_ecahb", "q6_tsctr_1to2", "q6ss_trig",
 				"q6_axis", "q6_ahb_s", "q6ss_atbm", "q6_ahb",
-				"q6_axim", "q6ss_pclkdbg", "sys_noc_wcss_ahb" };
-	int num_clks = ARRAY_SIZE(clks);
+				"q6ss_pclkdbg", "sys_noc_wcss_ahb" };
+	const char *cfg_clks[] = { "q6_axim", "mem_noc_q6_axi" };
 
-	wcss->clks = devm_kcalloc(wcss->dev, num_clks, sizeof(*wcss->clks),
-				  GFP_KERNEL);
+	wcss->num_clks = ARRAY_SIZE(clks);
+	wcss->num_cfg_clks = ARRAY_SIZE(cfg_clks);
+	wcss->clks = devm_kcalloc(wcss->dev, wcss->num_clks,
+					sizeof(*wcss->clks), GFP_KERNEL);
 	if (!wcss->clks) {
 		dev_err(wcss->dev, "failed to allocate clocks\n");
 		return -ENOMEM;
 	}
 
-	for (i = 0; i < num_clks; i++)
+	for (i = 0; i < wcss->num_clks; i++)
 		wcss->clks[i].id = clks[i];
 
-	wcss->num_clks = num_clks;
+	wcss->cfg_clks = devm_kcalloc(wcss->dev, wcss->num_cfg_clks,
+					sizeof(*wcss->cfg_clks), GFP_KERNEL);
+	if (!wcss->cfg_clks) {
+		dev_err(wcss->dev, "failed to allocate configuration clocks\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < wcss->num_cfg_clks; i++)
+		wcss->cfg_clks[i].id = cfg_clks[i];
 
 	wcss->axi_s_clk = devm_clk_get(wcss->dev, "wcss_axi_s");
 	if (IS_ERR(wcss->axi_s_clk)) {
@@ -2966,7 +3003,15 @@ static int ipq5332_init_q6_clock(struct q6_wcss *wcss)
 			dev_err(wcss->dev, "failed to get ce_ahb clk\n");
 		return PTR_ERR(wcss->gcc_ce_ahb_clk);
 	}
-	return devm_clk_bulk_get(wcss->dev, num_clks, wcss->clks);
+
+	ret = devm_clk_bulk_get(wcss->dev, wcss->num_cfg_clks, wcss->cfg_clks);
+	if (ret) {
+		dev_err(wcss->dev, "failed to enable cfg clocks, err=%d\n",
+			ret);
+		return ret;
+	}
+
+	return devm_clk_bulk_get(wcss->dev, wcss->num_clks, wcss->clks);
 }
 
 static int ipq5018_init_q6_clock(struct q6_wcss *wcss)
