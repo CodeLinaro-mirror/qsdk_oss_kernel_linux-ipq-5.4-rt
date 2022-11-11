@@ -1705,7 +1705,7 @@
 
 	qcom,test@0 {
 		compatible = "qcom,testmhi";
-		qcom,wlan-ramdump-dynamic = <0x400000>;
+		qcom,wlan-ramdump-dynamic = <0x600000>;
 	};
 
 	qti,gadget_diag@0 {
