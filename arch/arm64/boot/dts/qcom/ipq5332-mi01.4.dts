@@ -436,13 +436,13 @@
 		};
 
 		dma@7984000 {
-			status = "disabled";
+			status = "ok";
 		};
 
 		nand@79b0000 {
 			pinctrl-0 = <&qspi_nand_pins>;
 			pinctrl-names = "default";
-			status = "disabled";
+			status = "ok";
 		};
 
 		usb3@8A00000 {
