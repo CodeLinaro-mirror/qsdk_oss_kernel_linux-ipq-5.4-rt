@@ -93,7 +93,6 @@
 	/delete-node/ pmu;
 	/delete-node/ pmu-v7;
 	/delete-node/ qti,sps;
-	/delete-node/ qcom,test@0;
 	/delete-node/ qti,gadget_diag@0;
 
 	soc {
@@ -158,13 +157,6 @@
 		};
 		dma@7884000 {
 			status = "disabled";
-		};
-
-		/* GIC MSI are not needed for the initial bringup */
-		interrupt-controller@b000000 {
-			/delete-node/ v2m@0;
-			/delete-node/ v2m@1;
-			/delete-node/ v2m@2;
 		};
 
 		/* Not needed for the initial bringup */
@@ -509,31 +501,21 @@
 		};
 
 		phy_x2@4b1000 {
-			status = "disabled";
+			status = "ok";
 		};
 
 		pcie@18000000 {
-			/* Deleting to avoid build error, can be removed once GIC MSI is verified */
-			/delete-property/ msi-parent;
-			max-link-speed = <1>;
 			perst-gpio = <&tlmm 47 GPIO_ACTIVE_LOW>;
-			status = "disabled";
+			status = "ok";
 			pcie1_rp {
 				reg = <0 0 0 0 0>;
 
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
+					qrtr_node_id = <0x31>;
+					memory-region = <0>, <&mhi_region0>;
 				};
 			};
-		};
-
-		/* Deleting to avoid build error, can be removed once GIC MSI is verified */
-		pcie@10000000 {
-			/delete-property/ msi-parent;
-		};
-
-		pcie@20000000 {
-			/delete-property/ msi-parent;
 		};
 	};
 };
@@ -543,5 +525,13 @@
 	qcom,multipd_arch;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	mem-region = <&q6_region>;
+	status = "ok";
+};
+
+&qcn9224_pcie0 {
+	status = "ok";
+};
+
+&mhi_region0 {
 	status = "ok";
 };
