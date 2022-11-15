@@ -34,7 +34,7 @@ static int skb_recycle_spare_max_skbs = SKB_RECYCLE_SPARE_MAX_SKBS;
 #endif
 
 inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
-					  unsigned int length)
+					  unsigned int length, bool reset_skb)
 {
 	unsigned long flags;
 	struct sk_buff_head *h;
@@ -108,22 +108,25 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 		 * zero most of the structure so prefetch the start
 		 * of the shinfo region now so it's in the D-cache
 		 * before we start to write that.
+		 * For buffers recycled by PPE DS rings, the packets wouldnt
+		 * have been processed by host and hence shinfo reset can be
+		 * avoided. Avoid it if specifically requested for it
+		 * (by DS rings), and the buffer is found to be recycled by
+		 * DS previously
 		 */
-		shinfo = skb_shinfo(skb);
-		prefetchw(shinfo);
-
-		zero_struct(skb, offsetof(struct sk_buff, tail));
-		refcount_set(&skb->users, 1);
-		skb->mac_header = (typeof(skb->mac_header))~0U;
-		skb->transport_header = (typeof(skb->transport_header))~0U;
-		zero_struct(shinfo, offsetof(struct skb_shared_info, dataref));
-		atomic_set(&shinfo->dataref, 1);
-
+		if (reset_skb || !recycled_for_ds) {
+			shinfo = skb_shinfo(skb);
+			prefetchw(shinfo);
+			zero_struct(skb, offsetof(struct sk_buff, tail));
+			refcount_set(&skb->users, 1);
+			skb->mac_header = (typeof(skb->mac_header))~0U;
+			skb->transport_header = (typeof(skb->transport_header))~0U;
+			zero_struct(shinfo, offsetof(struct skb_shared_info, dataref));
+			atomic_set(&shinfo->dataref, 1);
+		}
 		skb->data = skb->head + NET_SKB_PAD;
 		skb_reset_tail_pointer(skb);
-
 		skb->dev = dev;
-
 		skb->is_from_recycler = 1;
 		/* Restore fast_recycled flag */
 		if (is_fast_recycled) {

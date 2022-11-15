@@ -468,13 +468,15 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev,
 	unsigned int len = length;
 
 #ifdef CONFIG_SKB_RECYCLER
-	skb = skb_recycler_alloc(dev, length);
+	bool reset_skb = true;
+	skb = skb_recycler_alloc(dev, length, reset_skb);
 	if (likely(skb)) {
 		/* SKBs in the recycler are from various unknown sources.
-		 * Their truesize is unknown. We should set truesize
-		 * as the needed buffer size before using it.
-		 */
+		* Their truesize is unknown. We should set truesize
+		* as the needed buffer size before using it.
+		*/
 		skb->truesize = SKB_TRUESIZE(SKB_DATA_ALIGN(len + NET_SKB_PAD));
+		skb->recycled_for_ds = 0;
 		return skb;
 	}
 
@@ -559,6 +561,125 @@ skb_fail:
 	return skb;
 }
 EXPORT_SYMBOL(__netdev_alloc_skb);
+
+#ifdef CONFIG_SKB_RECYCLER
+/* __netdev_alloc_skb_no_skb_reset - allocate an skbuff for rx on a specific device
+ *	@dev: network device to receive on
+ *	@length: length to allocate
+ *	@gfp_mask: get_free_pages mask, passed from wifi driver
+ *
+ *	Allocate a new &sk_buff and assign it a usage count of one. The
+ *	buffer has NET_SKB_PAD headroom built in. Users should allocate
+ *	the headroom they think they need without accounting for the
+ *	built in space. The built in space is used for optimisations.
+ *
+ *	Currently, using __netdev_alloc_skb_no_skb_reset for DS alone
+ *	and it invokes skb_recycler_alloc with reset_skb as false.
+ *	Hence, recycler pool will not do reset_struct when it
+ *	allocates DS used buffer to DS module, which will
+ *	improve the performance
+ *
+ *      %NULL is returned if there is no free memory.
+ */
+struct sk_buff *__netdev_alloc_skb_no_skb_reset(struct net_device *dev,
+						unsigned int length, gfp_t gfp_mask)
+{
+	struct sk_buff *skb;
+	unsigned int len = length;
+	bool reset_skb = false;
+
+#ifdef CONFIG_SKB_RECYCLER
+	skb = skb_recycler_alloc(dev, length, reset_skb);
+	if (likely(skb)) {
+		/* SKBs in the recycler are from various unknown sources.
+		* Their truesize is unknown. We should set truesize
+		* as the needed buffer size before using it.
+		*/
+		skb->truesize = SKB_TRUESIZE(SKB_DATA_ALIGN(len + NET_SKB_PAD));
+		skb->fast_recycled = 0;
+		return skb;
+	}
+
+	len = SKB_RECYCLE_SIZE;
+	if (unlikely(length > SKB_RECYCLE_SIZE))
+		len = length;
+
+	skb = __alloc_skb(len + NET_SKB_PAD, gfp_mask,
+				SKB_ALLOC_RX, NUMA_NO_NODE);
+	if (!skb)
+		goto skb_fail;
+
+	/* Set truesize as the needed buffer size
+	* rather than the allocated size by __alloc_skb().
+	* */
+	if (length + NET_SKB_PAD < SKB_WITH_OVERHEAD(PAGE_SIZE))
+		skb->truesize = SKB_TRUESIZE(SKB_DATA_ALIGN(length + NET_SKB_PAD));
+
+	goto skb_success;
+#else
+	struct page_frag_cache *nc;
+	bool pfmemalloc;
+	bool page_frag_alloc_enable = true;
+	void *data;
+
+	len += NET_SKB_PAD;
+#ifdef CONFIG_ALLOC_SKB_PAGE_FRAG_DISABLE
+        page_frag_alloc_enable = false;
+#endif
+	/* If requested length is either too small or too big,
+	 * we use kmalloc() for skb->head allocation.
+	 */
+	if (len <= SKB_WITH_OVERHEAD(1024) ||
+		len > SKB_WITH_OVERHEAD(PAGE_SIZE) ||
+		(gfp_mask & (__GFP_DIRECT_RECLAIM | GFP_DMA)) ||
+		!page_frag_alloc_enable) {
+		skb = __alloc_skb(len, gfp_mask, SKB_ALLOC_RX, NUMA_NO_NODE);
+		if (!skb)
+			goto skb_fail;
+		goto skb_success;
+	}
+
+	len += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
+	len = SKB_DATA_ALIGN(len);
+
+	if (sk_memalloc_socks())
+		gfp_mask |= __GFP_MEMALLOC;
+
+	if (in_irq() || irqs_disabled()) {
+		nc = this_cpu_ptr(&netdev_alloc_cache);
+		data = page_frag_alloc(nc, len, gfp_mask);
+		pfmemalloc = nc->pfmemalloc;
+	} else {
+		local_bh_disable();
+		nc = this_cpu_ptr(&napi_alloc_cache.page);
+		data = page_frag_alloc(nc, len, gfp_mask);
+		pfmemalloc = nc->pfmemalloc;
+		local_bh_enable();
+	}
+
+	if (unlikely(!data))
+		return NULL;
+
+	skb = __build_skb(data, len);
+	if (unlikely(!skb)) {
+		skb_free_frag(data);
+		return NULL;
+
+	/* use OR instead of assignment to avoid clearing of bits in mask */
+	if (pfmemalloc)
+		skb->pfmemalloc = 1;
+	skb->head_frag = 1;
+#endif
+
+skb_success:
+	skb_reserve(skb, NET_SKB_PAD);
+	skb->dev = dev;
+
+skb_fail:
+	return skb;
+}
+EXPORT_SYMBOL(__netdev_alloc_skb_no_skb_reset);
+#endif
 
 /**
  *	__napi_alloc_skb - allocate skbuff for rx in a specific NAPI instance

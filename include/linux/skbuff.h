@@ -2817,6 +2817,11 @@ void *netdev_alloc_frag(unsigned int fragsz);
 struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int length,
 				   gfp_t gfp_mask);
 
+#ifdef CONFIG_SKB_RECYCLER /* Only for premium profiles */
+struct sk_buff *__netdev_alloc_skb_no_skb_reset(struct net_device *dev, unsigned int length,
+				   gfp_t gfp_mask);
+#endif
+
 /**
  *	netdev_alloc_skb - allocate an skbuff for rx on a specific device
  *	@dev: network device to receive on
