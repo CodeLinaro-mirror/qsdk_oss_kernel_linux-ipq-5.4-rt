@@ -331,8 +331,8 @@
 			status = "ok";
 			pinctrl-0 = <&mdio1_pins &mdio0_pins>;
 			pinctrl-names = "default";
-			/*gpio16 for manhattan reset, gpio22 for napa*/
-			phy-reset-gpio = <&tlmm 16 0 &tlmm 22 0>;
+			/*gpio51 for manhattan reset, gpio22 for napa*/
+			phy-reset-gpio = <&tlmm 51 0 &tlmm 22 0>;
 			phyaddr_fixup = <0xC90F018>;
 			uniphyaddr_fixup = <0xC90F014>;
 			mdio_clk_fixup; /* MDIO clock sequence fix up flag */
