@@ -267,7 +267,7 @@
 		dp1 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
-			qcom,id = <1>;
+			qcom,id = <2>;
 			reg = <0x3a504000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
@@ -280,7 +280,7 @@
 		dp2 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
-			qcom,id = <2>;
+			qcom,id = <1>;
 			reg = <0x3a500000 0x4000>;
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
