@@ -39,32 +39,24 @@
 
 	cpus {
 		CPU0: cpu@0 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc0>;
 			/delete-property/ clocks;
 			/delete-property/ clock-latency;
 			/delete-property/ operating-points-v2;
 		};
 
 		CPU1: cpu@1 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc1>;
 			/delete-property/ clocks;
 			/delete-property/ clock-latency;
 			/delete-property/ operating-points-v2;
 		};
 
 		CPU2: cpu@2 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc2>;
 			/delete-property/ clocks;
 			/delete-property/ clock-latency;
 			/delete-property/ operating-points-v2;
 		};
 
 		CPU3: cpu@3 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc3>;
 			/delete-property/ clocks;
 			/delete-property/ clock-latency;
 			/delete-property/ operating-points-v2;
@@ -85,7 +77,6 @@
 	/delete-node/ firmware;
 	/delete-node/ qti,tzlog;
 	/delete-node/ qti,scm_restart_reason;
-	/delete-node/ psci;
 	/delete-node/ ctx-save;
 	/delete-node/ qseecom;
 
@@ -162,26 +153,6 @@
 		/* Not needed for the initial bringup */
 		ess-instance {
 			status = "disabled";
-		};
-
-		acc0: clock-controller@b188000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b188000 0x1000>;
-		};
-
-		acc1: clock-controller@b198000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b198000 0x1000>;
-		};
-
-		acc2: clock-controller@b1a8000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b1a8000 0x1000>;
-		};
-
-		acc3: clock-controller@b1b8000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b1b8000 0x1000>;
 		};
 
 		pinctrl@1000000 {
