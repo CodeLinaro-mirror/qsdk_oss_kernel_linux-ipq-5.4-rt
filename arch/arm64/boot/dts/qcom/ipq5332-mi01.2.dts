@@ -105,9 +105,6 @@
 		/delete-node/ qcom,apss_clk@b111000;
 
 		/delete-node/ syscon@193d100;
-		/delete-node/ syscon@1905000;
-		/delete-node/ hwlock;
-		/delete-node/ smem;
 		/delete-node/ scm;
 
 		/* QDSS & DCC nodes */
@@ -135,16 +132,21 @@
 		 * will lead to build error, so disable it.
 		 */
 		mailbox@b111000 {
-			status = "disabled";
+			status = "ok";
 		};
 		wcss-smp2p {
-			status = "disabled";
+			status = "ok";
 		};
 		syscon@1945000 {
-			status = "disabled";
+			status = "ok";
 		};
 		remoteproc@d100000 {
-			status = "disabled";
+			qcom,nosecure;
+			status = "ok";
+			remoteproc_pd1 {
+				qcom,nosecure;
+				status = "ok";
+			};
 		};
 		dma@7884000 {
 			status = "disabled";
