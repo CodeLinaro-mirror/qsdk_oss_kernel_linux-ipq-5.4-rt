@@ -297,6 +297,17 @@ static void qca_mdio_clock_set(void)
 
 	iounmap(base);
 	pr_warn("Configure MDIO clock by writting register\n");
+
+	base = ioremap_nocache(0x7a00610, 0x20000);
+	val = readl(base);
+	val |= BIT(0);
+	writel(val, base);
+
+	val = readl(base+0x10000);
+	val |= BIT(0);
+	writel(val, base+0x10000);
+	iounmap(base);
+
 }
 
 static void qca_tcsr_ldo_rdy_set(bool ready)
