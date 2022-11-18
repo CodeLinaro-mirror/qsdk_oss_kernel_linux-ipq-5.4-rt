@@ -200,10 +200,6 @@
 			gcc-use-dummy;
 		};
 
-		nsscc@39b00000 {
-			nsscc-use-dummy;
-		};
-
 		dp1 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
