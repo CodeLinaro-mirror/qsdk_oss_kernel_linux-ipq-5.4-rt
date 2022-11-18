@@ -175,10 +175,6 @@
 			};
 		};
 
-		gcc@1800000 {
-			gcc-use-dummy;
-		};
-
 		dp1 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
