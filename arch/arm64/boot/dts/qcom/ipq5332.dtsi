@@ -1493,11 +1493,13 @@
 					  "handover",
 					  "stop-ack";
 
-			resets = <&gcc GCC_WCSS_BCR>,
-				 <&gcc GCC_WCSS_Q6_BCR>;
+			resets = <&gcc GCC_WCSSAON_ARES>,
+					<&gcc GCC_WCSS_BCR>,
+					<&gcc GCC_WCSS_Q6_BCR>;
 
-			reset-names = "wcss_reset",
-				      "wcss_q6_reset";
+			reset-names = "wcss_aon_reset",
+					"wcss_reset",
+					"wcss_q6_reset";
 
 			clocks =  <&gcc GCC_Q6_TSCTR_1TO2_CLK>,
 					<&gcc GCC_Q6SS_TRIG_CLK>,

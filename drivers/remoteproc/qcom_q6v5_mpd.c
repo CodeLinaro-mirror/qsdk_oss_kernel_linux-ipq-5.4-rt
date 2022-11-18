@@ -980,12 +980,22 @@ int enable_ipq5332_clocks(struct q6_wcss *wcss)
 				break;
 		}
 	} else {
+		ret = reset_control_deassert(wcss->wcss_aon_reset);
+		if (ret) {
+			dev_err(wcss->dev, "wcss_aon_reset deassert failed\n");
+			return ret;
+		}
 		ret = clk_prepare_enable(wcss->axi_s_clk);
 		if (ret) {
 			dev_err(wcss->dev, "wcss axi_s clk enable failed");
 			return ret;
 		}
 		clk_disable_unprepare(wcss->axi_s_clk);
+		ret = reset_control_assert(wcss->wcss_aon_reset);
+		if (ret) {
+			dev_err(wcss->dev, "wcss_aon_reset assert failed\n");
+			return ret;
+		}
 	}
 
 	ret = reset_control_deassert(wcss->wcss_q6_reset);
@@ -3395,6 +3405,7 @@ static const struct wcss_data q6_ipq5332_res_init = {
 	.q6_firmware_name = "IPQ5332/q6_fw0.mdt",
 	.crash_reason_smem = WCSS_CRASH_REASON,
 	.remote_id = WCSS_SMEM_HOST,
+	.aon_reset_required = true,
 	.wcss_q6_reset_required = true,
 	.ssr_name = "q6wcss",
 	.reset_cmd_id = 0x18,
