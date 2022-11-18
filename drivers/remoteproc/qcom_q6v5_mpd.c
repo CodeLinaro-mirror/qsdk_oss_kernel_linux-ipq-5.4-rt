@@ -927,31 +927,9 @@ int enable_ipq5332_wcss_clocks(struct q6_wcss *wcss)
 static int enable_ipq5332_q6_configurable_clocks(struct q6_wcss *wcss)
 {
 	int ret, i;
-	unsigned long rate = TURBO_FREQ;
 	struct device *dev = wcss->dev;
 
 	for (i = 0; i < wcss->num_cfg_clks; i++) {
-		/* In case of fbc, u-boot adds cpu id property in dts.
-		 * so that cpu_is_**() API will give valid cpuid and
-		 * clock will be configured based on skew.
-		 * qcom_scm_is_available() is true in case of fbc and
-		 * false in standalone. In standalone, clock configured
-		 * to turbo mode.
-		 */
-		if (qcom_scm_is_available()) {
-			if (cpu_is_ipq5332() || cpu_is_ipq5322())
-				rate = TURBO_FREQ;
-			else
-				rate = NOMIN_FREQ;
-		}
-
-		ret = clk_set_rate(wcss->cfg_clks[i].clk, rate);
-		if (ret) {
-			dev_err(dev, "failed to set rate for %s",
-				wcss->cfg_clks[i].id);
-			return ret;
-		}
-
 		ret = clk_prepare_enable(wcss->cfg_clks[i].clk);
 		if (ret) {
 			dev_err(dev, "failed to enable %s",
