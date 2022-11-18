@@ -274,7 +274,7 @@
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
 			mdio-bus = <&mdio>;
-			qcom,phy-mdio-addr = <28>;
+			qcom,phy-mdio-addr = <12>;
 			qcom,link-poll = <1>;
 			phy-mode = "sgmii";
 		};
@@ -327,7 +327,7 @@
 				fixup;
 			};
 			phy4: ethernet-phy@4 {
-				reg = <28>;
+				reg = <12>;
 			};
 		};
 
@@ -347,7 +347,7 @@
 					};
 					port@1 {
 						port_id = <2>;
-						phy_address = <28>;
+						phy_address = <12>;
 					};
 				};
 			};
