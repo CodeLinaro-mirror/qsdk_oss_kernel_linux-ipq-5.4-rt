@@ -37,34 +37,6 @@
 		bootargs-append = " clk_ignore_unused";
 	};
 
-	cpus {
-		CPU0: cpu@0 {
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		CPU1: cpu@1 {
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		CPU2: cpu@2 {
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		CPU3: cpu@3 {
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		/delete-node/ cpu_opp_table;
-	};
-
 	/*
 	 * Below nodes are applicable for all RDPs, hence enabled by
 	 * default in base dtsi file itself.
@@ -100,9 +72,6 @@
 		/delete-node/ prng@e3000;
 		/delete-node/ watchdog@b017000;
 		/delete-node/ qcom,msm-imem@8600000;
-
-		/* APSS clock node */
-		/delete-node/ qcom,apss_clk@b111000;
 
 		/delete-node/ syscon@193d100;
 		/delete-node/ scm;
