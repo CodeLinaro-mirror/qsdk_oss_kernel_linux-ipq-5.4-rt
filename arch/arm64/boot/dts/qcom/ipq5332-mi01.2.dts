@@ -55,7 +55,6 @@
 	/* Misc nodes */
 	/delete-node/ pmu;
 	/delete-node/ pmu-v7;
-	/delete-node/ qti,sps;
 	/delete-node/ qti,gadget_diag@0;
 
 	soc {
@@ -75,26 +74,6 @@
 
 		/delete-node/ syscon@193d100;
 		/delete-node/ scm;
-
-		/* QDSS & DCC nodes */
-		/delete-node/ dcc_v2@797f000;
-		/delete-node/ csr@4001000;
-		/delete-node/ stm@4002000;
-		/delete-node/ funnel@4041000;
-		/delete-node/ funnel@4042000;
-		/delete-node/ funnel@4045000;
-		/delete-node/ replicator@4046000;
-		/delete-node/ etf@4047000;
-		/delete-node/ tmc@4048000;
-		/delete-node/ cti@5098000;
-		/delete-node/ etm@509c000;
-		/delete-node/ cti@5099000;
-		/delete-node/ etm@509d000;
-		/delete-node/ cti@509a000;
-		/delete-node/ etm@509e000;
-		/delete-node/ cti@509b000;
-		/delete-node/ etm@509f000;
-		/delete-node/ funnel@50a1000;
 
 		/*
 		 * Below nodes are referenced by other nodes, deleting it
