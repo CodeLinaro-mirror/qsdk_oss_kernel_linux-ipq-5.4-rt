@@ -1534,6 +1534,12 @@ static int qcom_pcie_init_2_9_0_5018(struct qcom_pcie *pcie)
 	struct dw_pcie *pci = pcie->pci;
 	struct device *dev = pci->dev;
 	int i, ret;
+	u32 aux_clk_rate;
+	u32 axi_m_clk_rate = AXI_CLK_RATE;
+	u32 axi_s_clk_rate = AXI_CLK_RATE;
+
+	device_property_read_u32(dev, "axi-m-clk-rate", &axi_m_clk_rate);
+	device_property_read_u32(dev, "axi-s-clk-rate", &axi_s_clk_rate);
 
 	for (i = 0; i < ARRAY_SIZE(res->rst); i++) {
 		ret = reset_control_assert(res->rst[i]);
@@ -1560,10 +1566,12 @@ static int qcom_pcie_init_2_9_0_5018(struct qcom_pcie *pcie)
 	 */
 	usleep_range(2000, 2500);
 
-	ret = clk_prepare_enable(res->iface);
-	if (ret) {
-		dev_err(dev, "cannot prepare/enable core clock\n");
-		goto err_clk_iface;
+	if (res->iface) {
+		ret = clk_prepare_enable(res->iface);
+		if (ret) {
+			dev_err(dev, "cannot prepare/enable core clock\n");
+			goto err_clk_iface;
+		}
 	}
 
 	ret = clk_prepare_enable(res->ahb_clk);
@@ -1578,13 +1586,21 @@ static int qcom_pcie_init_2_9_0_5018(struct qcom_pcie *pcie)
 		goto err_clk_aux;
 	}
 
+	if (!device_property_read_u32(dev, "aux-clk-rate", &aux_clk_rate)) {
+		ret = clk_set_rate(res->aux_clk, aux_clk_rate);
+		if (ret) {
+			dev_err(dev, "acx_clk rate set failed (%d)\n", ret);
+			goto err_clk_aux;
+		}
+	}
+
 	ret = clk_prepare_enable(res->axi_m_clk);
 	if (ret) {
 		dev_err(dev, "cannot prepare/enable core clock\n");
 		goto err_clk_axi_m;
 	}
 
-	ret = clk_set_rate(res->axi_m_clk, AXI_CLK_RATE);
+	ret = clk_set_rate(res->axi_m_clk, axi_m_clk_rate);
 	if (ret) {
 		dev_err(dev, "MClk rate set failed (%d)\n", ret);
 		goto err_clk_axi_s;
@@ -1596,7 +1612,7 @@ static int qcom_pcie_init_2_9_0_5018(struct qcom_pcie *pcie)
 		goto err_clk_axi_s;
 	}
 
-	ret = clk_set_rate(res->axi_s_clk, AXI_CLK_RATE);
+	ret = clk_set_rate(res->axi_s_clk, axi_s_clk_rate);
 	if (ret) {
 		dev_err(dev, "SClk rate set failed (%d)\n", ret);
 		goto err_clk_axi_bridge;
@@ -1622,8 +1638,12 @@ static int qcom_pcie_init_2_9_0_5018(struct qcom_pcie *pcie)
 		}
 	}
 
-	writel(SLV_ADDR_SPACE_SZ,
-		pcie->parf + PCIE20_v3_PARF_SLV_ADDR_SPACE_SIZE);
+	if (pcie->slv_addr_space_sz)
+		writel(pcie->slv_addr_space_sz,
+			pcie->parf + PCIE20_v3_PARF_SLV_ADDR_SPACE_SIZE);
+	else
+		writel(SLV_ADDR_SPACE_SZ,
+			pcie->parf + PCIE20_v3_PARF_SLV_ADDR_SPACE_SIZE);
 
 	return 0;
 
@@ -1639,7 +1659,8 @@ err_clk_axi_m:
 err_clk_aux:
 	clk_disable_unprepare(res->ahb_clk);
 err_clk_ahb:
-	clk_disable_unprepare(res->iface);
+	if (res->iface)
+		clk_disable_unprepare(res->iface);
 err_clk_iface:
 	/*
 	 * Not checking for failure, will anyway return
@@ -1656,6 +1677,10 @@ static int qcom_pcie_post_init_2_9_0_5018(struct qcom_pcie *pcie)
 	int i;
 	u32 val;
 	struct dw_pcie *pci = pcie->pci;
+	u32 max_speed = SPEED_GEN2;
+
+	if (of_device_is_compatible(pci->dev->of_node, "qti,pcie-ipq5332"))
+		max_speed = SPEED_GEN3;
 
 	val = readl(pcie->parf + PCIE20_PARF_PHY_CTRL);
 	val &= ~BIT(0);
@@ -1689,7 +1714,14 @@ static int qcom_pcie_post_init_2_9_0_5018(struct qcom_pcie *pcie)
 	writel(PCIE_CAP_CPL_TIMEOUT_DISABLE, pci->dbi_base +
 		PCIE20_DEVICE_CONTROL2_STATUS2);
 
-	qcom_pcie_set_link_speed(pci->dbi_base, pcie->max_speed, SPEED_GEN2);
+	if (pcie->max_payload_size) {
+		val = readl(pci->dbi_base + PCIE_DEVICE_CONTROL_STATUS);
+		val &= ~PCIE_CAP_MAX_PAYLOAD_SIZE_CS_MASK;
+		val |= PCIE_CAP_MAX_PAYLOAD_SIZE_CS_OFFSET(pcie->max_payload_size);
+		writel(val, pci->dbi_base + PCIE_DEVICE_CONTROL_STATUS);
+	}
+
+	qcom_pcie_set_link_speed(pci->dbi_base, pcie->max_speed, max_speed);
 
 	for (i = 0; i < 255; i++)
 		writel(0x0, pcie->parf + PARF_BDF_TO_SID_TABLE + (4 * i));
@@ -1717,7 +1749,6 @@ static int qti_pcie_init_2_9_0_9574(struct qcom_pcie *pcie)
 	struct qcom_pcie_resources_2_9_0 *res = &pcie->res.v2_9_0;
 	struct dw_pcie *pci = pcie->pci;
 	struct device *dev = pci->dev;
-	unsigned int axi_m_clk_freq;
 	int i, ret;
 	u32 val;
 
@@ -1764,14 +1795,10 @@ static int qti_pcie_init_2_9_0_9574(struct qcom_pcie *pcie)
 		goto err_clk_axi_m;
 	}
 
-	if (!device_property_read_u32(dev, "axi-m-clk-frequency", &axi_m_clk_freq)) {
-		ret = clk_set_rate(res->axi_m_clk, axi_m_clk_freq);
-	} else {
-		if (pcie->num_lanes == 1)
-			ret = clk_set_rate(res->axi_m_clk, AXI_CLK_RATE_IPQ9574);
-		else if (pcie->num_lanes == 2)
-			ret = clk_set_rate(res->axi_m_clk, AXI_M_2LANE_CLK_RATE_IPQ9574);
-	}
+	if (pcie->num_lanes == 1)
+		ret = clk_set_rate(res->axi_m_clk, AXI_CLK_RATE_IPQ9574);
+	else if (pcie->num_lanes == 2)
+		ret = clk_set_rate(res->axi_m_clk, AXI_M_2LANE_CLK_RATE_IPQ9574);
 
 	if (ret) {
 		dev_err(dev, "MClk rate set failed (%d)\n", ret);
@@ -2240,6 +2267,14 @@ static const struct qcom_pcie_ops ops_2_9_0_ipq5018 = {
 	.ltssm_enable = qcom_pcie_2_3_2_ltssm_enable,
 };
 
+static const struct qcom_pcie_ops ops_2_9_0_ipq5332 = {
+	.get_resources = qti_pcie_get_resources_2_9_0_9574,
+	.init = qcom_pcie_init_2_9_0_5018,
+	.post_init = qcom_pcie_post_init_2_9_0_5018,
+	.deinit = qcom_pcie_deinit_2_9_0,
+	.ltssm_enable = qcom_pcie_2_3_2_ltssm_enable,
+};
+
 /* QTI IP rev.: 2.9.0	Synopsys IP rev.: 5.00a */
 static const struct qcom_pcie_ops ops_2_9_0_ipq9574 = {
 	.get_resources = qti_pcie_get_resources_2_9_0_9574,
@@ -2255,6 +2290,11 @@ static const struct qcom_pcie_of_data qcom_pcie_2_9_0 = {
 
 static const struct qcom_pcie_of_data qcom_pcie_2_9_0_ipq5018 = {
 	.ops = &ops_2_9_0_ipq5018,
+	.version = 0x500A,
+};
+
+static const struct qcom_pcie_of_data qti_pcie_2_9_0_ipq5332 = {
+	.ops = &ops_2_9_0_ipq5332,
 	.version = 0x500A,
 };
 
@@ -2832,7 +2872,7 @@ static const struct of_device_id qcom_pcie_match[] = {
 	{ .compatible = "qcom,pcie-ipq4019", .data = &qcom_pcie_2_4_0 },
 	{ .compatible = "qcom,pcie-qcs404", .data = &qcom_pcie_2_4_0 },
 	{ .compatible = "qcom,pcie-ipq5018", .data = &qcom_pcie_2_9_0_ipq5018 },
-	{ .compatible = "qti,pcie-ipq5332", .data = &qti_pcie_2_9_0_ipq9574 },
+	{ .compatible = "qti,pcie-ipq5332", .data = &qti_pcie_2_9_0_ipq5332 },
 	{ .compatible = "qti,pcie-ipq9574", .data = &qti_pcie_2_9_0_ipq9574 },
 	{ }
 };

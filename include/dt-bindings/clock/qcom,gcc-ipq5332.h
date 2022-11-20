@@ -200,5 +200,8 @@
 #define GPLL2						189
 #define GPLL4_MAIN					190
 #define GPLL4						191
+#define GCC_PCIE3X2_RCHG_CLK				192
+#define GCC_PCIE3X1_0_RCHG_CLK				193
+#define GCC_PCIE3X1_1_RCHG_CLK				194
 
 #endif

@@ -708,7 +708,6 @@ static struct clk_rcg2 gcc_pcie3x1_0_axi_clk_src = {
 
 static struct clk_rcg2 gcc_pcie3x1_0_rchg_clk_src = {
 	.cmd_rcgr = 0x2907c,
-	.mnd_width = 0,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_adss_pwm_clk_src,
@@ -717,6 +716,22 @@ static struct clk_rcg2 gcc_pcie3x1_0_rchg_clk_src = {
 		.parent_data = gcc_parent_data_0,
 		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
 		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_0_rchg_clk = {
+	.halt_reg = 0x2907c,
+	.clkr = {
+		.enable_reg = 0x2907c,
+		.enable_mask = BIT(1),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_pcie3x1_0_rchg_clk",
+			.parent_hws = (const struct clk_hw *[]){
+					&gcc_pcie3x1_0_rchg_clk_src.clkr.hw },
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
 	},
 };
 
@@ -736,7 +751,6 @@ static struct clk_rcg2 gcc_pcie3x1_1_axi_clk_src = {
 
 static struct clk_rcg2 gcc_pcie3x1_1_rchg_clk_src = {
 	.cmd_rcgr = 0x2a078,
-	.mnd_width = 0,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_0,
 	.freq_tbl = ftbl_gcc_adss_pwm_clk_src,
@@ -745,6 +759,22 @@ static struct clk_rcg2 gcc_pcie3x1_1_rchg_clk_src = {
 		.parent_data = gcc_parent_data_0,
 		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
 		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_branch gcc_pcie3x1_1_rchg_clk = {
+	.halt_reg = 0x2a078,
+	.clkr = {
+		.enable_reg = 0x2a078,
+		.enable_mask = BIT(1),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_pcie3x1_1_rchg_clk",
+			.parent_hws = (const struct clk_hw *[]){
+					&gcc_pcie3x1_1_rchg_clk_src.clkr.hw },
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
 	},
 };
 
@@ -792,6 +822,22 @@ static struct clk_rcg2 gcc_pcie3x2_rchg_clk_src = {
 		.parent_data = gcc_parent_data_0,
 		.num_parents = ARRAY_SIZE(gcc_parent_data_0),
 		.ops = &clk_rcg2_ops,
+	},
+};
+
+static struct clk_branch gcc_pcie3x2_rchg_clk = {
+	.halt_reg = 0x28078,
+	.clkr = {
+		.enable_reg = 0x28078,
+		.enable_mask = BIT(1),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_pcie3x2_rchg_clk",
+			.parent_hws = (const struct clk_hw *[]){
+					&gcc_pcie3x2_rchg_clk_src.clkr.hw },
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
 	},
 };
 
@@ -4011,6 +4057,7 @@ static struct clk_regmap *gcc_ipq5332_dummy_clocks[] = {
 	[GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK] = &gcc_pcie3x1_0_axi_s_bridge_clk.clkr,
 	[GCC_PCIE3X1_0_AXI_S_CLK] = &gcc_pcie3x1_0_axi_s_clk.clkr,
 	[GCC_PCIE3X1_0_PIPE_CLK] = &gcc_pcie3x1_0_pipe_clk.clkr,
+	[GCC_PCIE3X1_0_RCHG_CLK] = &gcc_pcie3x1_0_rchg_clk.clkr,
 	[GCC_PCIE3X1_0_RCHG_CLK_SRC] = &gcc_pcie3x1_0_rchg_clk_src.clkr,
 	[GCC_PCIE3X1_1_AHB_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_ahb_clk),
 	[GCC_PCIE3X1_1_AUX_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_aux_clk),
@@ -4019,7 +4066,8 @@ static struct clk_regmap *gcc_ipq5332_dummy_clocks[] = {
 	[GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_axi_s_bridge_clk),
 	[GCC_PCIE3X1_1_AXI_S_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_axi_s_clk),
 	[GCC_PCIE3X1_1_PIPE_CLK] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_pipe_clk),
-	[GCC_PCIE3X1_1_RCHG_CLK_SRC] = DEFINE_DUMMY_CLK(gcc_pcie3x1_1_rchg_clk_src),
+	[GCC_PCIE3X1_1_RCHG_CLK] = &gcc_pcie3x1_1_rchg_clk.clkr,
+	[GCC_PCIE3X1_1_RCHG_CLK_SRC] = &gcc_pcie3x1_1_rchg_clk_src.clkr,
 	[GCC_PCIE3X1_PHY_AHB_CLK] = &gcc_pcie3x1_phy_ahb_clk.clkr,
 	[GCC_PCIE3X2_AHB_CLK] = &gcc_pcie3x2_ahb_clk.clkr,
 	[GCC_PCIE3X2_AUX_CLK] = &gcc_pcie3x2_aux_clk.clkr,
@@ -4030,6 +4078,7 @@ static struct clk_regmap *gcc_ipq5332_dummy_clocks[] = {
 	[GCC_PCIE3X2_AXI_S_CLK_SRC] = &gcc_pcie3x2_axi_s_clk_src.clkr,
 	[GCC_PCIE3X2_PHY_AHB_CLK] = &gcc_pcie3x2_phy_ahb_clk.clkr,
 	[GCC_PCIE3X2_PIPE_CLK] = &gcc_pcie3x2_pipe_clk.clkr,
+	[GCC_PCIE3X2_RCHG_CLK] = &gcc_pcie3x2_rchg_clk.clkr,
 	[GCC_PCIE3X2_RCHG_CLK_SRC] = &gcc_pcie3x2_rchg_clk_src.clkr,
 	[GCC_PCIE_AUX_CLK_SRC] = &gcc_pcie_aux_clk_src.clkr,
 	[GCC_PCNOC_AT_CLK] = DEFINE_DUMMY_CLK(gcc_pcnoc_at_clk),
@@ -4207,6 +4256,7 @@ static struct clk_regmap *gcc_ipq5332_clocks[] = {
 	[GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK] = &gcc_pcie3x1_0_axi_s_bridge_clk.clkr,
 	[GCC_PCIE3X1_0_AXI_S_CLK] = &gcc_pcie3x1_0_axi_s_clk.clkr,
 	[GCC_PCIE3X1_0_PIPE_CLK] = &gcc_pcie3x1_0_pipe_clk.clkr,
+	[GCC_PCIE3X1_0_RCHG_CLK] = &gcc_pcie3x1_0_rchg_clk.clkr,
 	[GCC_PCIE3X1_0_RCHG_CLK_SRC] = &gcc_pcie3x1_0_rchg_clk_src.clkr,
 	[GCC_PCIE3X1_1_AHB_CLK] = &gcc_pcie3x1_1_ahb_clk.clkr,
 	[GCC_PCIE3X1_1_AUX_CLK] = &gcc_pcie3x1_1_aux_clk.clkr,
@@ -4226,6 +4276,7 @@ static struct clk_regmap *gcc_ipq5332_clocks[] = {
 	[GCC_PCIE3X2_AXI_S_CLK_SRC] = &gcc_pcie3x2_axi_s_clk_src.clkr,
 	[GCC_PCIE3X2_PHY_AHB_CLK] = &gcc_pcie3x2_phy_ahb_clk.clkr,
 	[GCC_PCIE3X2_PIPE_CLK] = &gcc_pcie3x2_pipe_clk.clkr,
+	[GCC_PCIE3X2_RCHG_CLK] = &gcc_pcie3x2_rchg_clk.clkr,
 	[GCC_PCIE3X2_RCHG_CLK_SRC] = &gcc_pcie3x2_rchg_clk_src.clkr,
 	[GCC_PCIE_AUX_CLK_SRC] = &gcc_pcie_aux_clk_src.clkr,
 	[GCC_PCNOC_AT_CLK] = &gcc_pcnoc_at_clk.clkr,
