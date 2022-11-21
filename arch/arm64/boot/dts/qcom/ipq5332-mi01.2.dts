@@ -392,7 +392,7 @@
 		};
 
 		phy@4b0000 {
-			status = "disabled";
+			status = "ok";
 		};
 
 		phy_x2@4b1000 {
@@ -415,7 +415,7 @@
 
 		pcie@20000000 {
 			perst-gpio = <&tlmm 38 GPIO_ACTIVE_LOW>;
-			status = "disabled";
+			status = "ok";
 			pcie0_rp {
 				reg = <0 0 0 0 0>;
 

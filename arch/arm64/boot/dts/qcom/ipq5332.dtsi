@@ -1167,7 +1167,7 @@
 				 <&gcc GCC_PCIE3X1_1_AHB_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AUX_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK>,
-				 <&gcc GCC_PCIE3X2_RCHG_CLK>;
+				 <&gcc GCC_PCIE3X1_1_RCHG_CLK>;
 
 			clock-names = "axi_m",
 				      "axi_s",
@@ -1336,7 +1336,7 @@
 				 <&gcc GCC_PCIE3X1_0_AHB_CLK>,
 				 <&gcc GCC_PCIE3X1_0_AUX_CLK>,
 				 <&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>,
-				 <&gcc GCC_PCIE3X2_RCHG_CLK>;
+				 <&gcc GCC_PCIE3X1_0_RCHG_CLK>;
 
 			clock-names = "axi_m",
 				      "axi_s",
