@@ -2194,7 +2194,7 @@ static struct clk_branch gcc_pcie3x1_0_axi_s_clk = {
 
 static struct clk_branch gcc_pcie3x1_0_pipe_clk = {
 	.halt_reg = 0x29068,
-	.halt_check = BRANCH_HALT,
+	.halt_check = BRANCH_HALT_DELAY,
 	.clkr = {
 		.enable_reg = 0x29068,
 		.enable_mask = BIT(0),
@@ -2302,7 +2302,7 @@ static struct clk_branch gcc_pcie3x1_1_axi_s_clk = {
 
 static struct clk_branch gcc_pcie3x1_1_pipe_clk = {
 	.halt_reg = 0x2a068,
-	.halt_check = BRANCH_HALT,
+	.halt_check = BRANCH_HALT_DELAY,
 	.clkr = {
 		.enable_reg = 0x2a068,
 		.enable_mask = BIT(0),
@@ -2446,7 +2446,7 @@ static struct clk_branch gcc_pcie3x2_phy_ahb_clk = {
 
 static struct clk_branch gcc_pcie3x2_pipe_clk = {
 	.halt_reg = 0x28068,
-	.halt_check = BRANCH_HALT,
+	.halt_check = BRANCH_HALT_DELAY,
 	.clkr = {
 		.enable_reg = 0x28068,
 		.enable_mask = BIT(0),
