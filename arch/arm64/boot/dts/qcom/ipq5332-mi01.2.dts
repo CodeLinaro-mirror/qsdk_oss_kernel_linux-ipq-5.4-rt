@@ -411,7 +411,7 @@
 
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
-					qrtr_node_id = <0x31>;
+					qrtr_node_id = <0x30>;
 					memory-region = <0>, <&mhi_region0>;
 				};
 			};
