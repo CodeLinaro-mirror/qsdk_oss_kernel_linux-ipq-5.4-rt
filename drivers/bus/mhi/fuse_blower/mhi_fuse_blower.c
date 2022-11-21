@@ -33,6 +33,14 @@
 
 #define QCN9224_TCSR_PBL_LOGGING_REG		0x1B00094
 
+#define QCN9224_OEM_ID 				0x01e20018
+#define QCN9224_SECURE_BOOT0_AUTH_EN 		0x01e20010
+#define QCN9224_OEM_PK_HASH 			0x01e20060
+#define QCN9224_OEM_PK_HASH_SIZE 		36
+#define QCN9224_OEM_ID_MASK 			GENMASK(31,16)
+#define QCN9224_OEM_ID_SHIFT 			16
+#define QCN9224_SECURE_BOOT0_AUTH_EN_MASK 	(0x1)
+
 #define BHI_STATUS (0x12C)
 #define BHI_IMGADDR_LOW (0x108)
 #define BHI_IMGADDR_HIGH (0x10C)
@@ -264,7 +272,33 @@ fail:
 	return ret;
 }
 
-int mhi_fuse_pci_enable_bus(struct pci_dev *pci_dev, const struct pci_device_id *id)
+int mhi_fuse_show(struct pci_dev *pci_dev, void __iomem *bar)
+{
+	u32 val = 0;
+	int i;
+
+	printk("\nFuse Name \t\t Address \t Value\n");
+	printk("------------------------------------------------------\n");
+
+	mhi_pci_reg_read(bar, QCN9224_OEM_ID, &val);
+	printk("OEM ID\t\t\t 0x%x \t 0x%lx \n",QCN9224_OEM_ID,
+			(val & QCN9224_OEM_ID_MASK) >> QCN9224_OEM_ID_SHIFT);
+
+	mhi_pci_reg_read(bar, QCN9224_SECURE_BOOT0_AUTH_EN, &val);
+	printk("SECURE_BOOT0_AUTH_EN\t 0x%x \t 0x%x \n", QCN9224_SECURE_BOOT0_AUTH_EN,
+			(val & QCN9224_SECURE_BOOT0_AUTH_EN_MASK));
+
+	for (i = 0; i <= QCN9224_OEM_PK_HASH_SIZE ; i+=4) {
+		mhi_pci_reg_read(bar, QCN9224_OEM_PK_HASH + i, &val);
+
+		printk("OEM PK hash \t\t 0x%x \t 0x%x\n",QCN9224_OEM_PK_HASH + i, val);
+	}
+	printk("------------------------------------------------------\n\n");
+
+	return 0;
+}
+
+int mhi_fuse_pci_enable_bus(struct pci_dev *pci_dev, const struct pci_device_id *id, bool fuse)
 {
 	u16 device_id;
 	int ret;
@@ -316,7 +350,10 @@ int mhi_fuse_pci_enable_bus(struct pci_dev *pci_dev, const struct pci_device_id 
 
 	pci_save_state(pci_dev);
 
-	ret = mhi_fuse_blow(pci_dev, bar);
+	if (fuse)
+		ret = mhi_fuse_blow(pci_dev, bar);
+	else
+		ret = mhi_fuse_show(pci_dev, bar);
 
 	return 0;
 
@@ -335,8 +372,15 @@ static ssize_t fuse_blower_show(struct device *dev,
 				struct device_attribute *attr,
 				char *buf)
 {
+	int i;
 
-	return snprintf(buf, PAGE_SIZE, "%u\n", idx);
+	for (i = 0; i < idx; i++) {
+		printk("PCIe Bus ID: %d\n",i);
+		mhi_fuse_pci_enable_bus(gpci_dev_list[i].pci_dev,
+						gpci_dev_list[i].id, false);
+	}
+
+	return 0;
 }
 
 static ssize_t fuse_blower_store(struct device *dev,
@@ -352,7 +396,7 @@ static ssize_t fuse_blower_store(struct device *dev,
 	}
 
 	mhi_fuse_pci_enable_bus(gpci_dev_list[index].pci_dev,
-					gpci_dev_list[index].id);
+					gpci_dev_list[index].id, true);
 
 	return n;
 }
@@ -386,7 +430,12 @@ int mhi_fuse_pci_probe(struct pci_dev *pci_dev, const struct pci_device_id *id)
 
 void mhi_fuse_pci_remove(struct pci_dev *pci_dev)
 {
-	printk("mhi_fuse PCI removing\n");
+	dev_info(&pci_dev->dev,"removing\n");
+
+	pci_clear_master(pci_dev);
+	pci_release_region(pci_dev, PCI_BAR_NUM);
+	if (pci_is_enabled(pci_dev))
+		pci_disable_device(pci_dev);
 }
 
 static const struct pci_device_id mhi_fuse_pci_id_table[] = {
@@ -430,9 +479,9 @@ int __init mhi_fuse_init(void)
 
 void __exit mhi_fuse_exit(void)
 {
-	printk("Enter\n");
+	printk("Unregister mhi_fuse_blower\n");
 	mhi_fuse_pci_unregister();
-	printk("Exit\n");
+	printk("done\n");
 }
 
 module_init(mhi_fuse_init);
