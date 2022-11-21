@@ -549,6 +549,20 @@ static int __init bootconfig_partition_init(void)
 		proc_create_data("trybit", S_IRUGO, upgrade_info_dir,
 				&trybit_ops,&trybit);
 
+		trymode_inprogress = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_TRYMODE_INFO, &len);
+		if(IS_ERR(trymode_inprogress))
+		{
+			pr_err("\nBootconfig: SMEM read failed\n");
+			return -ENOMEM;
+		}
+
+		if(1 == *trymode_inprogress){
+			age_write_permession = WRITE_ENABLE;
+			printk("\nBootconfig: Try mode in progress\n");
+			proc_create_data("trymode_inprogress", S_IRUGO, upgrade_info_dir,
+					&trymode_inprogress_ops, &age_write_permession);
+		}
+
 	} else {
 		if(bootconfig1->age == bootconfig2->age) {
 			bootconfig1->age++;
@@ -571,17 +585,6 @@ static int __init bootconfig_partition_init(void)
 
 	proc_create_data("age", S_IRUGO, bootconfig2_info_dir,
 			&age_ops, bootconfig2);
-
-	trymode_inprogress = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_TRYMODE_INFO, &len);
-	if(IS_ERR(trymode_inprogress))
-		return -ENOMEM;
-
-	if(1 == *trymode_inprogress){
-		age_write_permession = WRITE_ENABLE;
-		printk("\nBootconfig: Try mode in progress\n");
-		proc_create_data("trymode_inprogress", S_IRUGO, upgrade_info_dir,
-				&trymode_inprogress_ops, &age_write_permession);
-	}
 
 	return 0;
 }
