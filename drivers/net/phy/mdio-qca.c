@@ -302,10 +302,12 @@ static void qca_mdio_clock_set(void)
 	val = readl(base);
 	val |= BIT(0);
 	writel(val, base);
+	usleep_range(100000, 110000);
 
 	val = readl(base+0x10000);
 	val |= BIT(0);
 	writel(val, base+0x10000);
+	usleep_range(100000, 110000);
 	iounmap(base);
 
 }
@@ -660,6 +662,8 @@ static int qca_mdio_probe(struct platform_device *pdev)
 		}
 	}
 
+	qca_mdio_clock_set();
+
 	ret = qca_phy_reset(pdev);
 	if (ret)
 		dev_err(&pdev->dev, "Could not find reset gpio\n");
@@ -677,8 +681,6 @@ static int qca_mdio_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_out;
 	}
-	qca_mdio_clock_set();
-
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
