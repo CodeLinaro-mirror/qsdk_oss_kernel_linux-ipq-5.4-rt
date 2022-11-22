@@ -51,22 +51,6 @@
 	/delete-node/ qti,gadget_diag@0;
 
 	soc {
-
-		/*
-		 * Below nodes are applicable for all RDPs, hence enabled by
-		 * default in base dtsi file itself.
-		 * So, rather than marking these nodes with status = "disabled",
-		 * delete it. Once verified in silicon, we can remove the below
-		 * snippet.
-		 */
-
-		/* Misc nodes */
-		/delete-node/ prng@e3000;
-
-		/*
-		 * Below nodes are referenced by other nodes, deleting it
-		 * will lead to build error, so disable it.
-		 */
 		mailbox@b111000 {
 			status = "ok";
 		};
