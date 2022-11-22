@@ -62,8 +62,6 @@
 
 		/* Misc nodes */
 		/delete-node/ prng@e3000;
-		/delete-node/ watchdog@b017000;
-
 
 		/*
 		 * Below nodes are referenced by other nodes, deleting it
