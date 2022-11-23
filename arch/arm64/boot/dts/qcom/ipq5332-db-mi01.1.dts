@@ -282,23 +282,6 @@
 			status = "ok";
 		};
 
-		pcie2_phy: phy@4b1800 {
-			status = "ok";
-		};
-
-		pcie2: pcie@10000000 {
-			max-link-speed = <1>;
-			perst-gpio = <&tlmm 44 GPIO_ACTIVE_LOW>;
-			status = "ok";
-			pcie2_rp {
-				reg = <0 0 0 0 0>;
-
-				qcom,mhi@1 {
-					reg = <0 0 0 0 0>;
-				};
-			};
-		};
-
 		pcie1: pcie@18000000 {
 			max-link-speed = <1>;
 			perst-gpio = <&tlmm 47 GPIO_ACTIVE_LOW>;
