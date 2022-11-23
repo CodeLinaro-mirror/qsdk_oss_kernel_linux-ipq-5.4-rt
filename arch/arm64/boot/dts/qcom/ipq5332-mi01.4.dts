@@ -46,8 +46,6 @@
 	 */
 
 	/* Misc nodes */
-	/delete-node/ pmu;
-	/delete-node/ pmu-v7;
 	/delete-node/ qti,gadget_diag@0;
 
 	soc {
