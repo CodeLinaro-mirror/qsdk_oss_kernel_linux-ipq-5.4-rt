@@ -189,7 +189,7 @@
 				};
 			};
 
-			ess-switch1@0xc000000 {
+			ess-switch1@1 {
 				compatible = "qcom,ess-switch-qca8386";
 				device_id = <1>;
 				switch_access_mode = "mdio";
