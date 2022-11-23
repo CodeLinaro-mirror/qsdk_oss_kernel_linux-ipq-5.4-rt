@@ -211,7 +211,7 @@
 		};
 
 		hs_m31phy_0: hs_m31phy@7b000 {
-			compatible = "qca,m31-usb-hsphy";
+			compatible = "qca,ipq5332-m31-usb-hsphy";
 			reg = <0x07b000 0x12C>,
 				<0x08af8800 0x400>;
 			reg-names = "m31usb_phy_base",
