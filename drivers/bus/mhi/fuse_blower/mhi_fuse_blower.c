@@ -27,20 +27,33 @@
 
 #define DEFAULT_FW_PATH				"qcn9224/fuse_blower.bin"
 #define QCN9224_PCIE_REMAP_BAR_CTRL_OFFSET      0x310C
+#define PCIE_SOC_GLOBAL_RESET_ADDRESS 		0x3008
 #define QCN9224_TCSR_SOC_HW_VERSION		0x1B00000
 #define QCN9224_TCSR_SOC_HW_VERSION_MASK	GENMASK(11,8)
 #define QCN9224_TCSR_SOC_HW_VERSION_SHIFT 	8
+#define PCIE_SOC_GLOBAL_RESET_VALUE 		0x5
+#define MAX_SOC_GLOBAL_RESET_WAIT_CNT 		50 /* x 20msec */
 
-#define QCN9224_TCSR_PBL_LOGGING_REG		0x1B00094
-
-#define QCN9224_OEM_ID 				0x01e20018
+#define QCN9224_TCSR_PBL_LOGGING_REG		0x01B00094
 #define QCN9224_SECURE_BOOT0_AUTH_EN 		0x01e20010
+#define QCN9224_OEM_MODEL_ID 			0x01e20018
+#define QCN9224_ANTI_ROLL_BACK_FEATURE 		0x01e2001C
 #define QCN9224_OEM_PK_HASH 			0x01e20060
-#define QCN9224_OEM_PK_HASH_SIZE 		36
+#define QCN9224_SECURE_BOOT0_AUTH_EN_MASK 	(0x1)
 #define QCN9224_OEM_ID_MASK 			GENMASK(31,16)
 #define QCN9224_OEM_ID_SHIFT 			16
-#define QCN9224_SECURE_BOOT0_AUTH_EN_MASK 	(0x1)
+#define QCN9224_MODEL_ID_MASK 			GENMASK(15,0)
+#define QCN9224_ANTI_ROLL_BACK_FEATURE_EN_MASK 	BIT(9)
+#define QCN9224_ANTI_ROLL_BACK_FEATURE_EN_SHIFT 9
+#define QCN9224_TOTAL_ROT_NUM_MASK 		GENMASK(13,12)
+#define QCN9224_TOTAL_ROT_NUM_SHIFT 		12
+#define QCN9224_ROT_REVOCATION_MASK 		GENMASK(17,14)
+#define QCN9224_ROT_REVOCATION_SHIFT 		14
+#define QCN9224_ROT_ACTIVATION_MASK 		GENMASK(21,18)
+#define QCN9224_ROT_ACTIVATION_SHIFT 		18
+#define QCN9224_OEM_PK_HASH_SIZE 		36
 
+#define MHICTRL (0x38)
 #define BHI_STATUS (0x12C)
 #define BHI_IMGADDR_LOW (0x108)
 #define BHI_IMGADDR_HIGH (0x10C)
@@ -52,6 +65,7 @@
 #define BHI_IMGTXDB (0x118)
 #define BHI_EXECENV (0x128)
 
+#define MHICTRL_RESET_MASK (0x2)
 #define BHI_STATUS_MASK (0xC0000000)
 #define BHI_STATUS_SHIFT (30)
 #define BHI_STATUS_SUCCESS (2)
@@ -134,6 +148,37 @@ static int mhi_pci_reg_read(void __iomem *bar,
 
 	return 0;
 }
+
+int mhifuse_get_exec_env(void __iomem *bar)
+{
+	u32 exec;
+	mhi_pci_reg_read(bar, BHI_EXECENV, &exec);
+
+	return exec;
+}
+
+void mhifuse_global_soc_reset(void __iomem *bar)
+{
+	u32 current_ee;
+	u32 count = 0;
+
+	current_ee = mhifuse_get_exec_env(bar);
+
+	do {
+		writel_relaxed(PCIE_SOC_GLOBAL_RESET_VALUE,
+			       PCIE_SOC_GLOBAL_RESET_ADDRESS +
+			       bar);
+		msleep(20);
+		current_ee = mhifuse_get_exec_env(bar);
+		count++;
+	} while (current_ee != 0 &&
+		 count < MAX_SOC_GLOBAL_RESET_WAIT_CNT);
+
+	if (count >= MAX_SOC_GLOBAL_RESET_WAIT_CNT)
+		printk("SoC global reset failed! Reset count : %d\n",
+			      count);
+}
+
 static void *mhi_fuse_copy_fw(struct pci_dev *pci_dev, dma_addr_t *dma_addr, size_t *size)
 {
 	struct device *dev = &pci_dev->dev;
@@ -210,13 +255,20 @@ static void print_error_code(void __iomem *addr, bool pbl_log)
 
 }
 
-int mhi_fuse_blow(struct pci_dev *pci_dev, void __iomem *bar)
+int mhi_fuse_blow(struct pci_dev *pci_dev)
 {
 	dma_addr_t dma_addr;
+	void __iomem *bar;
 	size_t size;
 	void *buf;
 	u32 val = 0;
 	int ret = 0;
+
+	bar = pci_iomap(pci_dev, PCI_BAR_NUM, 0);
+	if (!bar) {
+		printk("Failed to do PCI IO map ..\n");
+		return -EIO;
+	}
 
 	mhi_pci_reg_read(bar, QCN9224_TCSR_SOC_HW_VERSION, &val);
 	val = (val & QCN9224_TCSR_SOC_HW_VERSION_MASK) >>
@@ -267,26 +319,58 @@ int mhi_fuse_blow(struct pci_dev *pci_dev, void __iomem *bar)
 	}
 
 	printk("Fusing completed successfully \n");
+
 fail:
+	/* Target SoC global reset */
+	mhifuse_global_soc_reset(bar);
+
+	msleep(1000);
+
+	/* Target MHI reset */
+	val = readl(bar + MHICTRL);
+	writel(val | MHICTRL_RESET_MASK, bar + MHICTRL);
+
 	dma_free_coherent(&pci_dev->dev, size, buf, dma_addr);
+	pci_iounmap(pci_dev, bar);
+
 	return ret;
 }
 
-int mhi_fuse_show(struct pci_dev *pci_dev, void __iomem *bar)
+int mhi_fuse_show(struct pci_dev *pci_dev)
 {
 	u32 val = 0;
+	void __iomem *bar;
 	int i;
+
+	bar = pci_iomap(pci_dev, PCI_BAR_NUM, 0);
+	if (!bar) {
+		printk("Failed to do PCI IO map ..\n");
+		return -EIO;
+	}
 
 	printk("\nFuse Name \t\t Address \t Value\n");
 	printk("------------------------------------------------------\n");
 
-	mhi_pci_reg_read(bar, QCN9224_OEM_ID, &val);
-	printk("OEM ID\t\t\t 0x%x \t 0x%lx \n",QCN9224_OEM_ID,
-			(val & QCN9224_OEM_ID_MASK) >> QCN9224_OEM_ID_SHIFT);
-
 	mhi_pci_reg_read(bar, QCN9224_SECURE_BOOT0_AUTH_EN, &val);
 	printk("SECURE_BOOT0_AUTH_EN\t 0x%x \t 0x%x \n", QCN9224_SECURE_BOOT0_AUTH_EN,
 			(val & QCN9224_SECURE_BOOT0_AUTH_EN_MASK));
+
+	mhi_pci_reg_read(bar, QCN9224_OEM_MODEL_ID, &val);
+	printk("OEM ID\t\t\t 0x%x \t 0x%lx \n",QCN9224_OEM_MODEL_ID,
+			(val & QCN9224_OEM_ID_MASK) >> QCN9224_OEM_ID_SHIFT);
+
+	printk("MODEL ID\t\t\t 0x%x \t 0x%lx \n",QCN9224_OEM_MODEL_ID,
+			(val & QCN9224_MODEL_ID_MASK));
+
+	mhi_pci_reg_read(bar, QCN9224_ANTI_ROLL_BACK_FEATURE, &val);
+	printk("ANTI_ROLL_BACK_FEATURE_EN 0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+			(val & QCN9224_ANTI_ROLL_BACK_FEATURE_EN_MASK) >> QCN9224_ANTI_ROLL_BACK_FEATURE_EN_SHIFT);
+	printk("TOTAL_ROT_NUM\t\t 0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+			(val & QCN9224_TOTAL_ROT_NUM_MASK) >> QCN9224_TOTAL_ROT_NUM_SHIFT);
+	printk("ROT_REVOCATION\t\t 0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+			(val & QCN9224_ROT_REVOCATION_MASK) >> QCN9224_ROT_REVOCATION_SHIFT);
+	printk("ROT_ACTIVATION\t\t 0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+			(val & QCN9224_ROT_ACTIVATION_MASK) >> QCN9224_ROT_ACTIVATION_SHIFT);
 
 	for (i = 0; i <= QCN9224_OEM_PK_HASH_SIZE ; i+=4) {
 		mhi_pci_reg_read(bar, QCN9224_OEM_PK_HASH + i, &val);
@@ -294,6 +378,8 @@ int mhi_fuse_show(struct pci_dev *pci_dev, void __iomem *bar)
 		printk("OEM PK hash \t\t 0x%x \t 0x%x\n",QCN9224_OEM_PK_HASH + i, val);
 	}
 	printk("------------------------------------------------------\n\n");
+
+	pci_iounmap(pci_dev, bar);
 
 	return 0;
 }
@@ -303,7 +389,6 @@ int mhi_fuse_pci_enable_bus(struct pci_dev *pci_dev, const struct pci_device_id 
 	u16 device_id;
 	int ret;
 	u32 pci_dma_mask = PCI_DMA_MASK_64_BIT;
-	void __iomem *bar;
 
 	printk("Going for PCI Enable bus\n");
 	pci_read_config_word(pci_dev, PCI_DEVICE_ID, &device_id);
@@ -341,19 +426,17 @@ int mhi_fuse_pci_enable_bus(struct pci_dev *pci_dev, const struct pci_device_id 
 
 	pci_set_master(pci_dev);
 
-	bar = pci_iomap(pci_dev, PCI_BAR_NUM, 0);
-	if (!bar) {
-		printk("Failed to do PCI IO map ..\n");
-		ret = -EIO;
-		goto out4;
-	}
-
 	pci_save_state(pci_dev);
 
 	if (fuse)
-		ret = mhi_fuse_blow(pci_dev, bar);
+		ret = mhi_fuse_blow(pci_dev);
 	else
-		ret = mhi_fuse_show(pci_dev, bar);
+		ret = mhi_fuse_show(pci_dev);
+
+	if (ret) {
+		printk("MHI fuse %s failed, ret %d \n",fuse?"blow":"print", ret);
+		goto out4;
+	}
 
 	return 0;
 
@@ -376,8 +459,12 @@ static ssize_t fuse_blower_show(struct device *dev,
 
 	for (i = 0; i < idx; i++) {
 		printk("PCIe Bus ID: %d\n",i);
-		mhi_fuse_pci_enable_bus(gpci_dev_list[i].pci_dev,
-						gpci_dev_list[i].id, false);
+		if (gpci_dev_list[i].pci_dev->is_busmaster != true) {
+			mhi_fuse_pci_enable_bus(gpci_dev_list[i].pci_dev,
+							gpci_dev_list[i].id, false);
+		} else {
+			mhi_fuse_show(gpci_dev_list[i].pci_dev);
+		}
 	}
 
 	return 0;
@@ -395,8 +482,12 @@ static ssize_t fuse_blower_store(struct device *dev,
 		return n;
 	}
 
-	mhi_fuse_pci_enable_bus(gpci_dev_list[index].pci_dev,
-					gpci_dev_list[index].id, true);
+	if (gpci_dev_list[index].pci_dev->is_busmaster != true) {
+		mhi_fuse_pci_enable_bus(gpci_dev_list[index].pci_dev,
+						gpci_dev_list[index].id, true);
+	} else {
+		mhi_fuse_blow(gpci_dev_list[index].pci_dev);
+	}
 
 	return n;
 }
