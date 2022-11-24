@@ -66,14 +66,6 @@
 				status = "ok";
 			};
 		};
-		dma@7884000 {
-			status = "disabled";
-		};
-
-		/* Not needed for the initial bringup */
-		ess-instance {
-			status = "disabled";
-		};
 
 		pinctrl@1000000 {
 			serial_0_pins: serial0-pinmux {
