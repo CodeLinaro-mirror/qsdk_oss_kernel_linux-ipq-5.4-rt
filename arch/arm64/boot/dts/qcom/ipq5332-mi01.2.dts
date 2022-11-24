@@ -66,14 +66,6 @@
 				status = "ok";
 			};
 		};
-		dma@7884000 {
-			status = "disabled";
-		};
-
-		/* Not needed for the initial bringup */
-		ess-instance {
-			status = "disabled";
-		};
 
 		pinctrl@1000000 {
 			serial_0_pins: serial0-pinmux {
@@ -318,11 +310,6 @@
 			pinctrl-0 = <&serial_0_pins>;
 			pinctrl-names = "default";
 			status = "ok";
-		};
-
-		i2c@78b6000 {
-			pinctrl-0 = <&i2c_1_pins>;
-			pinctrl-names = "default";
 		};
 
 		dma@7984000 {
