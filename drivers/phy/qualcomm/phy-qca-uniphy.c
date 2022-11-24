@@ -60,6 +60,7 @@ struct qca_uni_ss_phy {
 	unsigned int host;
 	struct clk *pipe_clk;
 	struct clk *phy_cfg_ahb_clk;
+	u32 no_reset_seq;
 };
 
 struct qf_read {
@@ -111,6 +112,8 @@ static int qca_uni_ss_phy_init(struct phy *x)
 		clk_prepare_enable(phy->phy_cfg_ahb_clk);
 		clk_prepare_enable(phy->pipe_clk);
 		phy_autoload();
+		if (phy->no_reset_seq)
+			return 0;
 		/*set frequency initial value*/
 		writel(0x1cb9, phy->base + SSCG_CTRL_REG_4);
 		writel(0x023a, phy->base + SSCG_CTRL_REG_5);
@@ -143,6 +146,7 @@ static int qca_uni_ss_get_resources(struct platform_device *pdev,
 		dev_err(&pdev->dev, "couldn't compatible string: %d\n", ret);
 		return ret;
 	}
+	phy->no_reset_seq = of_property_read_bool(phy->dev->of_node, "no-reset-seq");
 
 	phy->por_rst = devm_reset_control_get(phy->dev, "por_rst");
 	if (IS_ERR(phy->por_rst))

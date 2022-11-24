@@ -235,6 +235,7 @@
 			resets =  <&gcc GCC_USB0_PHY_BCR>;
 			reset-names = "por_rst";
 			#phy-cells = <0>;
+			no-reset-seq;
 			status = "disabled";
 		};
 
