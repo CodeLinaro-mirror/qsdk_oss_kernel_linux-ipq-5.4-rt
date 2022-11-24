@@ -1091,10 +1091,14 @@
 				"pipe_clk";
 
 			assigned-clocks = <&gcc GCC_USB0_MASTER_CLK>,
-					<&gcc GCC_USB0_MOCK_UTMI_CLK>;
+					<&gcc GCC_USB0_MOCK_UTMI_CLK>,
+					<&gcc GCC_USB0_AUX_CLK>,
+					<&gcc GCC_USB0_LFPS_CLK>;
 
 			assigned-clock-rates = <133330000>,
-						<60000000>;
+						<60000000>,
+						<2000000>,
+						<25000000>;
 
 			resets = <&gcc GCC_USB_BCR>;
 

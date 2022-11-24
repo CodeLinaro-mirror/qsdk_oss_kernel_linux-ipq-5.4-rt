@@ -1342,6 +1342,7 @@ static struct clk_regmap_div gcc_usb0_mock_utmi_div_clk_src = {
 			&gcc_usb0_mock_utmi_clk_src.clkr.hw,
 		},
 		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_regmap_div_ro_ops,
 	},
 };
@@ -3521,7 +3522,6 @@ static struct clk_branch gcc_usb0_master_clk = {
 
 static struct clk_branch gcc_usb0_mock_utmi_clk = {
 	.halt_reg = 0x2c054,
-	.halt_check = BRANCH_HALT_VOTED,
 	.clkr = {
 		.enable_reg = 0x2c054,
 		.enable_mask = BIT(0),
@@ -3557,7 +3557,7 @@ static struct clk_branch gcc_usb0_phy_cfg_ahb_clk = {
 
 static struct clk_branch gcc_usb0_pipe_clk = {
 	.halt_reg = 0x2c078,
-	.halt_check = BRANCH_HALT,
+	.halt_check = BRANCH_HALT_DELAY,
 	.clkr = {
 		.enable_reg = 0x2c078,
 		.enable_mask = BIT(0),
