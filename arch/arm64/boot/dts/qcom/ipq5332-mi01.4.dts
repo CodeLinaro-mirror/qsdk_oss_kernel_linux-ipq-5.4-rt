@@ -37,17 +37,6 @@
 		bootargs-append = " clk_ignore_unused";
 	};
 
-	/*
-	 * Below nodes are applicable for all RDPs, hence enabled by
-	 * default in base dtsi file itself.
-	 * So, rather than marking these nodes with status = "disabled",
-	 * delete it. Once verified in silicon, we can remove the below
-	 * snippet.
-	 */
-
-	/* Misc nodes */
-	/delete-node/ qti,gadget_diag@0;
-
 	soc {
 		mailbox@b111000 {
 			status = "ok";
@@ -305,17 +294,17 @@
 		};
 
 		usb3@8A00000 {
-			status = "disabled";
+			status = "ok";
+			qcom,multiplexed-phy;
+			qcom,phy-mux-regs = <&tcsr_q6_block 0x2540>;
+		};
 
-			dwc3@8A00000 {
-				/delete-property/ #phy-cells;
-				/delete-property/ phys;
-				/delete-property/ phy-names;
-			};
+		ssuniphy@4b0000 {
+			status = "ok";
 		};
 
 		hs_m31phy@7b000 {
-			status = "disabled";
+			status = "ok";
 		};
 
 		leds {
