@@ -68,7 +68,7 @@
 			#clock-cells = <0>;
 		};
 
-		gcc_gpll0_out_aux_clk: gcc_gpll0_out_aux_clk {
+		gcc_gpll0_out_aux: gcc_gpll0_out_aux {
 			compatible = "fixed-clock";
 			clock-frequency = <800000000>;
 			#clock-cells = <0>;
@@ -880,11 +880,11 @@
 			clocks = <&xo>,
 				<&cmn_pll_nss_clk_200m>,
 				<&cmn_pll_nss_clk_300m>,
-				<&gcc_gpll0_out_aux_clk>;
+				<&gcc_gpll0_out_aux>;
 			clock-names = "xo",
 					"cmn_pll_nss_clk_200m",
 					"cmn_pll_nss_clk_300m",
-					"gcc_gpll0_out_aux_clk";
+					"gcc_gpll0_out_aux";
 			#clock-cells = <0x1>;
 			#reset-cells = <0x1>;
 		};
