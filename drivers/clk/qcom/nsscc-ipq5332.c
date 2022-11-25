@@ -137,7 +137,7 @@ static struct clk_rcg2 nss_cc_ce_clk_src = {
 };
 
 static const struct freq_tbl ftbl_nss_cc_cfg_clk_src[] = {
-	F(100000000, P_CMN_PLL_NSS_CLK_200M, 2, 0, 0),
+	F(100000000, P_GCC_GPLL0_OUT_AUX, 8, 0, 0),
 	{ }
 };
 
