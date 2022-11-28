@@ -1104,6 +1104,7 @@
 			resets = <&gcc GCC_USB_BCR>;
 
 			qca,host = <1>;
+			qcom,phy-mux-regs = <&tcsr_q6_block 0x2540>;
 			status = "disabled";
 
 			dwc_0: dwc3@8A00000 {

@@ -314,7 +314,6 @@
 		usb3@8A00000 {
 			status = "ok";
 			qcom,multiplexed-phy;
-			qcom,phy-mux-regs = <&tcsr_q6_block 0x2540>;
 		};
 
 		ssuniphy_0: ssuniphy@4b0000 {
