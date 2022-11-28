@@ -47,15 +47,6 @@
 		syscon@1945000 {
 			status = "ok";
 		};
-		remoteproc@d100000 {
-			qcom,nosecure;
-			status = "ok";
-			remoteproc_pd1 {
-				qcom,nosecure;
-				status = "ok";
-			};
-		};
-
 		pinctrl@1000000 {
 			serial_0_pins: serial0-pinmux {
 				pins = "gpio18", "gpio19";
