@@ -242,7 +242,7 @@
 
 		usb3@8A00000 {
 			status = "ok";
-
+			qcom,select-utmi-as-pipe-clk;
 			dwc_0: dwc3@8A00000 {
 				/delete-property/ #phy-cells;
 				/delete-property/ phys;
