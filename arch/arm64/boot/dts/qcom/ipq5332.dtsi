@@ -2279,14 +2279,14 @@
 			};
 		};
 
-		qfprom_nvmem: qfprom_nvmem@a0000 {
+		qfprom_nvmem: qfprom_nvmem@a4000 {
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "qcom,qfprom";
-			reg = <0xa0000 0x1000>;
+			reg = <0xa4000 0x721>;
 
-			cpu_speed_bin: cpu_speed_bin@15 {
-				reg = <0x15 0x2>;
+			cpu_speed_bin: cpu_speed_bin@1d {
+				reg = <0x1d 0x2>;
 				bits = <7 2>;
 			};
 
