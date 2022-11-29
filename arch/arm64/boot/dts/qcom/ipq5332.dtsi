@@ -194,7 +194,7 @@
 		dma-ranges;
 		compatible = "simple-bus";
 
-		qcom,msm-eud@78000 {
+		eud@78000 {
 			compatible = "qcom,msm-eud";
 			reg = <0x78000 0x1000>,
 			      <0x79000 0x2000>,

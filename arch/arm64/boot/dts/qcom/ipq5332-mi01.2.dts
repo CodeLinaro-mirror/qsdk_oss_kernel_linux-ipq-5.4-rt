@@ -117,6 +117,10 @@
 			};
 		};
 
+		eud@78000 {
+			status = "ok";
+		};
+
 		dp1 {
 			device_type = "network";
 			compatible = "qcom,nss-dp";
