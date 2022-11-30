@@ -131,6 +131,29 @@
 				bootaddr = <0x4A900000>;
 				qcom,fw_shared;
 			};
+			q6_wcss_pd2: remoteproc_pd2 {
+				compatible = "qcom,ipq5332-wcss-pcie-mpd";
+				qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
+				interrupts-extended = <&wcss_smp2p_in 16 0>,
+							<&wcss_smp2p_in 17 0>,
+							<&wcss_smp2p_in 20 0>,
+							<&wcss_smp2p_in 19 0>;
+				interrupt-names = "fatal",
+						"ready",
+						"spawn-ack",
+						"stop-ack";
+
+				qcom,smem-states = <&wcss_smp2p_out 16>,
+						<&wcss_smp2p_out 17>,
+						<&wcss_smp2p_out 18>;
+				qcom,smem-state-names = "shutdown",
+							"stop",
+							"spawn";
+				qcom,emulation;
+				qcom,nosecure;
+				bootaddr = <0x4A900000>;
+				qcom,fw_shared;
+			};
 		};
 
 		scm {

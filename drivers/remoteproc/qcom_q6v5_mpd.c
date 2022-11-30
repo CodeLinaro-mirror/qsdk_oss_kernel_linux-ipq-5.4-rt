@@ -95,7 +95,7 @@
 #define TCSR_GLOBAL_CFG1	0x4
 #define TCSR_APU_REG0		0x1000
 #define TCSR_APU_REG1		0x1004
-#define TCSR_APU_REG0_VAL	0x11200
+#define TCSR_APU_REG0_VAL	0x1201
 #define SSCAON_CONFIG		0x8
 #define SSCAON_STATUS		0xc
 #define Q6SS_BHS_STATUS		0x78
@@ -166,7 +166,9 @@
 
 static const struct wcss_data q6_ipq5332_res_init;
 static int debug_wcss;
-static int userpd_bootaddr;
+static int userpd1_bootaddr;
+static int userpd2_bootaddr;
+static int userpd3_bootaddr;
 /**
  * enum state - state of a wcss (private)
  * @WCSS_NORMAL: subsystem is operating normally
@@ -1118,9 +1120,11 @@ static int ipq5332_q6_clk_enable(struct q6_wcss *wcss)
 		upd_rproc = platform_get_drvdata(upd_pdev);
 		upd_wcss = upd_rproc->priv;
 
-		val = readl(upd_wcss->rmb_base + SSCAON_CONFIG);
-		val |= BIT(0);
-		writel(val, upd_wcss->rmb_base + SSCAON_CONFIG);
+		if (upd_wcss->rmb_base) {
+			val = readl(upd_wcss->rmb_base + SSCAON_CONFIG);
+			val |= BIT(0);
+			writel(val, upd_wcss->rmb_base + SSCAON_CONFIG);
+		}
 	}
 
 	/* Power debug control */
@@ -1623,14 +1627,14 @@ static int wcss_ipq5332_ahb_pd_start(struct rproc *rproc)
 
 	if (of_property_read_bool(wcss->dev->of_node, "qcom,offloaded_to_q6")) {
 		pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
-		val = TCSR_APU_REG0_VAL | pd_asid;
+		val = TCSR_APU_REG0_VAL | (pd_asid << 16);
 		regmap_write(wcss->halt_map, wcss->halt_nc + TCSR_APU_REG0,
 									val);
 		if (wcss->is_emulation)
-			rproc->bootaddr = userpd_bootaddr;
+			rproc->bootaddr = userpd1_bootaddr;
 		regmap_write(wcss->halt_map, wcss->halt_nc + TCSR_APU_REG1,
 							rproc->bootaddr);
-		writel(0x00000010, wcss->l2vic_base);
+		writel(0x00000010, rpd_wcss->l2vic_base);
 		goto spawn_pd;
 	}
 
@@ -1789,6 +1793,42 @@ spawn_pd:
 	}
 
 	wcss->state = WCSS_NORMAL;
+
+	return ret;
+}
+
+static int wcss_ipq5332_pcie_pd_start(struct rproc *rproc)
+{
+	int ret;
+	struct q6_wcss *wcss = rproc->priv;
+	u8 pd_asid;
+	u32 val, pasid;
+	struct rproc *rpd_rproc = dev_get_drvdata(wcss->dev->parent);
+	struct q6_wcss *rpd_wcss = rpd_rproc->priv;
+
+	pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+	if (wcss->need_mem_protection) {
+		pasid = (pd_asid << 8) | UPD_SWID,
+		ret = qcom_scm_pas_auth_and_reset(pasid, 0x0, 0x0);
+		if (ret) {
+			dev_err(wcss->dev, "failed to power up pcie pd\n");
+			return ret;
+		}
+		goto spawn_pd;
+	}
+
+	val =  TCSR_APU_REG0_VAL | (pd_asid << 16);
+	regmap_write(wcss->halt_map, wcss->halt_nc + TCSR_APU_REG0, val);
+	if (wcss->is_emulation)
+		rproc->bootaddr = (pd_asid == 2) ? userpd2_bootaddr : userpd3_bootaddr;
+	regmap_write(wcss->halt_map, wcss->halt_nc + TCSR_APU_REG1,
+					rproc->bootaddr);
+	writel(0x00000010, rpd_wcss->l2vic_base);
+
+spawn_pd:
+	ret = q6_wcss_spawn_pd(rproc);
+	if (!ret)
+		wcss->state = WCSS_NORMAL;
 
 	return ret;
 }
@@ -2181,6 +2221,39 @@ static int q6_wcss_stop(struct rproc *rproc)
 pas_done:
 	qcom_q6v5_unprepare(&wcss->q6);
 
+	return 0;
+}
+
+static int wcss_ipq5332_pcie_pd_stop(struct rproc *rproc)
+{
+	struct q6_wcss *wcss = rproc->priv;
+	int ret;
+	struct rproc *rpd_rproc = dev_get_drvdata(wcss->dev->parent);
+	u32 pasid;
+	u8 pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+
+	if (rproc->state != RPROC_CRASHED) {
+		ret = qcom_q6v5_request_stop(&wcss->q6);
+		if (ret) {
+			dev_err(&rproc->dev, "ahb pd not stopped\n");
+			return ret;
+		}
+	}
+
+	if (wcss->need_mem_protection) {
+		pasid = (pd_asid << 8) | UPD_SWID,
+		ret = qcom_scm_pas_shutdown(pasid);
+		if (ret) {
+			dev_err(wcss->dev, "failed to power down ahb pd\n");
+			return ret;
+		}
+	}
+
+	/*Shut down rootpd, if userpd not crashed*/
+	if (rproc->state != RPROC_CRASHED)
+		rproc_shutdown(rpd_rproc);
+
+	wcss->state = WCSS_SHUTDOWN;
 	return 0;
 }
 
@@ -2601,6 +2674,14 @@ static const struct rproc_ops wcss_ahb_ipq5332_ops = {
 	.parse_fw = q6_wcss_register_dump_segments,
 };
 
+static const struct rproc_ops wcss_pcie_ipq5332_ops = {
+	.start = wcss_ipq5332_pcie_pd_start,
+	.stop = wcss_ipq5332_pcie_pd_stop,
+	.load = wcss_ahb_pcie_pd_load,
+	.get_boot_addr = rproc_elf_get_boot_addr,
+	.parse_fw = q6_wcss_register_dump_segments,
+};
+
 static int q6_wcss_init_reset(struct q6_wcss *wcss,
 				const struct wcss_data *desc)
 {
@@ -2741,52 +2822,45 @@ static int q6_wcss_init_mmio(struct q6_wcss *wcss,
 		ret = q6_init_mmio(wcss, pdev);
 		if (ret)
 			return ret;
-	} else if (wcss->version == WCSS_AHB_IPQ) {
-		res = platform_get_resource_byname(pdev,
-						   IORESOURCE_MEM,
-						   "rmb");
-		if (res) {
-			wcss->rmb_base =
-				devm_ioremap_resource(&pdev->dev, res);
-			if (IS_ERR(wcss->rmb_base))
-				return PTR_ERR(wcss->rmb_base);
-		}
+	}
 
-		res = platform_get_resource_byname(pdev,
-						   IORESOURCE_MEM,
-						   "l2vic_int");
-		if (res) {
-			wcss->l2vic_base =
-				devm_ioremap_resource(&pdev->dev, res);
-			if (IS_ERR(wcss->l2vic_base))
-				return PTR_ERR(wcss->l2vic_base);
-		}
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "l2vic_int");
+	if (res) {
+		wcss->l2vic_base =
+			devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(wcss->l2vic_base))
+			return PTR_ERR(wcss->l2vic_base);
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "rmb");
+	if (res) {
+		wcss->rmb_base =
+			devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(wcss->rmb_base))
+			return PTR_ERR(wcss->rmb_base);
 	}
 
 	syscon = of_parse_phandle(pdev->dev.of_node,
 				  "qcom,halt-regs", 0);
-	if (!syscon) {
-		dev_err(&pdev->dev, "failed to parse qcom,halt-regs\n");
-		return -EINVAL;
+	if (syscon) {
+		wcss->halt_map = syscon_node_to_regmap(syscon);
+		of_node_put(syscon);
+		if (IS_ERR(wcss->halt_map))
+			return PTR_ERR(wcss->halt_map);
+
+		ret = of_property_read_variable_u32_array(pdev->dev.of_node,
+				"qcom,halt-regs",
+				halt_reg, 0,
+				MAX_HALT_REG);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "failed to parse qcom,halt-regs\n");
+			return -EINVAL;
+		}
+
+		wcss->halt_q6 = halt_reg[1];
+		wcss->halt_wcss = halt_reg[2];
+		wcss->halt_nc = halt_reg[3];
 	}
-
-	wcss->halt_map = syscon_node_to_regmap(syscon);
-	of_node_put(syscon);
-	if (IS_ERR(wcss->halt_map))
-		return PTR_ERR(wcss->halt_map);
-
-	ret = of_property_read_variable_u32_array(pdev->dev.of_node,
-						  "qcom,halt-regs",
-						  halt_reg, 0,
-						  MAX_HALT_REG);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to parse qcom,halt-regs\n");
-		return -EINVAL;
-	}
-
-	wcss->halt_q6 = halt_reg[1];
-	wcss->halt_wcss = halt_reg[2];
-	wcss->halt_nc = halt_reg[3];
 	return 0;
 }
 
@@ -3298,11 +3372,9 @@ static int q6_wcss_probe(struct platform_device *pdev)
 		wcss->mdt_load_nosec = qcom_mdt_load_pd_seg_no_init;
 	}
 
-	if (wcss->version != WCSS_PCIE_IPQ) {
-		ret = q6_wcss_init_mmio(wcss, pdev);
-		if (ret)
-			goto free_rproc;
-	}
+	ret = q6_wcss_init_mmio(wcss, pdev);
+	if (ret)
+		goto free_rproc;
 
 	ret = q6_alloc_memory_region(wcss);
 	if (ret)
@@ -3464,6 +3536,21 @@ static const struct wcss_data wcss_ahb_ipq5018_res_init = {
 	.pasid = MPD_WCNSS_PAS_ID,
 };
 
+static const struct wcss_data wcss_pcie_ipq5332_res_init = {
+	.init_irq = init_irq,
+	.q6_firmware_name = "qcn6432/q6_fw.mdt",
+	.crash_reason_smem = WCSS_CRASH_REASON,
+	.ops = &wcss_pcie_ipq5332_ops,
+	.need_mem_protection = true,
+	.need_auto_boot = false,
+	.q6ver = Q6V7,
+	.version = WCSS_PCIE_IPQ,
+	.is_fw_shared = false,
+	.mdt_load_sec = qcom_mdt_load,
+	.mdt_load_nosec = qcom_mdt_load_no_init,
+	.pasid = MPD_WCNSS_PAS_ID,
+};
+
 static const struct wcss_data wcss_pcie_ipq5018_res_init = {
 	.init_irq = init_irq,
 	.q6_firmware_name = "IPQ5018/q6_fw.mdt",
@@ -3547,6 +3634,8 @@ static const struct of_device_id q6_wcss_of_match[] = {
 		.data = &wcss_ahb_ipq5332_res_init },
 	{ .compatible = "qcom,ipq9574-wcss-ahb-mpd",
 		.data = &wcss_ahb_ipq9574_res_init },
+	{ .compatible = "qcom,ipq5332-wcss-pcie-mpd",
+		.data = &wcss_pcie_ipq5332_res_init },
 	{ .compatible = "qcom,ipq5018-wcss-pcie-mpd",
 		.data = &wcss_pcie_ipq5018_res_init },
 	{ .compatible = "qcom,ipq9574-wcss-pcie-mpd",
@@ -3565,7 +3654,9 @@ static struct platform_driver q6_wcss_driver = {
 };
 module_platform_driver(q6_wcss_driver);
 module_param(debug_wcss, int, 0644);
-module_param(userpd_bootaddr, int, 0644);
+module_param(userpd1_bootaddr, int, 0644);
+module_param(userpd2_bootaddr, int, 0644);
+module_param(userpd3_bootaddr, int, 0644);
 
 MODULE_DESCRIPTION("Hexagon WCSS Multipd Peripheral Image Loader");
 MODULE_LICENSE("GPL v2");

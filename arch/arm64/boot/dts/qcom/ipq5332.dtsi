@@ -557,6 +557,50 @@
 			gpio-ranges = <&tlmm 0 0 53>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
+			emmc_pins: emmc_pins {
+				emmc_clk {
+					pins = "gpio13";
+					function = "sdc_clk";
+					drive-strength = <8>;
+					bias-disable;
+				};
+				emmc_cmd {
+					pins = "gpio12";
+					function = "sdc_cmd";
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+				emmc_data {
+					pins = "gpio8", "gpio9", "gpio10",
+						"gpio11";
+					function = "sdc_data";
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+			};
+
+			qspi_nand_pins: qspi_nand_pins {
+				qspi_clock {
+					pins = "gpio13";
+					function = "qspi_clk";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+				qspi_cs {
+					pins = "gpio12";
+					function = "qspi_cs";
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+
+				qspi_data {
+					pins = "gpio8", "gpio9", "gpio10", "gpio11";
+					function = "qspi_data";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+			};
 		};
 
 		gcc: gcc@1800000 {
@@ -650,6 +694,8 @@
 				<&gcc GCC_SDCC1_AHB_CLK>,
 				<&gcc GCC_SDCC1_APPS_CLK>;
 			clock-names = "xo", "iface", "core";
+			mmc-ddr-1_8v;
+			mmc-hs200-1_8v;
 			max-frequency = <192000000>;
 			bus-width = <4>;
 			non-removable;
@@ -869,15 +915,19 @@
 				 <&gcc GCC_PCIE3X1_1_AXI_S_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AHB_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AUX_CLK>,
-				 <&gcc GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK>;
+				 <&gcc GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK>,
+				 <&gcc GCC_PCIE3X1_1_RCHG_CLK>;
 
 			clock-names = "axi_m",
 				      "axi_s",
 				      "ahb",
 				      "aux",
-				      "axi_bridge";
+				      "axi_bridge",
+				      "rchng";
 
-			axi-m-clk-frequency = <240000000>;
+			axi-m-clk-rate = <240000000>;
+			axi-s-clk-rate = <240000000>;
+			aux-clk-rate = <2000000>;
 
 			resets = <&gcc GCC_PCIE3X1_1_PIPE_ARES>,
 				 <&gcc GCC_PCIE3X1_1_CORE_STICKY_ARES>,
@@ -951,15 +1001,19 @@
 				 <&gcc GCC_PCIE3X2_AXI_S_CLK>,
 				 <&gcc GCC_PCIE3X2_AHB_CLK>,
 				 <&gcc GCC_PCIE3X2_AUX_CLK>,
-				 <&gcc GCC_PCIE3X2_AXI_S_BRIDGE_CLK>;
+				 <&gcc GCC_PCIE3X2_AXI_S_BRIDGE_CLK>,
+				 <&gcc GCC_PCIE3X2_RCHG_CLK>;
 
 			clock-names = "axi_m",
 				      "axi_s",
 				      "ahb",
 				      "aux",
-				      "axi_bridge";
+				      "axi_bridge",
+				      "rchng";
 
-			axi-m-clk-frequency = <266666667>;
+			axi-m-clk-rate = <266666667>;
+			axi-s-clk-rate = <240000000>;
+			aux-clk-rate = <2000000>;
 
 			resets = <&gcc GCC_PCIE3X2_PIPE_ARES>,
 				 <&gcc GCC_PCIE3X2_CORE_STICKY_ARES>,
@@ -1030,15 +1084,19 @@
 				 <&gcc GCC_PCIE3X1_0_AXI_S_CLK>,
 				 <&gcc GCC_PCIE3X1_0_AHB_CLK>,
 				 <&gcc GCC_PCIE3X1_0_AUX_CLK>,
-				 <&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>;
+				 <&gcc GCC_PCIE3X1_0_AXI_S_BRIDGE_CLK>,
+				 <&gcc GCC_PCIE3X1_0_RCHG_CLK>;
 
 			clock-names = "axi_m",
 				      "axi_s",
 				      "ahb",
 				      "aux",
-				      "axi_bridge";
+				      "axi_bridge",
+				      "rchng";
 
-			axi-m-clk-frequency = <240000000>;
+			axi-m-clk-rate = <240000000>;
+			axi-s-clk-rate = <240000000>;
+			aux-clk-rate = <2000000>;
 
 			resets = <&gcc GCC_PCIE3X1_0_PIPE_ARES>,
 				 <&gcc GCC_PCIE3X1_0_CORE_STICKY_ARES>,
@@ -1244,12 +1302,14 @@
 				<0x193d21c 0x8>,
 				<0x193d204 0x4>,
 				<0x1825000 0x90b8>,
-				<0x4a1000 0x4>;
+				<0x4a1000 0x4>,
+				<0xD190488 0x4>;
 			reg-names = "qdsp6",
 					"tcsr-msip",
 					"tcsr-q6",
 					"ce_ahb",
-					"qtimer";
+					"qtimer",
+					"l2vic_int";
 
 			interrupts-extended = <&intc GIC_SPI 421 IRQ_TYPE_EDGE_RISING>,
 					      <&wcss_smp2p_in 0 0>,
@@ -1344,10 +1404,8 @@
 
 			q6_wcss_pd1: remoteproc_pd1 {
 				compatible = "qcom,ipq5332-wcss-ahb-mpd";
-				reg = <0x004ab000 0x20>,
-					<0xD190488 0x4>;
-				reg-names = "rmb",
-						"l2vic_int";
+				reg = <0x004ab000 0x20>;
+				reg-names = "rmb";
 				iu_firmware = "IPQ5332/iu_fw.mdt";
 				qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
 				interrupts-extended = <&wcss_smp2p_in 8 0>,

@@ -837,6 +837,10 @@ static int mhi_netdev_probe(struct mhi_device *mhi_dev,
 		mhi_netdev->pool_size <<= 1;
 	mhi_netdev->pool_size <<= 1;
 
+	dev_info(dbg_dev, "MHI netdev pool size: 0x%x \n",
+				(mhi_netdev->pool_size * mhi_netdev->mru));
+	dev_info(dbg_dev, "Note: To increase static netdev pool allocation use"
+				" mhi_nr_tre_update bootargs\n");
 	/* allocate memory pool */
 	ret = mhi_netdev_alloc_pool(mhi_netdev);
 

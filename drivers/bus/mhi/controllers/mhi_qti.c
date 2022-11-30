@@ -33,6 +33,11 @@ volatile int force_graceful = 0;
 int ap2mdm_gpio, mdm2ap_gpio;
 bool mhi_ssr_negotiate;
 
+static int mhi_nr_tre_update[50] = { -1 };
+static int mhi_nr_tre_update_argc = 0;
+module_param_array(mhi_nr_tre_update, int, &mhi_nr_tre_update_argc, 0644);
+MODULE_PARM_DESC(mhi_nr_tre_update, "MHI nr_tre update array");
+
 void __iomem *wdt;
 
 static struct kobject *mhi_kobj;
@@ -1167,6 +1172,34 @@ int mhi_pci_probe(struct pci_dev *pci_dev,
 	const struct firmware_info *firmware_info;
 	struct mhi_dev *mhi_dev;
 	int i, ret;
+
+	/* update nr_tre for ch & event cfg via bootargs */
+	if (mhi_nr_tre_update[0] != -1) {
+		int idx = 0;
+		for (i = 0; i < mhi_sdx_mhi_config.num_channels; i++) {
+			if (mhi_sdx_mhi_config.ch_cfg[i].num ==
+					mhi_nr_tre_update[idx]) {
+				mhi_sdx_mhi_channels[i].num_elements =
+					mhi_nr_tre_update[idx+1];
+				idx += 2;
+				if (idx == mhi_nr_tre_update_argc)
+					break;
+			}
+		}
+
+		idx = 0;
+		for (i = 0; i < mhi_sdx_mhi_config.num_events; i++) {
+			if (mhi_sdx_mhi_config.event_cfg[i].channel ==
+					mhi_nr_tre_update[idx]) {
+				mhi_sdx_mhi_events[i].num_elements =
+					(mhi_nr_tre_update[idx+1] << 1);
+
+				idx += 2;
+				if (idx == mhi_nr_tre_update_argc)
+					break;
+			}
+		}
+	}
 
 	/* Fix me: Add check to see if already registered */
 	mhi_cntrl = dt_register_mhi_controller(pci_dev);
