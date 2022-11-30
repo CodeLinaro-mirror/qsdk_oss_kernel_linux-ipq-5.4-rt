@@ -711,7 +711,7 @@
 			       <&gcc GCC_MEM_NOC_TS_CLK>;
 			clock-names = "nss-csr-clk", "nss-nssnoc-csr-clk", "nss-ce-ahb-clk",
 				"nss-ce-axi-clk", "nss-nssnoc-ce-ahb-clk", "nss-nssnoc-ce-axi-clk",
-				"nss-ts-clk", "nss-nsscc-clk", "nss-nsscfg-clk", "nss-nsscnoc-atb-clk",
+				"nss-ts-clk", "nss-nsscc-clk", "nss-nsscfg-clk", "nss-nssnoc-atb-clk",
 				"nss-nssnoc-nsscc-clk", "nss-nssnoc-pcnoc-1-clk", "nss-nssnoc-qosgen-ref-clk",
 				"nss-nssnoc-snoc-1-clk", "nss-nssnoc-snoc-clk", "nss-nssnoc-timeout-ref-clk",
 				"nss-nssnoc-xo-dcd-clk", "nss-snoc-nssnoc-clk", "nss-snoc-nssnoc-1-clk",
