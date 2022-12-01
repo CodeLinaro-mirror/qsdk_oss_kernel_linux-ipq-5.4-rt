@@ -45,7 +45,9 @@
 
 #define QCA_MAX_PHY_RESET	3
 
-#define QCA_MDIO_CLK_RATE	100000000
+#define QCA_MDIO_CLK_RATE		100000000
+#define UNIPHY_AHB_CLK_RATE		100000000
+#define UNIPHY_SYS_CLK_RATE	24000000
 
 #define TCSR_LDO_ADDR		0x19475C4
 #define GCC_GEPHY_ADDR	0x1856004
@@ -646,6 +648,21 @@ static void qca_phy_addr_fixup(struct mii_bus *mii_bus, struct device_node *np)
 	}
 }
 
+static int qca_mdio_clock_set_and_enable(struct device *dev,
+		const char *clk_id, unsigned long rate)
+{
+	struct clk *clk;
+
+	clk = devm_clk_get(dev, clk_id);
+	if (IS_ERR(clk))
+		return -1;
+
+	if (rate && clk_set_rate(clk, rate))
+		return -1;
+
+	return clk_prepare_enable(clk);
+}
+
 static int qca_mdio_probe(struct platform_device *pdev)
 {
 	struct qca_mdio_data *am;
@@ -661,6 +678,11 @@ static int qca_mdio_probe(struct platform_device *pdev)
 			usleep_range(100000, 110000);
 		}
 	}
+
+	qca_mdio_clock_set_and_enable(&pdev->dev, "uniphy0_ahb_clk", UNIPHY_AHB_CLK_RATE);
+	qca_mdio_clock_set_and_enable(&pdev->dev, "uniphy0_sys_clk", UNIPHY_SYS_CLK_RATE);
+	qca_mdio_clock_set_and_enable(&pdev->dev, "uniphy1_ahb_clk", UNIPHY_AHB_CLK_RATE);
+	qca_mdio_clock_set_and_enable(&pdev->dev, "uniphy1_sys_clk", UNIPHY_SYS_CLK_RATE);
 
 	qca_mdio_clock_set();
 
