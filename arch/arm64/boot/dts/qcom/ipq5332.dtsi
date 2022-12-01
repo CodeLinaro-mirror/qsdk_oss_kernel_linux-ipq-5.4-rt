@@ -2100,12 +2100,14 @@
 				<0x193d21c 0x8>,
 				<0x193d204 0x4>,
 				<0x1825000 0x90b8>,
-				<0x4a1000 0x4>;
+				<0x4a1000 0x4>,
+				<0xD190488 0x4>;
 			reg-names = "qdsp6",
 					"tcsr-msip",
 					"tcsr-q6",
 					"ce_ahb",
-					"qtimer";
+					"qtimer",
+					"l2vic_int";
 
 			interrupts-extended = <&intc GIC_SPI 421 IRQ_TYPE_EDGE_RISING>,
 					      <&wcss_smp2p_in 0 0>,
@@ -2203,10 +2205,8 @@
 
 			q6_wcss_pd1: remoteproc_pd1 {
 				compatible = "qcom,ipq5332-wcss-ahb-mpd";
-				reg = <0x004ab000 0x20>,
-					<0xD190488 0x4>;
-				reg-names = "rmb",
-						"l2vic_int";
+				reg = <0x004ab000 0x20>;
+				reg-names = "rmb";
 				iu_firmware = "IPQ5332/iu_fw.mdt";
 				qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
 				interrupts-extended = <&wcss_smp2p_in 8 0>,
