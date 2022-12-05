@@ -2107,6 +2107,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
+			firmware = "IPQ5332/q6_fw0.mdt";
 			reg = <0x0d100000 0x4040>,
 				<0x193d21c 0x8>,
 				<0x193d204 0x4>,
@@ -2218,6 +2219,7 @@
 				compatible = "qcom,ipq5332-wcss-ahb-mpd";
 				reg = <0x004ab000 0x20>;
 				reg-names = "rmb";
+				firmware = "IPQ5332/q6_fw1.mdt";
 				iu_firmware = "IPQ5332/iu_fw.mdt";
 				qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
 				interrupts-extended = <&wcss_smp2p_in 8 0>,
@@ -2271,6 +2273,7 @@
 
 			q6_wcss_pd2: remoteproc_pd2 {
 				compatible = "qcom,ipq5332-wcss-pcie-mpd";
+				firmware = "IPQ5332/q6_fw2.mdt";
 				qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
 				interrupts-extended = <&wcss_smp2p_in 16 0>,
 							<&wcss_smp2p_in 17 0>,
