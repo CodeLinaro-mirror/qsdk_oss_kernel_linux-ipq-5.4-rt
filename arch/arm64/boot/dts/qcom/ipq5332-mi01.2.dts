@@ -25,6 +25,7 @@
 
 	aliases {
 		serial0 = &blsp1_uart0;
+		serial1 = &blsp1_uart1;
 		ethernet0 = "/soc/dp1";
 		ethernet1 = "/soc/dp2";
 	};
@@ -51,6 +52,13 @@
 			serial_0_pins: serial0-pinmux {
 				pins = "gpio18", "gpio19";
 				function = "blsp0_uart0";
+				drive-strength = <8>;
+				bias-pull-up;
+			};
+
+			serial_1_pins: serial1-pinmux {
+				pins = "gpio33", "gpio34", "gpio35", "gpio36";
+				function = "blsp1_uart2";
 				drive-strength = <8>;
 				bias-pull-up;
 			};
@@ -294,6 +302,12 @@
 			pinctrl-0 = <&serial_0_pins>;
 			pinctrl-names = "default";
 			status = "ok";
+		};
+
+		serial@78b0000 {
+			pinctrl-0 = <&serial_1_pins>;
+			pinctrl-names = "default";
+			status = "disabled";
 		};
 
 		dma@7984000 {
