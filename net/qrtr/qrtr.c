@@ -187,6 +187,28 @@ struct qrtr_tx_flow {
 #define QRTR_TX_FLOW_HIGH	10
 #define QRTR_TX_FLOW_LOW	5
 
+#define QRTR_LOG_SIZE 		128
+/**
+ * struct qrtr_history - qrtr transaction history
+ * @timestamp: transaction timestamp
+ * @direction: transaction direction, 1 - TX, 0 - RX
+ * @qrtr_hdr: transaction qrtr header
+ * @msg_buffer: has control packet / data packet information
+ */
+struct qrtr_history {
+	u64 timestamp;
+	bool direction;
+	struct qrtr_hdr_v1 qrtr_hdr;
+	union {
+		struct qrtr_ctrl_pkt ctrl_pkt;
+		u8 data[64];
+	} msg_buffer;
+};
+
+struct qrtr_history qrtr_log[QRTR_LOG_SIZE];
+int qrtr_log_index;
+DEFINE_SPINLOCK(qrtr_log_spinlock);
+
 static struct sk_buff *qrtr_alloc_ctrl_packet(struct qrtr_ctrl_pkt **pkt,
 							gfp_t flags);
 static int qrtr_local_enqueue(struct qrtr_node *node, struct sk_buff *skb,
@@ -197,6 +219,100 @@ static int qrtr_bcast_enqueue(struct qrtr_node *node, struct sk_buff *skb,
 			      struct sockaddr_qrtr *to, unsigned int flags);
 static struct qrtr_sock *qrtr_port_lookup(int port);
 static void qrtr_port_put(struct qrtr_sock *ipc);
+
+
+static void qrtr_buffer_log_tx(struct qrtr_node *node, struct qrtr_hdr_v1 *hdr,
+		struct sk_buff *skb)
+{
+	const struct qrtr_ctrl_pkt *pkt;
+	u32 type;
+
+	if (!hdr || !skb || !skb->data)
+		return;
+
+	spin_lock(&qrtr_log_spinlock);
+
+	/* Clear previous entry */
+	memset(&qrtr_log[qrtr_log_index], 0, sizeof(struct qrtr_history));
+
+	type = le32_to_cpu(hdr->type);
+	qrtr_log[qrtr_log_index].qrtr_hdr.type = type;
+	qrtr_log[qrtr_log_index].direction = 1;
+
+	if (type == QRTR_TYPE_DATA) {
+		qrtr_log[qrtr_log_index].qrtr_hdr.version = le32_to_cpu(hdr->version);
+		qrtr_log[qrtr_log_index].qrtr_hdr.src_node_id = le32_to_cpu(hdr->src_node_id);
+		qrtr_log[qrtr_log_index].qrtr_hdr.src_port_id = le32_to_cpu(hdr->src_port_id);
+		qrtr_log[qrtr_log_index].qrtr_hdr.confirm_rx = le32_to_cpu(hdr->confirm_rx);
+		qrtr_log[qrtr_log_index].qrtr_hdr.size = le32_to_cpu(hdr->size);
+		qrtr_log[qrtr_log_index].qrtr_hdr.dst_node_id = le32_to_cpu(hdr->dst_node_id);
+		qrtr_log[qrtr_log_index].qrtr_hdr.dst_port_id = le32_to_cpu(hdr->dst_port_id);
+		memcpy(qrtr_log[qrtr_log_index].msg_buffer.data, skb->data + QRTR_HDR_MAX_SIZE, 64);
+	} else {
+		pkt = (struct qrtr_ctrl_pkt *)(skb->data + QRTR_HDR_MAX_SIZE);
+		if (type == QRTR_TYPE_NEW_SERVER || type == QRTR_TYPE_DEL_SERVER) {
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.service = le32_to_cpu(pkt->server.service);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.node = le32_to_cpu(pkt->server.node);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.instance = le32_to_cpu(pkt->server.instance);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.port = le32_to_cpu(pkt->server.port);
+		} else if (type == QRTR_TYPE_DEL_CLIENT || type == QRTR_TYPE_RESUME_TX) {
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.client.node = le32_to_cpu(pkt->client.node);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.client.port = le32_to_cpu(pkt->client.port);
+		} else if (type == QRTR_TYPE_HELLO || type == QRTR_TYPE_BYE)
+			qrtr_log[qrtr_log_index].qrtr_hdr.src_node_id = le32_to_cpu(hdr->src_node_id);
+	}
+
+	qrtr_log[qrtr_log_index++].timestamp = ktime_to_ms(ktime_get());
+
+	qrtr_log_index &= (QRTR_LOG_SIZE - 1);
+	spin_unlock(&qrtr_log_spinlock);
+}
+
+static void qrtr_buffer_log_rx(struct qrtr_node *node, struct sk_buff *skb)
+{
+	const struct qrtr_ctrl_pkt *pkt;
+	struct qrtr_cb *cb;
+
+	if (!skb || !skb->data)
+		return;
+
+	cb = (struct qrtr_cb *)skb->cb;
+
+	spin_lock(&qrtr_log_spinlock);
+
+	/* Clear previous entry */
+	memset(&qrtr_log[qrtr_log_index], 0, sizeof(struct qrtr_history));
+
+	qrtr_log[qrtr_log_index].qrtr_hdr.type = cb->type;
+	qrtr_log[qrtr_log_index].direction = 0;
+
+	if (cb->type == QRTR_TYPE_DATA) {
+		qrtr_log[qrtr_log_index].qrtr_hdr.confirm_rx = cb->confirm_rx;
+		qrtr_log[qrtr_log_index].qrtr_hdr.src_node_id = cb->src_node;
+		qrtr_log[qrtr_log_index].qrtr_hdr.src_port_id = cb->src_port;
+		qrtr_log[qrtr_log_index].qrtr_hdr.dst_node_id = cb->dst_node;
+		qrtr_log[qrtr_log_index].qrtr_hdr.dst_port_id = cb->dst_port;
+		memcpy(qrtr_log[qrtr_log_index].msg_buffer.data, skb->data, 64);
+
+	} else {
+		pkt = (struct qrtr_ctrl_pkt *)(skb->data);
+		if (cb->type == QRTR_TYPE_NEW_SERVER || cb->type == QRTR_TYPE_DEL_SERVER) {
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.service = le32_to_cpu(pkt->server.service);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.node = le32_to_cpu(pkt->server.node);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.instance = le32_to_cpu(pkt->server.instance);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.server.port = le32_to_cpu(pkt->server.port);
+		} else if (cb->type == QRTR_TYPE_DEL_CLIENT || cb->type == QRTR_TYPE_RESUME_TX) {
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.client.node = le32_to_cpu(pkt->client.node);
+			qrtr_log[qrtr_log_index].msg_buffer.ctrl_pkt.client.port = le32_to_cpu(pkt->client.port);
+		} else if (cb->type == QRTR_TYPE_HELLO || cb->type == QRTR_TYPE_BYE)
+			qrtr_log[qrtr_log_index].qrtr_hdr.src_node_id = cb->src_node;
+	}
+
+	qrtr_log[qrtr_log_index++].timestamp = ktime_to_ms(ktime_get());
+
+	qrtr_log_index &= (QRTR_LOG_SIZE - 1);
+	spin_unlock(&qrtr_log_spinlock);
+}
 
 static void qrtr_log_tx_msg(struct qrtr_node *node, struct qrtr_hdr_v1 *hdr,
 			    struct sk_buff *skb)
@@ -548,9 +664,11 @@ static int qrtr_node_enqueue(struct qrtr_node *node, struct sk_buff *skb,
 	if (!rc) {
 		mutex_lock(&node->ep_lock);
 		rc = -ENODEV;
-		if (node->ep)
+		if (node->ep) {
 			rc = node->ep->xmit(node->ep, skb);
-		else
+			if(!rc)
+				qrtr_buffer_log_tx(node, hdr, skb);
+		} else
 			kfree_skb(skb);
 		mutex_unlock(&node->ep_lock);
 	}
@@ -808,6 +926,7 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 
 	skb_put_data(skb, data + hdrlen, size);
 	qrtr_log_rx_msg(node, skb);
+	qrtr_buffer_log_rx(node, skb);
 
 	qrtr_node_assign(node, cb->src_node);
 
