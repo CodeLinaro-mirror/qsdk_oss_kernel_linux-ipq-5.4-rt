@@ -381,10 +381,19 @@
 			status = "ok";
 			pcie0_rp {
 				reg = <0 0 0 0 0>;
-				qcom,mhi@0 {
+				wifi@0 {
 					reg = <0 0 0 0 0>;
 					qrtr_instance_id = <0x30>;
+					boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
+							0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
+							0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
+					qti,disable-rddm-prealloc;
+					qti,rddm-seg-len = <0x1000>;
+					license-file = "";
+#if defined(__CNSS2__)
+					qrtr_node_id = <0x30>;
 					memory-region = <0>,<&mhi_region0>;
+#endif
 				};
 			};
 		};
@@ -446,19 +455,18 @@
 			status = "ok";
 			pcie2_rp {
 				reg = <0 0 0 0 0>;
-#if defined(__CNSS2__)
-				qcom,mhi@2 {
+				wifi@2 {
 					reg = <0 0 0 0 0>;
-					qrtr_node_id = <0x32>;
-					memory-region = <0>,<&mhi_region2>;
+					qti,disable-rddm-prealloc;
+					qti,rddm-seg-len = <0x1000>;
 					boot-args = <0x2 0x4 0x34 0x3 0x0 0x0     /* MX Rail, GPIO52, Drive strength 0x3 */
 							0x4 0x4 0x18 0x3 0x0 0x0  /* RFA1p2 Rail, GPIO24, Drive strength 0x3 */
 							0x0 0x4 0x0 0x0 0x0 0x0>; /* End of arguments */
 					license-file = "";
-				};
+#if defined(__CNSS2__)
+					qrtr_node_id = <0x32>;
+					memory-region = <0>,<&mhi_region2>;
 #else
-				wifi@2 {
-					reg = <0 0 0 0 0>;
 
 					/* qcn9224 tgt-mem-mode=0 layout - 46MB
 					* refer ipq9574-wkk-default-memory.dtsi
@@ -476,9 +484,9 @@
 					*/
 					memory-region = <&qcn9224_pcie2>;
 					qcom,board_id = <0x04>;
+#endif
 					status = "ok";
 				};
-#endif
 			};
 		};
 
