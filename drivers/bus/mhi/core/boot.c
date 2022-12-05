@@ -958,8 +958,11 @@ void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 		goto error_fw_load;
 	}
 
-	/* Download the License */
-	license_buf = mhi_download_fw_license_or_secdat(mhi_cntrl, &license_dma_addr, &license_buf_size);
+	if (mhi_cntrl->dev_id == QCN9224_DEVICE_ID) {
+		/* Download the License */
+		license_buf = mhi_download_fw_license_or_secdat(mhi_cntrl,
+				&license_dma_addr, &license_buf_size);
+	}
 
 	/* Download image using BHI */
 	memcpy(buf, firmware->data, size);
