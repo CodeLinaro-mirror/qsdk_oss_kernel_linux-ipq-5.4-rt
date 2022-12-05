@@ -19,6 +19,10 @@
 	interrupt-parent = <&intc>;
 
 	soc {
+		pcie0_phy: phy@4b0000{
+			status = "disabled";
+		};
+
 		pcie0: pcie@20000000 {
 			status = "disabled";
 		};
