@@ -486,10 +486,27 @@ int pcm_test_rw(void *data)
 
 static void pcm_start_test(int pcm_index)
 {
+	if (!(ctx[pcm_index].start >= 0 && ctx[pcm_index].start <= 7) &&
+		!IS_PCM_LBTEST_RX_TO_TX(ctx[pcm_index].start))
+	{
+		pr_notice("%ld is not supported configuration\n",
+				ctx[pcm_index].start);
+		return;
+	}
+	if ((pcm0_status != NULL && !strncmp(pcm0_status, "ok", 2)) &&
+		(pcm1_status != NULL && !strncmp(pcm1_status, "ok", 2)) &&
+		(ctx[pcm_index].start == 7 || ctx[pcm_index].start == 701)) {
+		pr_notice("%ld is not supported in dual instanse event\n",
+						ctx[pcm_index].start);
+		return;
+	}
 	pr_notice("%s : %ld\n", __func__, ctx[pcm_index].start);
+
 	if (ctx[pcm_index].start) {
 		if (ctx[pcm_index].running) {
-			pr_notice("%s : Test already running\n", __func__);
+			pr_notice("%s : Test already running with another "
+						"configuration\n", __func__);
+			return;
 		} else {
 				ctx[pcm_index].task = kthread_create(&pcm_test_rw,
 						(unsigned long *)(long)pcm_index,
