@@ -27,18 +27,6 @@
 			status = "disabled";
 		};
 
-		ssuniphy_0: ssuniphy@4b0000 {
-			status = "ok";
-		};
-
-		usb3: usb3@8A00000 {
-			dwc_0: dwc3@8A00000 {
-				#phy-cells = <0>;
-				phys = <&ssuniphy_0>;
-				phy-names = "usb3-phy";
-			};
-		};
-
 		q6v5_wcss: remoteproc@d100000 {
 			q6_wcss_pd2: remoteproc_pd2 {
 				status = "ok";
