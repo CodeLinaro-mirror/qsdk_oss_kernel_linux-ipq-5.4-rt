@@ -897,16 +897,13 @@
 			#reset-cells = <0x1>;
 		};
 
-		dcc_v2@797f000 {
+		dcc@797f000 {
 			compatible = "qcom,dcc-v2-ipq5332";
 			reg = <0x40ff000 0x1000>,
 				<0x4080000 0x800>;
 			reg-names = "dcc-base", "dcc-ram-base";
 			dcc-ram-offset = <0x0>;
-			clocks = <&gcc GCC_DCC_CLK>,
-				<&gcc GCC_DCC_XO_CLK>,
-				<&gcc GCC_PCNOC_DCC_CLK>;
-			status = "ok";
+			status = "disabled";
 		};
 
 		blsp_dma: dma@7884000 {
