@@ -198,7 +198,6 @@ static struct clk_rcg2 nss_cc_port1_rx_clk_src = {
 		.name = "nss_cc_port1_rx_clk_src",
 		.parent_names = gcc_xo_gcc_gpll0_out_aux_uniphy0_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se,
 		.num_parents = ARRAY_SIZE(gcc_xo_gcc_gpll0_out_aux_uniphy0_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se),
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 	},
 };
@@ -225,7 +224,6 @@ static struct clk_rcg2 nss_cc_port1_tx_clk_src = {
 		.name = "nss_cc_port1_tx_clk_src",
 		.parent_names = gcc_xo_gcc_gpll0_out_aux_uniphy0_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se,
 		.num_parents = ARRAY_SIZE(gcc_xo_gcc_gpll0_out_aux_uniphy0_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se),
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 	},
 };
@@ -252,7 +250,6 @@ static struct clk_rcg2 nss_cc_port2_rx_clk_src = {
 		.name = "nss_cc_port2_rx_clk_src",
 		.parent_names = gcc_xo_gcc_gpll0_out_aux_uniphy1_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se,
 		.num_parents = ARRAY_SIZE(gcc_xo_gcc_gpll0_out_aux_uniphy1_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se),
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 	},
 };
@@ -279,7 +276,6 @@ static struct clk_rcg2 nss_cc_port2_tx_clk_src = {
 		.name = "nss_cc_port2_tx_clk_src",
 		.parent_names = gcc_xo_gcc_gpll0_out_aux_uniphy1_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se,
 		.num_parents = ARRAY_SIZE(gcc_xo_gcc_gpll0_out_aux_uniphy1_gcc_rx_tx_cmn_pll_nss_clk_300m_200m_core_bi_pll_test_se),
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 	},
 };
