@@ -1459,7 +1459,6 @@ static int q6_wcss_start(struct rproc *rproc)
 	struct q6_wcss *upd_wcss;
 	const struct wcss_data *desc;
 	int loop = 0;
-	uint32_t val;
 
 	desc = of_device_get_match_data(wcss->dev);
 	if (!desc)
@@ -1541,6 +1540,7 @@ wait_for_reset:
 	if (debug_wcss && desc->q6ver != Q6V6)
 		writel(0x0, wcss->reg_base + Q6SS_DBG_CFG);
 
+#if 0
 	if (wcss->reg_base) {
 		/*
 		 * Read the version registers to
@@ -1553,6 +1553,7 @@ wait_for_reset:
 		}
 		dev_info(wcss->dev, "QDSP6SS Version : 0x%x\n", val);
 	}
+#endif
 
 	/* start userpd's, if root pd getting recovered*/
 	if (wcss->state == WCSS_RESTARTING) {
