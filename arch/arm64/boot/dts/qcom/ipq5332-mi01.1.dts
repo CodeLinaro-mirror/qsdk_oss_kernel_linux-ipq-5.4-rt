@@ -349,6 +349,8 @@
 
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
+					qrtr_node_id = <0x31>;
+					memory-region = <0>, <&mhi_region1>;
 				};
 			};
 		};
@@ -361,5 +363,20 @@
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	mem-region = <&q6_region>;
 	qcom,board_id = <0x11>;
+	status = "ok";
+};
+
+&mhi_region1 {
+	status = "ok";
+};
+
+&qcn9224_pcie1 {
+	status = "ok";
+};
+
+/* QCN9224 5G+6G */
+&wifi2 {
+	hremote_node = <&qcn9224_pcie1>;
+	board_id = <0x1006>;
 	status = "ok";
 };
