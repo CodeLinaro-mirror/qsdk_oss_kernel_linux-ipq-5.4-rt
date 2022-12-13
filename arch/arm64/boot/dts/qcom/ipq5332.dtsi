@@ -2204,7 +2204,6 @@
 					<&q6_etr_region>,
 					<&q6_caldb_region>;
 			qcom,rproc = <&q6v5_wcss>;
-			qcom,nosecure;
 			glink-edge {
 				interrupts = <GIC_SPI 417 IRQ_TYPE_EDGE_RISING>;
 				qcom,remote-pid = <1>;
@@ -2268,7 +2267,6 @@
 							"stop",
 							"spawn";
 				qcom,offloaded_to_q6;
-				qcom,nosecure;
 			};
 
 			q6_wcss_pd2: remoteproc_pd2 {
