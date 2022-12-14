@@ -440,7 +440,7 @@ static int __init bootconfig_partition_init(void)
 		if (IS_ERR(mtd)) {
 			pr_alert("%s: " BOOTCONFIG_PARTITION1 " not found\n",
 				__func__);
-			return 0;
+			goto free_memory;
 		}
 
 		bootconfig2 = read_bootconfig_mtd(mtd, 0);
@@ -453,7 +453,7 @@ static int __init bootconfig_partition_init(void)
 
 			disk = get_gendisk(MKDEV(MMC_BLOCK_MAJOR, i*CONFIG_MMC_BLOCK_MINORS), &partno);
 			if (!disk)
-				return 0;
+				goto free_memory;
 
 			disk_part_iter_init(&piter, disk, DISK_PITER_INCL_PART0);
 			while ((part = disk_part_iter_next(&piter))) {
@@ -491,6 +491,9 @@ static int __init bootconfig_partition_init(void)
  * failsafe parameters can be retained.
  */
 
+	if (!bootconfig1 || !bootconfig2)
+		goto free_memory;
+
 	boot_info_dir = proc_mkdir("boot_info",NULL);
 	upgrade_info_dir = proc_mkdir("upgrade_info",NULL);
 
@@ -503,7 +506,7 @@ static int __init bootconfig_partition_init(void)
 	bootconfig2_info_dir = proc_mkdir("bootconfig1", boot_info_dir);
 
 	if(!bootconfig1_info_dir || !bootconfig2_info_dir)
-		return 0;
+		goto remove_empty_dir;
 
 	for (i = 0; i < bc1_num_parts; i++) {
 		if (!flash_type_emmc &&
@@ -553,7 +556,7 @@ static int __init bootconfig_partition_init(void)
 		if(IS_ERR(trymode_inprogress))
 		{
 			pr_err("\nBootconfig: SMEM read failed\n");
-			return -ENOMEM;
+			goto remove_part_dir;
 		}
 
 		if(1 == *trymode_inprogress){
@@ -587,6 +590,44 @@ static int __init bootconfig_partition_init(void)
 			&age_ops, bootconfig2);
 
 	return 0;
+
+remove_part_dir:
+	for (i = 0; i < bc1_num_parts; i++) {
+		if (!flash_type_emmc &&
+				(strncmp(bc1_part_info[i].name, "kernel",
+					ALT_PART_NAME_LENGTH) == 0))
+			continue;
+
+		remove_proc_entry("primaryboot", bc1_partname_dir[i]);
+		remove_proc_entry("upgradepartition", bc1_partname_dir[i]);
+		remove_proc_entry(bc1_part_info[i].name, bootconfig1_info_dir);
+	}
+
+	for (i = 0; i < bc2_num_parts; i++) {
+		if (!flash_type_emmc &&
+				(strncmp(bc2_part_info[i].name, "kernel",
+					 ALT_PART_NAME_LENGTH) == 0))
+			continue;
+
+		remove_proc_entry("primaryboot", bc2_partname_dir[i]);
+		remove_proc_entry("upgradepartition", bc2_partname_dir[i]);
+		remove_proc_entry(bc2_part_info[i].name, bootconfig2_info_dir);
+	}
+
+	if(1 == try_feature){
+		remove_proc_entry("trybit",upgrade_info_dir);
+	}
+remove_empty_dir:
+	bootconfig1_info_dir ? remove_proc_entry("bootconfig0",boot_info_dir):NULL;
+	bootconfig2_info_dir ? remove_proc_entry("bootconfig1",boot_info_dir):NULL;
+	remove_proc_entry("boot_info", NULL);
+	remove_proc_entry("upgrade_info",NULL);
+free_memory:
+	bootconfig1 ? kfree(bootconfig1) : NULL;
+	bootconfig2 ? kfree(bootconfig2) : NULL;
+
+	return IS_ERR(trymode_inprogress) ? -ENOMEM:0;
+
 }
 module_init(bootconfig_partition_init);
 
