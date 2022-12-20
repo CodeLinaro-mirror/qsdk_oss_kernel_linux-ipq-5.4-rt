@@ -818,6 +818,10 @@ static int qup_i2c_bam_schedule_desc(struct qup_i2c_dev *qup)
 		if (!wait_for_completion_timeout(&qup->xfer, HZ))
 			dev_err(qup->dev, "flush timed out\n");
 
+		ret = qup_i2c_change_state(qup,QUP_RESET_STATE);
+		if (ret)
+			dev_err(qup->dev, "change to reset state timed out");
+
 		ret =  (qup->bus_err & QUP_I2C_NACK_FLAG) ? -ENXIO : -EIO;
 	}
 
