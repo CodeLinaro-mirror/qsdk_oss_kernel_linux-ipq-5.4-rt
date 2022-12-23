@@ -225,12 +225,13 @@ static void qrtr_buffer_log_tx(struct qrtr_node *node, struct qrtr_hdr_v1 *hdr,
 		struct sk_buff *skb)
 {
 	const struct qrtr_ctrl_pkt *pkt;
+	unsigned long flags;
 	u32 type;
 
 	if (!hdr || !skb || !skb->data)
 		return;
 
-	spin_lock(&qrtr_log_spinlock);
+	spin_lock_irqsave(&qrtr_log_spinlock, flags);
 
 	/* Clear previous entry */
 	memset(&qrtr_log[qrtr_log_index], 0, sizeof(struct qrtr_history));
@@ -265,12 +266,13 @@ static void qrtr_buffer_log_tx(struct qrtr_node *node, struct qrtr_hdr_v1 *hdr,
 	qrtr_log[qrtr_log_index++].timestamp = ktime_to_ms(ktime_get());
 
 	qrtr_log_index &= (QRTR_LOG_SIZE - 1);
-	spin_unlock(&qrtr_log_spinlock);
+	spin_unlock_irqrestore(&qrtr_log_spinlock, flags);
 }
 
 static void qrtr_buffer_log_rx(struct qrtr_node *node, struct sk_buff *skb)
 {
 	const struct qrtr_ctrl_pkt *pkt;
+	unsigned long flags;
 	struct qrtr_cb *cb;
 
 	if (!skb || !skb->data)
@@ -278,7 +280,7 @@ static void qrtr_buffer_log_rx(struct qrtr_node *node, struct sk_buff *skb)
 
 	cb = (struct qrtr_cb *)skb->cb;
 
-	spin_lock(&qrtr_log_spinlock);
+	spin_lock_irqsave(&qrtr_log_spinlock, flags);
 
 	/* Clear previous entry */
 	memset(&qrtr_log[qrtr_log_index], 0, sizeof(struct qrtr_history));
@@ -311,7 +313,7 @@ static void qrtr_buffer_log_rx(struct qrtr_node *node, struct sk_buff *skb)
 	qrtr_log[qrtr_log_index++].timestamp = ktime_to_ms(ktime_get());
 
 	qrtr_log_index &= (QRTR_LOG_SIZE - 1);
-	spin_unlock(&qrtr_log_spinlock);
+	spin_unlock_irqrestore(&qrtr_log_spinlock, flags);
 }
 
 static void qrtr_log_tx_msg(struct qrtr_node *node, struct qrtr_hdr_v1 *hdr,
