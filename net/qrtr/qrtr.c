@@ -667,9 +667,8 @@ static int qrtr_node_enqueue(struct qrtr_node *node, struct sk_buff *skb,
 		mutex_lock(&node->ep_lock);
 		rc = -ENODEV;
 		if (node->ep) {
+			qrtr_buffer_log_tx(node, hdr, skb);
 			rc = node->ep->xmit(node->ep, skb);
-			if(!rc)
-				qrtr_buffer_log_tx(node, hdr, skb);
 		} else
 			kfree_skb(skb);
 		mutex_unlock(&node->ep_lock);
