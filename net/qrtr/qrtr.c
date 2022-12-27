@@ -669,6 +669,8 @@ static int qrtr_node_enqueue(struct qrtr_node *node, struct sk_buff *skb,
 		if (node->ep) {
 			qrtr_buffer_log_tx(node, hdr, skb);
 			rc = node->ep->xmit(node->ep, skb);
+			if (rc)
+				pr_err("%s : Error in xmit : ret = %d\n",__func__, rc);
 		} else
 			kfree_skb(skb);
 		mutex_unlock(&node->ep_lock);
