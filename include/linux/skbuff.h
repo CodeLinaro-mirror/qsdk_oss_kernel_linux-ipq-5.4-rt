@@ -1052,6 +1052,7 @@ void skb_dump(const char *level, const struct sk_buff *skb, bool full_pkt);
 void skb_tx_error(struct sk_buff *skb);
 void consume_skb(struct sk_buff *skb);
 void consume_skb_list_fast(struct sk_buff_head *skb_list);
+void check_skb_fast_recyclable(struct sk_buff *skb);
 void __consume_stateless_skb(struct sk_buff *skb);
 void  __kfree_skb(struct sk_buff *skb);
 extern struct kmem_cache *skbuff_head_cache;
@@ -1175,6 +1176,7 @@ static inline int skb_pad(struct sk_buff *skb, int pad)
 }
 #define dev_kfree_skb(a)	consume_skb(a)
 #define dev_kfree_skb_list_fast(a)	consume_skb_list_fast(a)
+#define dev_check_skb_fast_recyclable(a)       check_skb_fast_recyclable(a)
 
 int skb_append_pagefrags(struct sk_buff *skb, struct page *page,
 			 int offset, size_t size);
@@ -2233,6 +2235,14 @@ static inline void skb_set_tail_pointer(struct sk_buff *skb, const int offset)
 
 #endif /* NET_SKBUFF_DATA_USES_OFFSET */
 
+static inline void skb_assert_len(struct sk_buff *skb)
+{
+#ifdef CONFIG_DEBUG_NET
+	if (WARN_ONCE(!skb->len, "%s\n", __func__))
+		DO_ONCE_LITE(skb_dump, KERN_ERR, skb, false);
+#endif /* CONFIG_DEBUG_NET */
+}
+
 /*
  *	Add data to an sk_buff
  */
@@ -2816,6 +2826,11 @@ void *netdev_alloc_frag(unsigned int fragsz);
 
 struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int length,
 				   gfp_t gfp_mask);
+
+#ifdef CONFIG_SKB_RECYCLER /* Only for premium profiles */
+struct sk_buff *__netdev_alloc_skb_no_skb_reset(struct net_device *dev, unsigned int length,
+				   gfp_t gfp_mask);
+#endif
 
 /**
  *	netdev_alloc_skb - allocate an skbuff for rx on a specific device

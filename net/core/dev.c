@@ -3479,7 +3479,6 @@ struct sk_buff *dev_hard_start_xmit(struct sk_buff *first, struct net_device *de
 
 	while (skb) {
 		struct sk_buff *next = skb->next;
-
 		skb_mark_not_on_list(skb);
 		rc = xmit_one(skb, dev, txq, next != NULL);
 		if (unlikely(!dev_xmit_complete(rc))) {
@@ -3641,6 +3640,60 @@ static void qdisc_pkt_len_init(struct sk_buff *skb)
 
 		qdisc_skb_cb(skb)->pkt_len += (gso_segs - 1) * hdr_len;
 	}
+}
+
+static inline int __dev_xmit_skb_qdisc(struct sk_buff *skb, struct Qdisc *q,
+				 struct net_device *top_qdisc_dev,
+				 struct netdev_queue *top_txq)
+{
+	spinlock_t *root_lock = qdisc_lock(q);
+	struct sk_buff *to_free = NULL;
+	bool contended;
+	int rc;
+
+	qdisc_calculate_pkt_len(skb, q);
+
+	if (q->flags & TCQ_F_NOLOCK) {
+		rc = q->enqueue(skb, q, &to_free) & NET_XMIT_MASK;
+		if (likely(!netif_xmit_frozen_or_stopped(top_txq)))
+			qdisc_run(q);
+
+		if (unlikely(to_free))
+			kfree_skb_list(to_free);
+		return rc;
+	}
+
+	/*
+	 * Heuristic to force contended enqueues to serialize on a
+	 * separate lock before trying to get qdisc main lock.
+	 * This permits qdisc->running owner to get the lock more
+	 * often and dequeue packets faster.
+	 */
+	contended = qdisc_is_running(q);
+	if (unlikely(contended))
+		spin_lock(&q->busylock);
+
+	spin_lock(root_lock);
+	if (unlikely(test_bit(__QDISC_STATE_DEACTIVATED, &q->state))) {
+		__qdisc_drop(skb, &to_free);
+		rc = NET_XMIT_DROP;
+	} else {
+		rc = q->enqueue(skb, q, &to_free) & NET_XMIT_MASK;
+		if (qdisc_run_begin(q)) {
+			if (unlikely(contended)) {
+				spin_unlock(&q->busylock);
+				contended = false;
+			}
+			__qdisc_run(q);
+			qdisc_run_end(q);
+		}
+	}
+	spin_unlock(root_lock);
+	if (unlikely(to_free))
+		kfree_skb_list(to_free);
+	if (unlikely(contended))
+		spin_unlock(&q->busylock);
+	return rc;
 }
 
 static inline int __dev_xmit_skb(struct sk_buff *skb, struct Qdisc *q,
@@ -4002,6 +4055,72 @@ q_xmit:
 EXPORT_SYMBOL(dev_fast_xmit_vp);
 
 /**
+ *	dev_fast_xmit_qdisc - fast xmit the skb along with qdisc processing
+ *	@skb:buffer to transmit
+ *	@top_qdisc_dev: the top device on which qdisc is enabled.
+ *	@bottom_dev: the device on which transmission should happen after qdisc processing.
+ *	sucessful return true
+ *	failed return false
+ */
+bool dev_fast_xmit_qdisc(struct sk_buff *skb, struct net_device *top_qdisc_dev, struct net_device *bottom_dev)
+{
+        struct netdev_queue *txq;
+	struct Qdisc *q;
+	int rc = -ENOMEM;
+
+	if (unlikely(!(top_qdisc_dev->flags & IFF_UP))) {
+		return false;
+	}
+
+	skb_reset_mac_header(skb);
+
+	/* Disable soft irqs for various locks below. Also
+	 * stops preemption for RCU.
+	 */
+	rcu_read_lock_bh();
+
+	txq = netdev_core_pick_tx(top_qdisc_dev, skb, NULL);
+	q = rcu_dereference_bh(txq->qdisc);
+	if (unlikely(!q->enqueue)) {
+		rcu_read_unlock_bh();
+		return false;
+	}
+
+	skb_update_prio(skb);
+
+	qdisc_pkt_len_init(skb);
+#ifdef CONFIG_NET_CLS_ACT
+	skb->tc_at_ingress = 0;
+# ifdef CONFIG_NET_EGRESS
+	if (static_branch_unlikely(&egress_needed_key)) {
+		skb = sch_handle_egress(skb, &rc, top_qdisc_dev);
+		if (!skb)
+			goto out;
+	}
+# endif
+#endif
+	/* If device/qdisc don't need skb->dst, release it right now while
+	 * its hot in this cpu cache.
+	 * TODO: do we need this ?
+	 */
+	if (top_qdisc_dev->priv_flags & IFF_XMIT_DST_RELEASE)
+		skb_dst_drop(skb);
+	else
+		skb_dst_force(skb);
+
+	trace_net_dev_queue(skb);
+
+	/* Update the dev so that we can transmit to bottom device after qdisc */
+	skb->dev = bottom_dev;
+	rc = __dev_xmit_skb_qdisc(skb, q, top_qdisc_dev, txq);
+
+out:
+	rcu_read_unlock_bh();
+	return true;
+}
+EXPORT_SYMBOL(dev_fast_xmit_qdisc);
+
+/**
  *	dev_fast_xmit - fast xmit the skb
  *	@skb:buffer to transmit
  *	@dev: the device to be transmited to
@@ -4114,6 +4233,7 @@ static int __dev_queue_xmit(struct sk_buff *skb, struct net_device *sb_dev)
 	bool again = false;
 
 	skb_reset_mac_header(skb);
+	skb_assert_len(skb);
 
 	if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_SCHED_TSTAMP))
 		__skb_tstamp_tx(skb, NULL, skb->sk, SCM_TSTAMP_SCHED);
@@ -4824,7 +4944,7 @@ static int netif_rx_internal(struct sk_buff *skb)
 	if (dev->sawf_flags & NETDEV_SAWF_FLAG_ENABLED) {
 		netif_sawf_timestamp(skb, dev);
 	} else {
-		net_timestamp_check(netdev_tstamp_prequeue, skb);
+		net_timestamp_check(READ_ONCE(netdev_tstamp_prequeue), skb);
 	}
 
 	trace_netif_rx(skb);
@@ -5171,7 +5291,7 @@ static int __netif_receive_skb_core(struct sk_buff **pskb, bool pfmemalloc,
 	__be16 type;
 	int (*fast_recv)(struct sk_buff *skb);
 
-	net_timestamp_check(!netdev_tstamp_prequeue, skb);
+	net_timestamp_check(!READ_ONCE(netdev_tstamp_prequeue), skb);
 
 	trace_netif_receive_skb(skb);
 
@@ -5565,7 +5685,7 @@ static int netif_receive_skb_internal(struct sk_buff *skb)
 	if (dev->sawf_flags & NETDEV_SAWF_FLAG_ENABLED) {
 		netif_sawf_timestamp(skb, dev);
 	} else {
-		net_timestamp_check(netdev_tstamp_prequeue, skb);
+		net_timestamp_check(READ_ONCE(netdev_tstamp_prequeue), skb);
 	}
 
 	if (skb_defer_rx_timestamp(skb))
@@ -5600,7 +5720,7 @@ static void netif_receive_skb_list_internal(struct list_head *head)
 		if (dev->sawf_flags & NETDEV_SAWF_FLAG_ENABLED) {
 			netif_sawf_timestamp(skb, dev);
 		} else {
-			net_timestamp_check(netdev_tstamp_prequeue, skb);
+			net_timestamp_check(READ_ONCE(netdev_tstamp_prequeue), skb);
 		}
 
 		skb_list_del_init(skb);
@@ -6334,7 +6454,7 @@ static int process_backlog(struct napi_struct *napi, int quota)
 		net_rps_action_and_irq_enable(sd);
 	}
 
-	napi->weight = dev_rx_weight;
+	napi->weight = READ_ONCE(dev_rx_weight);
 	while (again) {
 		struct sk_buff *skb;
 
@@ -6888,8 +7008,8 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
 {
 	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
 	unsigned long time_limit = jiffies +
-		usecs_to_jiffies(netdev_budget_usecs);
-	int budget = netdev_budget;
+		usecs_to_jiffies(READ_ONCE(netdev_budget_usecs));
+	int budget = READ_ONCE(netdev_budget);
 	LIST_HEAD(list);
 	LIST_HEAD(repoll);
 

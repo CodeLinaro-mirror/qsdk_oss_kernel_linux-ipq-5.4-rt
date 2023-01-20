@@ -14,6 +14,7 @@
 #include <linux/platform_device.h>
 #include <linux/usb/phy.h>
 #include <linux/reset.h>
+#include <linux/of_device.h>
 
 enum clk_reset_action {
 	CLK_RESET_DEASSERT	= 0,
@@ -41,6 +42,7 @@ enum clk_reset_action {
 #define USB_PHY_REFCLK_CTRL		0xA0
 #define USB_PHY_HS_PHY_CTRL2		0x64
 #define USB_PHY_UTMI_CTRL0		0x3c
+#define USB2PHY_USB_PHY_M31_XCFGI_11	0xE4
 
 #define UTMI_PHY_OVERRIDE_EN		BIT(1)
 #define POR_EN				BIT(1)
@@ -53,6 +55,10 @@ enum clk_reset_action {
 #define USB2_UTMI_CLK_EN		BIT(1)
 #define CLKCORE				BIT(1)
 #define ATERESET			~BIT(0)
+#define FREQ_24MHZ			(5 << 4)
+#define XCFG_COARSE_TUNE_NUM		(2 << 0)
+#define XCFG_FINE_TUNE_NUM		(1 << 3)
+
 static void m31usb_write_readback(void *base, u32 offset,
 					const u32 mask, u32 val);
 
@@ -102,6 +108,30 @@ static void m31usb_phy_enable_clock(struct m31usb_phy *qphy)
 	writel(0x0, qphy->base + USB_PHY_CFG0);
 }
 
+static void ipq5332_m31usb_phy_enable_clock(struct m31usb_phy *qphy)
+{
+	/* Enable override ctrl */
+	writel(UTMI_PHY_OVERRIDE_EN, qphy->base + USB_PHY_CFG0);
+	/* Enable POR*/
+	writel(POR_EN, qphy->base + USB_PHY_UTMI_CTRL5);
+	udelay(15);
+	/* Configure frequency select value*/
+	writel(FREQ_SEL, qphy->base + USB_PHY_FSEL_SEL);
+	/* Configure refclk frequency */
+	writel(COMMONONN | FREQ_24MHZ | RETENABLEN,
+		qphy->base + USB_PHY_HS_PHY_CTRL_COMMON0);
+	/* select ATERESET*/
+	writel(POR_EN & ATERESET, qphy->base + USB_PHY_UTMI_CTRL5);
+	writel(USB2_SUSPEND_N_SEL | USB2_SUSPEND_N | USB2_UTMI_CLK_EN,
+		qphy->base + USB_PHY_HS_PHY_CTRL2);
+	writel(XCFG_COARSE_TUNE_NUM  | XCFG_FINE_TUNE_NUM,
+				qphy->base + USB2PHY_USB_PHY_M31_XCFGI_11);
+	udelay(4);
+	writel(0x0, qphy->base + USB_PHY_UTMI_CTRL5);
+	writel(USB2_SUSPEND_N | USB2_UTMI_CLK_EN,
+		qphy->base + USB_PHY_HS_PHY_CTRL2);
+}
+
 static int m31usb_phy_init(struct usb_phy *phy)
 {
 	struct m31usb_phy *qphy = container_of(phy, struct m31usb_phy, phy);
@@ -124,7 +154,11 @@ static int m31usb_phy_init(struct usb_phy *phy)
 	wmb();
 
 	/* Turn on phy ref clock*/
-	m31usb_phy_enable_clock(qphy);
+	if (of_device_is_compatible(phy->dev->of_node,
+					"qca,ipq5332-m31-usb-hsphy"))
+		ipq5332_m31usb_phy_enable_clock(qphy);
+	else
+		m31usb_phy_enable_clock(qphy);
 
 	/* Set OTG VBUS Valid from HSPHY to controller */
 	m31usb_write_readback(qphy->qscratch_base, HS_PHY_CTRL_REG,
@@ -284,7 +318,8 @@ static int m31usb_phy_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id m31usb_phy_id_table[] = {
-	{ .compatible = "qca,m31-usb-hsphy", },
+	{ .compatible = "qca,m31-usb-hsphy",},
+	{ .compatible = "qca,ipq5332-m31-usb-hsphy",},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, m31usb_phy_id_table);

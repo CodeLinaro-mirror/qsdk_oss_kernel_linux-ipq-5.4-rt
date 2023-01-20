@@ -10,12 +10,6 @@
 
 #include "ipq5332-mi01.1.dts"
 
-#ifdef __IPQ_MEM_PROFILE_512_MB__
-#include "ipq5332-512MB-memory.dtsi"
-#else
-#include "ipq5332-default-memory.dtsi"
-#endif
-
 / {
 	model = "Qualcomm Technologies, Inc. IPQ5332/AP-MI01.7";
 	compatible = "qcom,ipq5332-ap-mi01.7", "qcom,ipq5332";

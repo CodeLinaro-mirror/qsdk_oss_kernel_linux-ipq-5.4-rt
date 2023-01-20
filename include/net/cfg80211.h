@@ -1046,12 +1046,14 @@ enum cfg80211_ap_settings_flags {
  * Used to configure AP MLO Interface
  *
  * @num_mlo_links: number of MLO links.
+ * @reconfig: whether reconfiguration or not
  * @mlo_link_ids: Array of link ids.
  * @mlo_mac_addrs: Array of MLO MAC address.
  */
 #define MAX_NUM_MLO_LINKS 16
 struct cfg80211_mlo_info {
 	u8 num_mlo_links;
+	bool reconfig;
 	u32 mlo_link_ids[MAX_NUM_MLO_LINKS];
 	struct mac_address mlo_mac_addrs[MAX_NUM_MLO_LINKS];
 };
@@ -3783,7 +3785,8 @@ struct cfg80211_ops {
 			    struct cfg80211_ap_settings *settings);
 	int	(*change_beacon)(struct wiphy *wiphy, struct net_device *dev,
 				 struct cfg80211_beacon_data *info);
-	int	(*stop_ap)(struct wiphy *wiphy, struct net_device *dev);
+	int	(*stop_ap)(struct wiphy *wiphy, struct net_device *dev,
+			   struct cfg80211_ap_settings *settings);
 
 
 	int	(*add_station)(struct wiphy *wiphy, struct net_device *dev,
@@ -6749,6 +6752,7 @@ void cfg80211_port_authorized(struct net_device *dev, const u8 *bssid,
  * @ie_len: length of IEs
  * @reason: reason code for the disconnection, set it to 0 if unknown
  * @locally_generated: disconnection was requested locally
+ * @link_id: link_id of AP for non-AP STA MLD
  * @gfp: allocation flags
  *
  * After it calls this function, the driver should enter an idle state
@@ -6756,7 +6760,7 @@ void cfg80211_port_authorized(struct net_device *dev, const u8 *bssid,
  */
 void cfg80211_disconnected(struct net_device *dev, u16 reason,
 			   const u8 *ie, size_t ie_len,
-			   bool locally_generated, gfp_t gfp);
+			   bool locally_generated, int link_id, gfp_t gfp);
 
 /**
  * cfg80211_ready_on_channel - notification of remain_on_channel start

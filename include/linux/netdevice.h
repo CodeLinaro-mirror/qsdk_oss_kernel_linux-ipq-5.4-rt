@@ -2488,6 +2488,7 @@ struct packet_type {
 					      struct net_device *);
 	bool			(*id_match)(struct packet_type *ptype,
 					    struct sock *sk);
+	struct net		*af_packet_net;
 	void			*af_packet_priv;
 	struct list_head	list;
 };
@@ -2783,6 +2784,7 @@ int dev_queue_xmit(struct sk_buff *skb);
 bool dev_fast_xmit_vp(struct sk_buff *skb, struct net_device *dev);
 bool dev_fast_xmit(struct sk_buff *skb, struct net_device *dev,
 		   netdev_features_t features);
+bool dev_fast_xmit_qdisc(struct sk_buff *skb, struct net_device *top_qdisc_dev, struct net_device *bottom_dev);
 int dev_queue_xmit_accel(struct sk_buff *skb, struct net_device *sb_dev);
 int dev_direct_xmit(struct sk_buff *skb, u16 queue_id);
 int register_netdevice(struct net_device *dev);
@@ -3903,7 +3905,8 @@ void netdev_run_todo(void);
  */
 static inline void dev_put(struct net_device *dev)
 {
-	this_cpu_dec(*dev->pcpu_refcnt);
+	if (dev)
+		this_cpu_dec(*dev->pcpu_refcnt);
 }
 
 /**
@@ -3914,7 +3917,8 @@ static inline void dev_put(struct net_device *dev)
  */
 static inline void dev_hold(struct net_device *dev)
 {
-	this_cpu_inc(*dev->pcpu_refcnt);
+	if (dev)
+		this_cpu_inc(*dev->pcpu_refcnt);
 }
 
 /* Carrier loss detection, dial on demand. The functions netif_carrier_on

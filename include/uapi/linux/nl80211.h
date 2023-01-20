@@ -56,6 +56,7 @@
 #define NL80211_EDMG_BW_CONFIG_MAX	15
 #define NL80211_EDMG_CHANNELS_MIN	1
 #define NL80211_EDMG_CHANNELS_MAX	0x3c /* 0b00111100 */
+#define NL80211_MLD_MAX_NUM_LINKS	15 /* Max Num of MLD Links */
 
 /**
  * DOC: Station handling
@@ -2506,6 +2507,7 @@ enum nl80211_commands {
  * @NL80211_ATTR_MLD_REFERENCE: MLD Reference.
  * @NL80211_ATTR_MLD_LINK_IDS: nested attribute to hold MLD link-ids.
  * @NL80211_ATTR_MLD_LINK_MACS: nested attribute to hold MLD mac addrs.
+ * @NL80211_ATTR_RECONFIG: whether the operation is reconfiguration or not
  *
  * @NL80211_ATTR_SAE_PWE: Indicates the mechanism(s) allowed for SAE PWE
  *	derivation in WPA3-Personal networks which are using SAE authentication.
@@ -2991,6 +2993,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_HE_6GHZ_CAPABILITY,
 
 	NL80211_ATTR_SAE_PWE = 298,
+	NL80211_ATTR_MLO_LINK_ID = 313,
 
 	NL80211_ATTR_EHT_CAPABILITY = 350,
 	NL80211_ATTR_EHT_PUNCTURE_BITMAP,
@@ -2998,6 +3001,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_MLD_REFERENCE,
 	NL80211_ATTR_MLD_LINK_IDS,
 	NL80211_ATTR_MLD_LINK_MACS,
+	NL80211_ATTR_RECONFIG,
 	/* add attributes here, update the policy in nl80211.c */
 
 	__NL80211_ATTR_AFTER_LAST,
@@ -6779,5 +6783,7 @@ enum nl80211_sae_pwe_mechanism {
        NL80211_SAE_PWE_HASH_TO_ELEMENT,
        NL80211_SAE_PWE_BOTH,
 };
+
+#define NL80211_MLO_INVALID_LINK_ID	-1
 
 #endif /* __LINUX_NL80211_H */

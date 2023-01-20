@@ -871,11 +871,14 @@ dtb-$(CONFIG_ARCH_QCOM) += \
 	ipq5332-emulation-ssoc.dtb \
 	ipq5332-mi01.1.dtb \
 	ipq5332-mi01.2.dtb \
+	ipq5332-mi01.2-qcn9160-c1.dtb \
 	ipq5332-mi01.4.dtb \
 	ipq5332-mi01.6.dtb \
 	ipq5332-mi01.7.dtb \
+	ipq5332-mi03.1.dtb \
 	ipq5332-db-mi01.1.dtb \
 	ipq5332-db-mi02.1.dtb \
+	ipq5332-db-mi03.1.dtb \
 	ipq6018-cp01-c1.dtb \
 	ipq6018-cp01-c3.dtb \
 	ipq6018-cp01-c4.dtb \
@@ -932,6 +935,7 @@ dtb-$(CONFIG_ARCH_QCOM) += \
 	ipq9574-al02-c16.dtb \
 	ipq9574-al02-c17.dtb \
 	ipq9574-al02-c18.dtb \
+	ipq9574-al02-c19.dtb \
 	ipq9574-db-al01-c1.dtb \
 	ipq9574-db-al01-c2.dtb \
 	ipq9574-db-al01-c3.dtb \

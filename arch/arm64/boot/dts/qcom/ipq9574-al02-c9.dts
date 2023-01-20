@@ -22,6 +22,11 @@
         };
 
 	soc {
+		wsi: wsi {
+			id = <0>;
+			num_chip = <2>;
+		};
+
 		pcie0_x1: pci@28000000 {
 			status = "ok";
 			pcie0_rp {
@@ -39,6 +44,12 @@
 #if defined(__CNSS2__)
 					qrtr_node_id = <0x30>;
 					memory-region = <0>,<&mhi_region0>;
+#else
+					/* qcn9224 tgt-mem-mode=0 layout
+					* refer ipq9574-wkk-default-memory.dtsi */
+					memory-region = <&qcn9224_pcie0>;
+					qcom,board_id = <0x1010>;
+					qcom,wsi = <&wsi>;
 #endif
 					status = "ok";
 				};
@@ -49,6 +60,24 @@
 			status = "ok";
 		};
 
+#if !defined(__CNSS2__)
+		pcie2_x2: pci@20000000 {
+			status = "ok";
+			pcie2_rp {
+				reg = <0 0 0 0 0>;
+				wifi@2 {
+					reg = <0 0 0 0 0>;
+
+					/* qcn9224 tgt-mem-mode=0 layout
+					* refer ipq9574-wkk-default-memory.dtsi */
+					memory-region = <&qcn9224_pcie2>;
+					qcom,board_id = <0x100e>;
+					status = "ok";
+					qcom,wsi = <&wsi>;
+				};
+			};
+		};
+#endif
 		pcie3_x2: pci@18000000 {
 			status = "disabled";
 			/delete-node/ pcie3_rp;

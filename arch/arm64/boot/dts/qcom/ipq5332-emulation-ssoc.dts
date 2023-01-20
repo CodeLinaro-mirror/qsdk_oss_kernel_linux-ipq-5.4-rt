@@ -131,6 +131,13 @@
 				bootaddr = <0x4A900000>;
 				qcom,fw_shared;
 			};
+			q6_wcss_pd2: remoteproc_pd2 {
+				qcom,emulation;
+				qcom,nosecure;
+				bootaddr = <0x4A900000>;
+				qcom,fw_shared;
+				status = "ok";
+			};
 		};
 
 		scm {

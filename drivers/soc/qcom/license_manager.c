@@ -248,9 +248,15 @@ int scm_get_device_attestation_ephimeral_key(void *key_buf, u32 key_buf_len,
 
 	pr_info(" %s : Key Length is  : %X\n", __func__, *key_len);
 
-	for (index = 0; index <= *key_len; index = index + sizeof(u32)) {
+	for (index = 0; index < (*key_len - (*key_len % sizeof(u32)));
+			index = index + sizeof(u32)) {
 		snprintf(buf+strlen(buf), MAX_SIZE_OF_KEY_BUF_LEN - strlen(buf),
-				"%X ", *(unsigned int *)(key_buf + index));
+				"%08X ", *(unsigned int *)(key_buf + index));
+	}
+	if ((*key_len % sizeof(u32)) != 0) {
+		snprintf(buf+strlen(buf), MAX_SIZE_OF_KEY_BUF_LEN - strlen(buf),
+				"%X ", *(unsigned int *)(key_buf +
+					(*key_len - (*key_len % sizeof(u32)))));
 	}
 
 	f = filp_open(QWES_M3_KEY_RESP_FILE, flags, 0600);

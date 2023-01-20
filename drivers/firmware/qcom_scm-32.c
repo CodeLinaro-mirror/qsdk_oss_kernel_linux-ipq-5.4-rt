@@ -1689,8 +1689,7 @@ int __qti_scm_get_device_attestation_ephimeral_key(struct device *dev, u32 svc_i
 		if (!ret)
 			ret = le32_to_cpu(desc.ret[0]);
 	} else {
-		ret = qcom_scm_call(dev, svc_id, cmd_id, key_buf,
-				sizeof(key_buf), key_len, sizeof(key_len));
+		ret = -EINVAL;
 	}
 
 	dma_unmap_single(dev, dma_key_len, sizeof(unsigned int), DMA_FROM_DEVICE);
@@ -1727,15 +1726,6 @@ int __qti_scm_get_device_attestation_response(struct device *dev, u32 svc_id,
 {
 	int ret;
 	struct scm_desc desc = {0};
-	struct qwes_report {
-		uint32_t dma_req_buf;
-		uint32_t req_buf_len;
-		uint32_t dma_claim_buf;
-		uint32_t extclaim_buf_len;
-		uint32_t dma_resp_buf;
-		uint32_t resp_buf_len;
-		uint32_t attest_resp_len;
-	}qwes;
 
 	dma_addr_t dma_req_buf;
 	dma_addr_t dma_claim_buf = 0;
@@ -1750,7 +1740,7 @@ int __qti_scm_get_device_attestation_response(struct device *dev, u32 svc_id,
 		return ret;
 	}
 
-	if(extclaim_buf != NULL) {
+	if (extclaim_buf != NULL) {
 		dma_claim_buf = dma_map_single(dev, extclaim_buf, extclaim_buf_len,
 				DMA_FROM_DEVICE);
 		ret = dma_mapping_error(dev, dma_claim_buf);
@@ -1783,7 +1773,7 @@ int __qti_scm_get_device_attestation_response(struct device *dev, u32 svc_id,
 		desc.args[3] = extclaim_buf_len;
 		desc.args[4] = dma_resp_buf;
 		desc.args[5] = resp_buf_len;
-		desc.args[6] = (u32)attest_resp_len;
+		desc.args[6] = dma_resp_len;
 
 		desc.arginfo = SCM_ARGS(7, QCOM_SCM_VAL, QCOM_SCM_VAL,
 					QCOM_SCM_VAL, QCOM_SCM_VAL, QCOM_SCM_VAL,
@@ -1792,15 +1782,7 @@ int __qti_scm_get_device_attestation_response(struct device *dev, u32 svc_id,
 		if (!ret)
 			ret = le32_to_cpu(desc.ret[0]);
 	} else {
-		qwes.dma_req_buf = dma_req_buf;
-		qwes.req_buf_len = req_buf_len;
-		qwes.dma_claim_buf = dma_claim_buf;
-		qwes.extclaim_buf_len = extclaim_buf_len;
-		qwes.dma_resp_buf = dma_resp_buf;
-		qwes.resp_buf_len = resp_buf_len;
-		qwes.attest_resp_len = (u32)attest_resp_len;
-		ret = qcom_scm_call(dev, svc_id, cmd_id, &qwes,
-				sizeof(struct qwes_report), NULL, 0);
+		ret = -EINVAL;
 	}
 
 	dma_unmap_single(dev, dma_resp_len, sizeof(unsigned int),
@@ -1809,7 +1791,7 @@ dma_unmap_resp_buf:
 	dma_unmap_single(dev, dma_resp_buf, resp_buf_len, DMA_FROM_DEVICE);
 
 dma_unmap_extclaim_buf:
-	if(extclaim_buf != NULL) {
+	if (extclaim_buf != NULL) {
 		dma_unmap_single(dev, dma_claim_buf, extclaim_buf_len,
 			DMA_FROM_DEVICE);
 	}
@@ -1842,13 +1824,6 @@ int __qti_scm_get_device_provision_response(struct device *dev, u32 svc_id,
 {
 	int ret;
 	struct scm_desc desc = {0};
-	struct qwes_report {
-		uint32_t dma_req_buf;
-		uint32_t req_buf_len;
-		uint32_t dma_resp_buf;
-		uint32_t resp_buf_len;
-		uint32_t prov_resp_size;
-	}qwes;
 
 	dma_addr_t dma_req_buf;
 	dma_addr_t dma_resp_buf;
@@ -1891,17 +1866,11 @@ int __qti_scm_get_device_provision_response(struct device *dev, u32 svc_id,
 		if(!ret)
 			ret = le32_to_cpu(desc.ret[0]);
 	} else {
-		qwes.dma_req_buf = dma_req_buf;
-		qwes.req_buf_len = provreq_buf_len;
-		qwes.dma_resp_buf = dma_resp_buf;
-		qwes.resp_buf_len = provresp_buf_len;
-		qwes.prov_resp_size = dma_prov_resp_size;
-		ret = qcom_scm_call(dev, svc_id, cmd_id, &qwes,
-				sizeof(struct qwes_report), NULL, 0);
+		ret = -EINVAL;
 	}
+
 	dma_unmap_single(dev, dma_prov_resp_size, sizeof(unsigned int),
 			DMA_FROM_DEVICE);
-
 dma_unmap_resp_buf:
 	dma_unmap_single(dev, dma_resp_buf, provresp_buf_len, DMA_FROM_DEVICE);
 

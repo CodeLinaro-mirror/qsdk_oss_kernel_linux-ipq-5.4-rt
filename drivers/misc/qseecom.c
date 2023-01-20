@@ -611,10 +611,20 @@ store_context_data(struct device *dev, struct device_attribute *attr,
                         const char *buf, size_t count)
 {
 	int i = 0;
+	int num_bytes = (count - 1) / 2 ;
 
 	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++)
 		context_data[i] = 0;
-	context_data_len = MAX_CONTEXT_BUFFER_LEN;
+
+	if((count - 1) % 2 != 0) {
+		pr_info("Input data should be in terms of bytes, which " \
+			"will have even number of digits\n");
+		pr_info("Context data length is %lu bytes\n",
+			(unsigned long)count-1);
+		return -EINVAL;
+	}
+
+	context_data_len = num_bytes;
 
 	if (count > ((MAX_CONTEXT_BUFFER_LEN * 2) + 1)) {
 		pr_info("Invalid input\n");
@@ -624,13 +634,13 @@ store_context_data(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	}
 
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++) {
+	for (i = 0; i < num_bytes; i++) {
 		sscanf(buf, "%2hhx", &context_data[i]);
 		buf += 2;
 	}
 
 	pr_debug("context_data is :\n");
-	for (i = 0; i < MAX_CONTEXT_BUFFER_LEN; i++)
+	for (i = 0; i < num_bytes; i++)
 		pr_debug("0x%02x\n", (unsigned int)context_data[i]);
 
 	return count;

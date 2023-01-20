@@ -3,7 +3,7 @@
  * IPQ5332 AP-MI01.4 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -25,220 +25,27 @@
 
 	aliases {
 		serial0 = &blsp1_uart0;
+		ethernet0 = "/soc/dp1";
+		ethernet1 = "/soc/dp2";
 	};
 
 	chosen {
-		linux,initrd-end = <0x57000000>;
-		linux,initrd-start = <0x55000000>;
-		bootargs = "root=/dev/ram0 rw init=/init";
 		stdout-path = "serial0";
 		bootargs-append = " clk_ignore_unused";
 	};
 
-	cpus {
-		CPU0: cpu@0 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc0>;
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		CPU1: cpu@1 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc1>;
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		CPU2: cpu@2 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc2>;
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		CPU3: cpu@3 {
-			enable-method = "qcom,arm-cortex-acc";
-			qcom,acc = <&acc3>;
-			/delete-property/ clocks;
-			/delete-property/ clock-latency;
-			/delete-property/ operating-points-v2;
-		};
-
-		/delete-node/ cpu_opp_table;
-	};
-
-	/*
-	 * Below nodes are applicable for all RDPs, hence enabled by
-	 * default in base dtsi file itself.
-	 * So, rather than marking these nodes with status = "disabled",
-	 * delete it. Once verified in silicon, we can remove the below
-	 * snippet.
-	 */
-
-	/* Below nodes are QSEE dependent */
-	/delete-node/ firmware;
-	/delete-node/ qti,tzlog;
-	/delete-node/ qti,scm_restart_reason;
-	/delete-node/ psci;
-	/delete-node/ ctx-save;
-	/delete-node/ qseecom;
-
-	/* Misc nodes */
-	/delete-node/ pmu;
-	/delete-node/ pmu-v7;
-	/delete-node/ qti,sps;
-	/delete-node/ qcom,test@0;
-	/delete-node/ qti,gadget_diag@0;
-
 	soc {
-
-		/*
-		 * Below nodes are applicable for all RDPs, hence enabled by
-		 * default in base dtsi file itself.
-		 * So, rather than marking these nodes with status = "disabled",
-		 * delete it. Once verified in silicon, we can remove the below
-		 * snippet.
-		 */
-
-		/* Misc nodes */
-		/delete-node/ prng@e3000;
-		/delete-node/ watchdog@b017000;
-		/delete-node/ qcom,msm-imem@8600000;
-
-		/* APSS clock node */
-		/delete-node/ qcom,apss_clk@b111000;
-
-		/delete-node/ syscon@193d100;
-		/delete-node/ syscon@1905000;
-		/delete-node/ hwlock;
-		/delete-node/ smem;
-		/delete-node/ scm;
-
-		/* QDSS & DCC nodes */
-		/delete-node/ dcc_v2@797f000;
-		/delete-node/ csr@4001000;
-		/delete-node/ stm@4002000;
-		/delete-node/ funnel@4041000;
-		/delete-node/ funnel@4042000;
-		/delete-node/ funnel@4045000;
-		/delete-node/ replicator@4046000;
-		/delete-node/ etf@4047000;
-		/delete-node/ tmc@4048000;
-		/delete-node/ cti@5098000;
-		/delete-node/ etm@509c000;
-		/delete-node/ cti@5099000;
-		/delete-node/ etm@509d000;
-		/delete-node/ cti@509a000;
-		/delete-node/ etm@509e000;
-		/delete-node/ cti@509b000;
-		/delete-node/ etm@509f000;
-		/delete-node/ funnel@50a1000;
-
-		/*
-		 * Below nodes are referenced by other nodes, deleting it
-		 * will lead to build error, so disable it.
-		 */
-		mailbox@b111000 {
-			status = "disabled";
-		};
-		wcss-smp2p {
-			status = "disabled";
-		};
-		syscon@1945000 {
-			status = "disabled";
-		};
-		remoteproc@d100000 {
-			status = "disabled";
-		};
-		dma@7884000 {
-			status = "disabled";
-		};
-
-		/* GIC MSI are not needed for the initial bringup */
-		interrupt-controller@b000000 {
-			/delete-node/ v2m@0;
-			/delete-node/ v2m@1;
-			/delete-node/ v2m@2;
-		};
-
-		/* Not needed for the initial bringup */
-		ess-instance {
-			status = "disabled";
-		};
-
-		acc0: clock-controller@b188000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b188000 0x1000>;
-		};
-
-		acc1: clock-controller@b198000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b198000 0x1000>;
-		};
-
-		acc2: clock-controller@b1a8000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b1a8000 0x1000>;
-		};
-
-		acc3: clock-controller@b1b8000 {
-			compatible = "qcom,arm-cortex-acc";
-			reg = <0x0b1b8000 0x1000>;
-		};
-
 		pinctrl@1000000 {
-			emmc_pins: emmc_pins {
-				emmc_clk {
-					pins = "gpio13";
-					function = "sdc_clk";
-					drive-strength = <8>;
-					bias-pull-down;
-				};
-				emmc_cmd {
-					pins = "gpio12";
-					function = "sdc_cmd";
-					drive-strength = <8>;
-					bias-pull-up;
-				};
-				emmc_data {
-					pins = "gpio8", "gpio9", "gpio10",
-						"gpio11";
-					function = "sdc_data";
-					drive-strength = <8>;
-					bias-pull-down;
-				};
-			};
-
-			qspi_nand_pins: qspi_nand_pins {
-				qspi_clock {
-					pins = "gpio13";
-					function = "qspi_clk";
-					drive-strength = <8>;
-					bias-pull-down;
-				};
-
-				qspi_cs {
-					pins = "gpio12";
-					function = "qspi_cs";
-					drive-strength = <8>;
-					bias-pull-up;
-				};
-
-				qspi_data {
-					pins = "gpio8", "gpio9", "gpio10", "gpio11";
-					function = "qspi_data";
-					drive-strength = <8>;
-					bias-pull-down;
-				};
-			};
-
 			serial_0_pins: serial0-pinmux {
 				pins = "gpio18", "gpio19";
 				function = "blsp0_uart0";
+				drive-strength = <8>;
+				bias-pull-up;
+			};
+
+			serial_1_pins: serial1-pinmux {
+				pins = "gpio33", "gpio34", "gpio35", "gpio36";
+				function = "blsp1_uart2";
 				drive-strength = <8>;
 				bias-pull-up;
 			};
@@ -258,14 +65,64 @@
 					bias-pull-down;
 				};
 			};
+
+			mdio0_pins: mdio_pinmux {
+				mux_0 {
+					pins = "gpio25";
+					function = "mdc0";
+					drive-strength = <8>;
+					bias-disable;
+				};
+				mux_1 {
+					pins = "gpio26";
+					function = "mdio0";
+					drive-strength = <8>;
+					bias-pull-up;
+				};
+			};
+
+			mdio1_pins: mdio_pinmux {
+				mux_0 {
+					pins = "gpio27";
+					function = "mdc1";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+				mux_1 {
+					pins = "gpio28";
+					function = "mdio1";
+					drive-strength = <2>;
+					bias-pull-up;
+				};
+			};
+			pwm_pins: pwm_pinmux {
+				pins = "gpio30";
+				function = "pwm1";
+				drive-strength = <8>;
+			};
 		};
 
-		gcc@1800000 {
-			gcc-use-dummy;
+		dp1 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <2>;
+			reg = <0x3a504000 0x4000>;
+			qcom,mactype = <1>;
+			local-mac-address = [000000000000];
+			mdio-bus = <&mdio>;
+			qcom,phy-mdio-addr = <12>;
+			qcom,link-poll = <1>;
+			phy-mode = "sgmii";
 		};
 
-		nsscc@39b00000 {
-			nsscc-use-dummy;
+		dp2 {
+			device_type = "network";
+			compatible = "qcom,nss-dp";
+			qcom,id = <1>;
+			reg = <0x3a500000 0x4000>;
+			qcom,mactype = <1>;
+			local-mac-address = [000000000000];
+			phy-mode = "sgmii";
 		};
 
 		serial@78af000 {
@@ -274,33 +131,228 @@
 			status = "ok";
 		};
 
+		serial@78b0000 {
+			pinctrl-0 = <&serial_1_pins>;
+			pinctrl-names = "default";
+			status = "disabled";
+		};
+
 		i2c@78b6000 {
 			pinctrl-0 = <&i2c_1_pins>;
 			pinctrl-names = "default";
 		};
 
-		dma@7984000 {
+		pwm {
+			pinctrl-0 = <&pwm_pins>;
+			pinctrl-names = "default";
+			used-pwm-indices = <0>, <0>, <1>, <0>;
 			status = "disabled";
+		};
+
+		mdio:mdio@90000 {
+			status = "ok";
+			pinctrl-0 = <&mdio1_pins &mdio0_pins>;
+			pinctrl-names = "default";
+			/*gpio51 for manhattan reset, gpio22 for napa*/
+			phy-reset-gpio = <&tlmm 51 0 &tlmm 22 0>;
+			phyaddr_fixup = <0xC90F018>;
+			uniphyaddr_fixup = <0xC90F014>;
+			mdio_clk_fixup; /* MDIO clock sequence fix up flag */
+
+			phy0: ethernet-phy@0 {
+				reg = <1>;
+				fixup;
+			};
+			phy1: ethernet-phy@1 {
+				reg = <2>;
+				fixup;
+			};
+			phy2: ethernet-phy@2 {
+				reg = <3>;
+				fixup;
+			};
+			phy3: ethernet-phy@3 {
+				reg = <4>;
+				fixup;
+			};
+			phy4: ethernet-phy@4 {
+				reg = <12>;
+			};
+		};
+
+		ess-instance {
+			num_devices = <0x2>;
+			ess-switch@3a000000 {
+				switch_cpu_bmp = <0x1>;  /* cpu port bitmap */
+				switch_lan_bmp = <0x2>; /* lan port bitmap */
+				switch_wan_bmp = <0x4>; /* wan port bitmap */
+				switch_mac_mode = <0xc>; /* mac mode for uniphy instance0*/
+				switch_mac_mode1 = <0xf>; /* mac mode for uniphy instance1*/
+				switch_mac_mode2 = <0xff>; /* mac mode for uniphy instance2*/
+				qcom,port_phyinfo {
+					port@0 {
+						port_id = <1>;
+						forced-speed = <2500>;
+						forced-duplex = <1>;
+					};
+					port@1 {
+						port_id = <2>;
+						phy_address = <12>;
+					};
+				};
+			};
+
+			ess-switch1@1 {
+				compatible = "qcom,ess-switch-qca8386";
+				device_id = <1>;
+				switch_access_mode = "mdio";
+				mdio-bus = <&mdio>;
+				switch_mac_mode = <0xc>; /* mac mode for uniphy instance0 */
+				switch_mac_mode1 = <0xff>; /* mac mode1 for uniphy instance1 */
+				switch_cpu_bmp = <0x1>;  /* cpu port bitmap */
+				switch_lan_bmp = <0x1e>; /* lan port bitmap */
+				switch_wan_bmp = <0x0>;  /* wan port bitmap */
+				link-polling-required = <0>;
+				link-intr-gpio = <&tlmm 23 0>;
+				qcom,port_phyinfo {
+					port@0 {
+						port_id = <0>;
+						forced-speed = <2500>;
+						forced-duplex = <1>;
+					};
+					port@1 {
+						port_id = <1>;
+						phy_address = <1>;
+					};
+					port@2 {
+						port_id = <2>;
+						phy_address = <2>;
+					};
+					port@3 {
+						port_id = <3>;
+						phy_address = <3>;
+					};
+					port@4 {
+						port_id = <4>;
+						phy_address = <4>;
+					};
+				};
+
+				led_source@2 {
+					source = <2>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@5 {
+					source = <5>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@8 {
+					source = <8>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@11 {
+					source = <11>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+			};
+		};
+
+		nss-macsec0 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <12>;
+			mdiobus = <&mdio>;
+		};
+
+		/* EDMA host driver configuration for the board */
+		edma@3ab00000 {
+			qcom,txdesc-ring-start = <4>;		/* Tx desc ring start ID */
+			qcom,txdesc-rings = <12>;		/* Total number of Tx desc rings to be provisioned */
+			qcom,txcmpl-ring-start = <4>;		/* Tx complete ring start ID */
+			qcom,txcmpl-rings = <12>;		/* Total number of Tx complete rings to be provisioned */
+			qcom,rxfill-ring-start = <4>;		/* Rx fill ring start ID */
+			qcom,rxfill-rings = <4>;		/* Total number of Rx fill rings to be provisioned */
+			qcom,rxdesc-ring-start = <12>;		/* Rx desc ring start ID */
+			qcom,rxdesc-rings = <4>;		/* Total number of Rx desc rings to be provisioned */
+			qcom,rx-page-mode = <0>;		/* Rx fill ring page mode */
+			qcom,tx-map-priority-level = <1>;	/* Tx priority level per port */
+			qcom,rx-map-priority-level = <1>;	/* Rx priority level per core */
+			qcom,ppeds-num = <2>;			/* Number of PPEDS nodes */
+			/* PPE-DS node format: <Rx-fill Tx-cmpl Rx Tx Queue-base Queue-count> */
+			qcom,ppeds-map = <1 1 1 1 32 8>,	/* PPEDS Node#0 ring and queue map */
+					<2 2 2 2 40 8>;		/* PPEDS Node#1 ring and queue map */
+			qcom,txdesc-map = <8 9 10 11>,		/* Port0 per-core Tx ring map */
+					  <12 13 14 15>,	/* Port1 per-core Tx ring map */
+					  <4 5 6 7>;		/* used only for packets from  vp*/
+			qcom,txdesc-fc-grp-map = <1 2>;		/* Per GMAC flow control group map */
+			qcom,rxfill-map = <4 5 6 7>;		/* Per-core Rx fill ring map */
+			qcom,rxdesc-map = <12 13 14 15>;	/* Per-core Rx desc ring map */
+			qcom,rx-queue-start = <0>;		/* Rx queue start */
+			qcom,rx-ring-queue-map = <0 8 16 24>,	/* Priority 0 queues per-core Rx ring map */
+						<1 9 17 25>,	/* Priority 1 queues per-core Rx ring map */
+						<2 10 18 26>,	/* Priority 2 queues per-core Rx ring map */
+						<3 11 19 27>,	/* Priority 3 queues per-core Rx ring map */
+						<4 12 20 28>,	/* Priority 4 queues per-core Rx ring map */
+						<5 13 21 29>,	/* Priority 5 queues per-core Rx ring map */
+						<6 14 22 30>,	/* Priority 6 queues per-core Rx ring map */
+						<7 15 23 31>;	/* Priority 7 queues per-core Rx ring map */
+			interrupts = <0 163 4>,			/* Tx complete ring id #4 IRQ info */
+				   <0 164 4>,			/* Tx complete ring id #5 IRQ info */
+				   <0 165 4>,			/* Tx complete ring id #6 IRQ info */
+				   <0 166 4>,			/* Tx complete ring id #7 IRQ info */
+				   <0 167 4>,			/* Tx complete ring id #8 IRQ info */
+				   <0 168 4>,			/* Tx complete ring id #9 IRQ info */
+				   <0 169 4>,			/* Tx complete ring id #10 IRQ info */
+				   <0 170 4>,			/* Tx complete ring id #11 IRQ info */
+				   <0 171 4>,			/* Tx complete ring id #12 IRQ info */
+				   <0 172 4>,			/* Tx complete ring id #13 IRQ info */
+				   <0 173 4>,			/* Tx complete ring id #14 IRQ info */
+				   <0 174 4>,			/* Tx complete ring id #15 IRQ info */
+				   <0 139 4>,			/* Rx desc ring id #12 IRQ info */
+				   <0 140 4>,			/* Rx desc ring id #13 IRQ info */
+				   <0 141 4>,			/* Rx desc ring id #14 IRQ info */
+				   <0 142 4>,			/* Rx desc ring id #15 IRQ info */
+				   <0 191 4>,			/* Misc error IRQ info */
+				<0 160 4>,			/* PPEDS Node #1(TxComp ring id #1) TxComplete IRQ info */
+				<0 128 4>,			/* PPEDS Node #1(Rx Desc ring id #1) Rx Desc IRQ info */
+				<0 152 4>,			/* PPEDS Node #1(RxFill Desc ring id #1) Rx Fill IRQ info */
+				<0 161 4>,			/* PPEDS Node #2(TxComp ring id #2) TxComplete IRQ info */
+				<0 129 4>,			/* PPEDS Node #2(Rx Desc ring id #2) Rx Desc IRQ info */
+				<0 153 4>;			/* PPEDS Node #2(RxFill Desc ring id #2) Rx Fill IRQ info */
+		};
+
+		dma@7984000 {
+			status = "ok";
 		};
 
 		nand@79b0000 {
 			pinctrl-0 = <&qspi_nand_pins>;
 			pinctrl-names = "default";
-			status = "disabled";
+			status = "ok";
 		};
 
 		usb3@8A00000 {
-			status = "disabled";
+			status = "ok";
+			qcom,multiplexed-phy;
+		};
 
-			dwc3@8A00000 {
-				/delete-property/ #phy-cells;
-				/delete-property/ phys;
-				/delete-property/ phy-names;
-			};
+		ssuniphy@4b0000 {
+			status = "ok";
 		};
 
 		hs_m31phy@7b000 {
-			status = "disabled";
+			status = "ok";
 		};
 
 		leds {
@@ -316,31 +368,22 @@
 		};
 
 		phy_x2@4b1000 {
-			status = "disabled";
+			status = "ok";
 		};
 
 		pcie@18000000 {
-			/* Deleting to avoid build error, can be removed once GIC MSI is verified */
-			/delete-property/ msi-parent;
-			max-link-speed = <1>;
-			perst-gpio = <&tlmm 47 GPIO_ACTIVE_LOW>;
-			status = "disabled";
+			status = "ok";
 			pcie1_rp {
 				reg = <0 0 0 0 0>;
 
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
+					qrtr_node_id = <0x31>;
+					qti,disable-rddm-prealloc;
+					qti,rddm-seg-len = <0x1000>;
+					memory-region = <0>, <&mhi_region1>;
 				};
 			};
-		};
-
-		/* Deleting to avoid build error, can be removed once GIC MSI is verified */
-		pcie@10000000 {
-			/delete-property/ msi-parent;
-		};
-
-		pcie@20000000 {
-			/delete-property/ msi-parent;
 		};
 	};
 };
@@ -350,5 +393,21 @@
 	qcom,multipd_arch;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	mem-region = <&q6_region>;
+	qcom,board_id = <0x14>;
+	status = "ok";
+};
+
+&qcn9224_pcie1 {
+	status = "ok";
+};
+
+&mhi_region1 {
+	status = "ok";
+};
+
+/* QCN9224 5G */
+&wifi2 {
+	hremote_node = <&qcn9224_pcie1>;
+	board_id = <0x02>;
 	status = "ok";
 };

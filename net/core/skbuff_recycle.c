@@ -34,7 +34,7 @@ static int skb_recycle_spare_max_skbs = SKB_RECYCLE_SPARE_MAX_SKBS;
 #endif
 
 inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
-					  unsigned int length)
+					  unsigned int length, bool reset_skb)
 {
 	unsigned long flags;
 	struct sk_buff_head *h;
@@ -108,22 +108,25 @@ inline struct sk_buff *skb_recycler_alloc(struct net_device *dev,
 		 * zero most of the structure so prefetch the start
 		 * of the shinfo region now so it's in the D-cache
 		 * before we start to write that.
+		 * For buffers recycled by PPE DS rings, the packets wouldnt
+		 * have been processed by host and hence shinfo reset can be
+		 * avoided. Avoid it if specifically requested for it
+		 * (by DS rings), and the buffer is found to be recycled by
+		 * DS previously
 		 */
-		shinfo = skb_shinfo(skb);
-		prefetchw(shinfo);
-
-		zero_struct(skb, offsetof(struct sk_buff, tail));
-		refcount_set(&skb->users, 1);
-		skb->mac_header = (typeof(skb->mac_header))~0U;
-		skb->transport_header = (typeof(skb->transport_header))~0U;
-		zero_struct(shinfo, offsetof(struct skb_shared_info, dataref));
-		atomic_set(&shinfo->dataref, 1);
-
+		if (reset_skb || !recycled_for_ds) {
+			shinfo = skb_shinfo(skb);
+			prefetchw(shinfo);
+			zero_struct(skb, offsetof(struct sk_buff, tail));
+			refcount_set(&skb->users, 1);
+			skb->mac_header = (typeof(skb->mac_header))~0U;
+			skb->transport_header = (typeof(skb->transport_header))~0U;
+			zero_struct(shinfo, offsetof(struct skb_shared_info, dataref));
+			atomic_set(&shinfo->dataref, 1);
+		}
 		skb->data = skb->head + NET_SKB_PAD;
 		skb_reset_tail_pointer(skb);
-
 		skb->dev = dev;
-
 		skb->is_from_recycler = 1;
 		/* Restore fast_recycled flag */
 		if (is_fast_recycled) {
@@ -619,3 +622,101 @@ void skb_recycler_print_all_lists(void)
 	preempt_enable();
 
 }
+
+/**
+ *	consume_skb_can_fast_recycle_debug - Debug API to flag any sanity check
+ *      				     failures on a fast recycled skb
+ *	@skb: buffer to be checked
+ *	@min_skb_size: minimum skb size allowed
+ *	@max_skb_size: maximum skb size allowed
+ *
+ *	Returns false with warning message if any of the checks fail
+ */
+#ifdef SKB_FAST_RECYCLABLE_DEBUG_ENABLE
+static inline bool consume_skb_can_fast_recycle_debug(const struct sk_buff *skb,
+		int min_skb_size, int max_skb_size)
+{
+	if (unlikely(irqs_disabled())) {
+		WARN(1, "skb_debug: irqs_disabled for skb = 0x%p \n", skb);
+		return false;
+	}
+	if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_DEV_ZEROCOPY)) {
+		WARN(1, "skb_debug: ZEROCOPY flag set for skb = 0x%p \n", skb);
+		return false;
+	}
+	if (unlikely(skb_is_nonlinear(skb))) {
+		WARN(1, "skb_debug: non-linear skb = 0x%p \n", skb);
+		return false;
+	}
+	if (unlikely(skb_shinfo(skb)->frag_list)) {
+		WARN(1, "skb_debug: set frag_list for skb = 0x%p \n", skb);
+		return false;
+	}
+	if (unlikely(skb_shinfo(skb)->nr_frags)) {
+		WARN(1, "skb_debug: set nr_frags for skb = 0x%p \n", skb);
+		return false;
+	}
+	if (unlikely(skb->fclone != SKB_FCLONE_UNAVAILABLE)) {
+		WARN(1, "skb_debug: FCLONE available for skb = 0x%p \n", skb);
+		return false;
+	}
+	min_skb_size = SKB_DATA_ALIGN(min_skb_size + NET_SKB_PAD);
+	if (unlikely(skb_end_pointer(skb) - skb->head < min_skb_size)) {
+		WARN(1, "skb_debug: invalid min size for skb = 0x%p \n", skb);
+		return false;
+	}
+	max_skb_size = SKB_DATA_ALIGN(max_skb_size + NET_SKB_PAD);
+	if (unlikely(skb_end_pointer(skb) - skb->head > max_skb_size)) {
+		WARN(1, "skb_debug: invalid max size for skb = 0x%p \n", skb);
+		return false;
+	}
+	if (unlikely(skb_cloned(skb))) {
+		WARN(1, "skb_debug: cloned skb = 0x%p \n", skb);
+		return false;
+	}
+	if (unlikely(skb_pfmemalloc(skb))) {
+		WARN(1, "skb_debug: enabled pfmemalloc for skb = 0x%p \n", skb);
+		return false;
+	}
+	if (skb->_skb_refdst) {
+		WARN(1, "skb_debug: _skb_refdst flag enabled = 0x%p \n", skb);
+		return false;
+	}
+	if (skb->destructor) {
+		WARN(1, "skb_debug: destructor flag enabled = 0x%p \n", skb);
+		return false;
+	}
+	if (skb->active_extensions) {
+		WARN(1, "skb_debug: active_extensions flag enabled = 0x%p \n",
+		     skb);
+		return false;
+	}
+#if IS_ENABLED(CONFIG_NF_CONNTRACK)
+	if (skb->_nfct & NFCT_PTRMASK) {
+		WARN(1, "skb_debug: nfctinfo bits set for skb = 0x%p \n", skb);
+		return false;
+	}
+#endif
+	return true;
+}
+
+/**
+ *      check_skb_fast_recyclable - Debug API to flag any sanity check failures
+ *      			    on a fast recycled skb
+ *      @skb: buffer to be checked
+ *
+ *      Checks skb recyclability
+ */
+void check_skb_fast_recyclable(struct sk_buff *skb)
+{
+	bool check = true;
+	check = consume_skb_can_recycle_debug(skb, SKB_RECYCLE_MIN_SIZE, SKB_RECYCLE_MAX_SIZE);
+	if (!check)
+		BUG_ON(1);
+}
+#else
+void check_skb_fast_recyclable(struct sk_buff *skb)
+{
+}
+#endif
+EXPORT_SYMBOL(check_skb_fast_recyclable);
