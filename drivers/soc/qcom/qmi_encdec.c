@@ -574,10 +574,9 @@ static int qmi_decode_string_elem(struct qmi_elem_info *ei_array,
 				sizeof(u8) : sizeof(u16);
 		rc = qmi_decode_basic_elem(&string_len, buf_src,
 					   1, string_len_sz);
+		string_len = le16_to_cpu(string_len);
 		decoded_bytes += rc;
 	}
-
-	string_len = le16_to_cpu(string_len);
 
 	if (string_len >= temp_ei->elem_len) {
 		pr_err("%s: String len %d >= Max Len %d\n",
