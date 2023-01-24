@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013-2016, 2019-2020, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -623,6 +623,7 @@ void skb_recycler_print_all_lists(void)
 
 }
 
+#ifdef SKB_FAST_RECYCLABLE_DEBUG_ENABLE
 /**
  *	consume_skb_can_fast_recycle_debug - Debug API to flag any sanity check
  *      				     failures on a fast recycled skb
@@ -632,7 +633,6 @@ void skb_recycler_print_all_lists(void)
  *
  *	Returns false with warning message if any of the checks fail
  */
-#ifdef SKB_FAST_RECYCLABLE_DEBUG_ENABLE
 static inline bool consume_skb_can_fast_recycle_debug(const struct sk_buff *skb,
 		int min_skb_size, int max_skb_size)
 {
@@ -714,9 +714,5 @@ void check_skb_fast_recyclable(struct sk_buff *skb)
 	if (!check)
 		BUG_ON(1);
 }
-#else
-void check_skb_fast_recyclable(struct sk_buff *skb)
-{
-}
-#endif
 EXPORT_SYMBOL(check_skb_fast_recyclable);
+#endif
