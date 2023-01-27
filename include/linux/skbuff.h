@@ -845,6 +845,8 @@ struct sk_buff {
 	/* Flag for recycle in PPE DS */
 	__u8			recycled_for_ds:1;
 	/* 1 or 3 bit hole */
+	__u8			fast_qdisc:1;
+	/* Packets processed in dev_fast_xmit_qdisc() path */
 
 #ifdef CONFIG_NET_SCHED
 	__u16			tc_index;	/* traffic control index */

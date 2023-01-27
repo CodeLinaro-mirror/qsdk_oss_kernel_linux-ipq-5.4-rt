@@ -1191,11 +1191,7 @@ void mhi_power_down(struct mhi_controller *mhi_cntrl, bool graceful)
 	write_unlock_irq(&mhi_cntrl->pm_lock);
 	mutex_unlock(&mhi_cntrl->pm_mutex);
 
-	mhi_queue_state_transition(mhi_cntrl, DEV_ST_TRANSITION_DISABLE);
-
-	/* Wait for shutdown to complete */
-	flush_work(&mhi_cntrl->st_worker);
-
+	mhi_pm_disable_transition(mhi_cntrl);
 	free_irq(mhi_cntrl->irq[0], mhi_cntrl);
 
 	mhi_free_boot_args(mhi_cntrl);
