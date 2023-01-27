@@ -840,6 +840,30 @@
 				};
 			};
 
+			pci0_pin: pci0-pinmux {
+				pins = "gpio38";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-up;
+				output-low;
+			};
+
+			pci1_pin: pci1-pinmux {
+				pins = "gpio47";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-up;
+				output-low;
+			};
+
+			pci2_pin: pci2-pinmux {
+				pins = "gpio44";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-up;
+				output-low;
+			};
+
 			qspi_nand_pins: qspi_nand_pins {
 				qspi_clock {
 					pins = "gpio13";
@@ -1212,6 +1236,8 @@
 
 		/* 1L controller with 2L/2x1L Flexible PHY 2nd lane */
 		pcie2: pcie@10000000 {
+			pinctrl-0 = <&pci2_pin>;
+			pinctrl-names = "default";
 			compatible = "qti,pcie-ipq5332";
 			reg =  <0x10000000 0xf1d
 				0x10000F20 0xa8
@@ -1298,6 +1324,8 @@
 		 * Connected to the 1st lane of the Flexible PHY in 1L mode
 		 */
 		pcie1: pcie@18000000 {
+			pinctrl-0 = <&pci1_pin>;
+			pinctrl-names = "default";
 			compatible = "qti,pcie-ipq5332";
 			reg =  <0x18000000 0xf1d
 				0x18000F20 0xa8
@@ -1383,6 +1411,8 @@
 
 		/* 1L controller with USB/PCIe combo PHY */
 		pcie0: pcie@20000000 {
+			pinctrl-0 = <&pci0_pin>;
+			pinctrl-names = "default";
 			compatible = "qti,pcie-ipq5332";
 			reg =  <0x20000000 0xf1d
 				0x20000F20 0xa8
