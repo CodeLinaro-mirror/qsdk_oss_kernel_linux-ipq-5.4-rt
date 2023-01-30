@@ -94,6 +94,7 @@ dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi01.7.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi03.1.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-db-mi01.1.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-db-mi02.1.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-db-mi03.1.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-mtp.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-longcheer-l8150.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= msm8916-samsung-a3u-eur.dtb

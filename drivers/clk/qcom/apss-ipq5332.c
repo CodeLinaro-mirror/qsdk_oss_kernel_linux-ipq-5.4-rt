@@ -66,7 +66,7 @@ static struct clk_alpha_pll apss_pll_early = {
 				"xo"
 			},
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_stromer_ops,
+			.ops = &clk_alpha_pll_stromer_plus_ops,
 			.flags = CLK_IS_CRITICAL,
 		},
 	},
@@ -164,23 +164,6 @@ static const struct alpha_pll_config apss_pll_config = {
 	.test_ctl_hi_val = 0x00400003,
 };
 
-static const struct alpha_pll_config apss_pll_turbo_config = {
-	.l = 0x3E,
-	.config_ctl_val = 0x4001075B,
-	.config_ctl_hi_val = 0x304,
-	.main_output_mask = BIT(0),
-	.aux_output_mask = BIT(1),
-	.early_output_mask = BIT(3),
-	.alpha_en_mask = BIT(24),
-	.vco_val = 0x0,
-	.vco_mask = GENMASK(21, 20),
-	.status_reg_val = 0x3,
-	.status_reg_mask = GENMASK(10, 8),
-	.lock_det = BIT(2),
-	.test_ctl_val = 0x0,
-	.test_ctl_hi_val = 0x00400003,
-};
-
 static const struct regmap_config apss_ipq5332_regmap_config = {
 	.reg_bits       = 32,
 	.reg_stride     = 4,
@@ -205,10 +188,7 @@ static int apss_ipq5332_probe(struct platform_device *pdev)
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
 
-	if (cpu_is_ipq5312() || cpu_is_ipq5302())
-		config = &apss_pll_config;
-	else
-		config = &apss_pll_turbo_config;
+	config = &apss_pll_config;
 
 	clk_alpha_pll_configure(&apss_pll_early, regmap, config);
 

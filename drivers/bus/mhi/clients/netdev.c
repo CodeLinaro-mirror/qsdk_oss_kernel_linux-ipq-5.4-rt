@@ -16,6 +16,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/mhi.h>
 
+#define MHI_RMNET_IF_NAME "rmnet_mhi"
 #define MHI_NETDEV_DRIVER_NAME "mhi_netdev"
 #define WATCHDOG_TIMEOUT (30 * HZ)
 #define IPC_LOG_PAGES (100)
@@ -44,6 +45,7 @@ struct mhi_netdev {
 	int current_index;
 	bool chain_skb;
 	struct mhi_net_chain *chain;
+	bool is_rmnet;
 
 	struct dentry *dentry;
 };
@@ -65,9 +67,13 @@ struct mhi_netbuf {
 static struct mhi_driver mhi_netdev_driver;
 static void mhi_netdev_create_debugfs(struct mhi_netdev *mhi_netdev);
 
-static __be16 mhi_netdev_ip_type_trans(u8 data)
+static __be16 mhi_netdev_ip_type_trans(u8 data, bool is_rmnet)
 {
 	__be16 protocol = 0;
+
+	if (is_rmnet)
+		return htons(ETH_P_MAP);
+
 	/* determine L3 protocol */
 	switch (data & 0xf0) {
 	case 0x40:
@@ -509,6 +515,9 @@ static int mhi_netdev_enable_iface(struct mhi_netdev *mhi_netdev)
 	if (ret)
 		mhi_netdev->interface_name = mhi_netdev_driver.driver.name;
 
+	if (!strcmp(mhi_netdev->interface_name, MHI_RMNET_IF_NAME))
+		mhi_netdev->is_rmnet = true;
+
 	snprintf(ifalias, sizeof(ifalias), "%s_%s_%u",
 		 mhi_netdev->interface_name,
 		 dev_name(mhi_cntrl->cntrl_dev), mhi_netdev->alias);
@@ -595,13 +604,15 @@ static void mhi_netdev_push_skb(struct mhi_netdev *mhi_netdev,
 		skb_add_rx_frag(skb, 0, mhi_buf->page, 0,
 				mhi_result->bytes_xferd, mhi_netdev->mru);
 		skb->dev = mhi_netdev->ndev;
-		skb->protocol = mhi_netdev_ip_type_trans(*(u8 *)mhi_buf->buf);
+		skb->protocol = mhi_netdev_ip_type_trans(*(u8 *)mhi_buf->buf,
+					mhi_netdev->is_rmnet);
 	} else {
 		skb_add_rx_frag(skb, 0, mhi_buf->page, ETH_HLEN,
 				mhi_result->bytes_xferd - ETH_HLEN,
 				mhi_netdev->mru);
 		skb->dev = mhi_netdev->ndev;
-		skb->protocol = mhi_netdev_ip_type_trans(((u8 *)mhi_buf->buf)[ETH_HLEN]);
+		skb->protocol = mhi_netdev_ip_type_trans(((u8 *)mhi_buf->buf)[ETH_HLEN],
+					mhi_netdev->is_rmnet);
 	}
 	netif_receive_skb(skb);
 }
@@ -650,10 +661,12 @@ static void mhi_netdev_xfer_dl_cb(struct mhi_device *mhi_dev,
 			skb->dev = ndev;
 			if (!mhi_netdev->ethernet_interface) {
 				skb->protocol =
-					mhi_netdev_ip_type_trans(*(u8 *)mhi_buf->buf);
+					mhi_netdev_ip_type_trans(*(u8 *)mhi_buf->buf,
+							mhi_netdev->is_rmnet);
 			} else {
 				skb->protocol =
-					mhi_netdev_ip_type_trans(((u8 *)mhi_buf->buf)[ETH_HLEN]);
+					mhi_netdev_ip_type_trans(((u8 *)mhi_buf->buf)[ETH_HLEN],
+							mhi_netdev->is_rmnet);
 			}
 			chain->head = skb;
 		} else {

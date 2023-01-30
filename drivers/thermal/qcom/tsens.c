@@ -224,7 +224,8 @@ static int tsens_probe(struct platform_device *pdev)
 
 	ret = priv->ops->init(priv);
 	if (ret < 0) {
-		dev_err(dev, "tsens init failed\n");
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "tsens init failed\n");
 		return ret;
 	}
 

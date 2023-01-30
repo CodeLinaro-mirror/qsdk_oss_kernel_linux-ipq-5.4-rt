@@ -331,6 +331,21 @@ void mhi_notify(struct mhi_device *mhi_dev, enum mhi_callback cb_reason)
 }
 EXPORT_SYMBOL_GPL(mhi_notify);
 
+void mhi_uevent_notify(struct mhi_controller *mhi_cntrl, enum mhi_ee_type ee)
+{
+	struct device *dev = &mhi_cntrl->mhi_dev->dev;
+	char *buf[2];
+	int ret;
+
+	buf[0] = kasprintf(GFP_KERNEL, "EXEC_ENV=%s", TO_MHI_EXEC_STR(ee));
+	buf[1] = NULL;
+
+	ret = kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, buf);
+	if (ret)
+		dev_err(dev, "Failed to send %s uevent\n", TO_MHI_EXEC_STR(ee));
+}
+EXPORT_SYMBOL_GPL(mhi_uevent_notify);
+
 static void mhi_assign_of_node(struct mhi_controller *mhi_cntrl,
 			       struct mhi_device *mhi_dev)
 {
@@ -489,6 +504,7 @@ irqreturn_t mhi_intvec_threaded_handler(int irq_number, void *priv)
 		if (mhi_cntrl->rddm_size && mhi_is_active(mhi_cntrl)) {
 			mhi_cntrl->status_cb(mhi_cntrl, MHI_CB_EE_RDDM);
 			mhi_cntrl->ee = ee;
+			mhi_uevent_notify(mhi_cntrl, mhi_cntrl->ee);
 			wake_up_all(&mhi_cntrl->state_event);
 		}
 		break;
@@ -867,6 +883,7 @@ int mhi_process_ctrl_ev_ring(struct mhi_controller *mhi_cntrl,
 				write_lock_irq(&mhi_cntrl->pm_lock);
 				mhi_cntrl->ee = event;
 				write_unlock_irq(&mhi_cntrl->pm_lock);
+				mhi_uevent_notify(mhi_cntrl, mhi_cntrl->ee);
 				wake_up_all(&mhi_cntrl->state_event);
 				break;
 			default:

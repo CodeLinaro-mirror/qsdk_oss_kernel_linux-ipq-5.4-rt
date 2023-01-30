@@ -56,7 +56,7 @@ static struct clk_alpha_pll gpll0_main = {
 				.fw_name = "xo",
 			},
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_stromer_ops,
+			.ops = &clk_alpha_pll_stromer_plus_ops,
 			.flags = CLK_IS_CRITICAL,
 		},
 	},
@@ -101,7 +101,7 @@ static struct clk_alpha_pll gpll2_main = {
 				.fw_name = "xo",
 			},
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_stromer_ops,
+			.ops = &clk_alpha_pll_stromer_plus_ops,
 		},
 	},
 };
@@ -132,7 +132,7 @@ static struct clk_alpha_pll gpll4_main = {
 				.fw_name = "xo",
 			},
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_stromer_ops,
+			.ops = &clk_alpha_pll_stromer_plus_ops,
 		},
 	},
 };

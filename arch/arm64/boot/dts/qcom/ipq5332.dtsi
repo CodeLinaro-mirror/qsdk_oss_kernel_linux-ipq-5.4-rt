@@ -3,7 +3,7 @@
  * IPQ5332 device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -138,7 +138,7 @@
 			 * Frequency     BIT3   BIT2   BIT1    BIT0    opp-supported-hw
 			 *              1.0GHz 1.2GHz 1.5GHz No Limit
 			 * ------------------------------------------------------------
-			 * 1080000000     0      1      0       0            0x4
+			 * 1080000000     1      1      1       1            0xF
 			 * 1488000000     0      0      1       1            0x3
 			 * -----------------------------------------------------------
 			 */
@@ -146,7 +146,7 @@
 			opp-1080000000 {
 				opp-hz = /bits/ 64 <1080000000>;
 				opp-microvolt = <850000>;
-				opp-supported-hw = <0x4>;
+				opp-supported-hw = <0xF>;
 				clock-latency-ns = <200000>;
 			};
 
@@ -1619,22 +1619,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4CD00000  |   20MB  |
+			 * | HREMOTE |  0x4DE00000  |   20MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x4E100000  |   1MB   |
+			 * | M3 Dump |  0x4F200000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x4E200000  |   1MB   |
+			 * |   ETR   |  0x4F300000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x4E300000  |   8MB   |
+			 * |  Caldb  |  0x4F400000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x4EB00000  |   7MB   |
+			 * |Pageable |  0x4FC00000  |   7MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4CD00000>;
-			m3-dump-addr = <0x4E100000>;
-			etr-addr = <0x4E200000>;
-			caldb-addr = <0x4E300000>;
-			pageable-addr = <0x4EB00000>;
+			base-addr = <0x4DE00000>;
+			m3-dump-addr = <0x4F200000>;
+			etr-addr = <0x4F300000>;
+			caldb-addr = <0x4F400000>;
+			pageable-addr = <0x4FC00000>;
 			hremote-size = <0x1400000>;
 			pageable-size = <0x700000>;
 			tgt-mem-mode = <0x1>;
@@ -1643,22 +1643,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4DB00000  |   28MB  |
+			 * | HREMOTE |  0x4EC00000  |   28MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x4F700000  |   1MB   |
+			 * | M3 Dump |  0x50800000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x4F800000  |   1MB   |
+			 * |   ETR   |  0x50900000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x4F900000  |   8MB   |
+			 * |  Caldb  |  0x50A00000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x50100000  |  12MB   |
+			 * |Pageable |  0x51200000  |  12MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4DB00000>;
-			m3-dump-addr = <0x4F700000>;
-			etr-addr = <0x4F800000>;
-			caldb-addr = <0x4F900000>;
-			pageable-addr = <0x50100000>;
+			base-addr = <0x4EC00000>;
+			m3-dump-addr = <0x50800000>;
+			etr-addr = <0x50900000>;
+			caldb-addr = <0x50A00000>;
+			pageable-addr = <0x51200000>;
 			hremote-size = <0x1C00000>;
 			pageable-size = <0xC00000>;
 			tgt-mem-mode = <0x0>;
@@ -1890,22 +1890,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4F200000  |   20MB  |
+			 * | HREMOTE |  0x50300000  |   20MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x50600000  |   1MB   |
+			 * | M3 Dump |  0x51700000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x50700000  |   1MB   |
+			 * |   ETR   |  0x51800000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x50800000  |   8MB   |
+			 * |  Caldb  |  0x51900000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x51000000  |   7MB   |
+			 * |Pageable |  0x52100000  |   7MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4F200000>;
-			m3-dump-addr = <0x50600000>;
-			etr-addr = <0x50700000>;
-			caldb-addr = <0x50800000>;
-			pageable-addr = <0x51000000>;
+			base-addr = <0x50300000>;
+			m3-dump-addr = <0x51700000>;
+			etr-addr = <0x51800000>;
+			caldb-addr = <0x51900000>;
+			pageable-addr = <0x52100000>;
 			hremote-size = <0x1400000>;
 			pageable-size = <0x700000>;
 			tgt-mem-mode = <0x1>;
@@ -1914,22 +1914,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x50D00000  |   28MB  |
+			 * | HREMOTE |  0x51E00000  |   28MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x52900000  |   1MB   |
+			 * | M3 Dump |  0x53A00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x52A00000  |   1MB   |
+			 * |   ETR   |  0x53B00000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x52B00000  |   8MB   |
+			 * |  Caldb  |  0x53C00000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x53300000  |  12MB   |
+			 * |Pageable |  0x54400000  |  12MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x50D00000>;
-			m3-dump-addr = <0x52900000>;
-			etr-addr = <0x52A00000>;
-			caldb-addr = <0x52B00000>;
-			pageable-addr = <0x53300000>;
+			base-addr = <0x51E00000>;
+			m3-dump-addr = <0x53A00000>;
+			etr-addr = <0x53B00000>;
+			caldb-addr = <0x53C00000>;
+			pageable-addr = <0x54400000>;
 			hremote-size = <0x1C00000>;
 			pageable-size = <0xC00000>;
 			tgt-mem-mode = <0x0>;
@@ -2148,6 +2148,12 @@
 				"inta";
 		};
 
+		wifi3: wifi3@f00000 {
+			compatible  = "qcom,cnss-qcn9160";
+			msi-parent = <&v2m0>;
+			status = "disabled";
+		};
+
 		wcss: wcss-smp2p {
 			compatible = "qcom,smp2p";
 			qcom,smem = <435>, <428>;
@@ -2209,12 +2215,10 @@
 					  "handover",
 					  "stop-ack";
 
-			resets = <&gcc GCC_WCSSAON_ARES>,
-					<&gcc GCC_WCSS_BCR>,
+			resets = <&gcc GCC_WCSS_BCR>,
 					<&gcc GCC_WCSS_Q6_BCR>;
 
-			reset-names = "wcss_aon_reset",
-					"wcss_reset",
+			reset-names = "wcss_reset",
 					"wcss_q6_reset";
 
 			clocks =  <&gcc GCC_Q6_TSCTR_1TO2_CLK>,
@@ -2226,9 +2230,7 @@
 					<&gcc GCC_Q6_AXIM_CLK>,
 					<&gcc GCC_Q6SS_PCLKDBG_CLK>,
 					<&gcc GCC_WCSS_ECAHB_CLK>,
-					<&gcc GCC_WCSS_AXIS_CLK>,
 					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
-					<&gcc GCC_CE_AHB_CLK>,
 					<&gcc GCC_MEM_NOC_Q6_AXI_CLK>;
 
 			clock-names = "q6_tsctr_1to2",
@@ -2240,9 +2242,7 @@
 					"q6_axim",
 					"q6ss_pclkdbg",
 					"wcss_ecahb",
-					"wcss_axi_s",
 					"sys_noc_wcss_ahb",
-					"ce_ahb",
 					"mem_noc_q6_axi";
 
 			assigned-clocks =  <&gcc GCC_Q6_TSCTR_1TO2_CLK>,
@@ -2254,9 +2254,7 @@
 					<&gcc GCC_Q6_AXIM_CLK>,
 					<&gcc GCC_Q6SS_PCLKDBG_CLK>,
 					<&gcc GCC_WCSS_ECAHB_CLK>,
-					<&gcc GCC_WCSS_AXIS_CLK>,
 					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
-					<&gcc GCC_CE_AHB_CLK>,
 					<&gcc GCC_MEM_NOC_Q6_AXI_CLK>;
 
 			assigned-clock-rates = <300000000>,
@@ -2267,8 +2265,6 @@
 						<133333333>,
 						<533333333>,
 						<120000000>,
-						<133333333>,
-						<266666667>,
 						<133333333>,
 						<133333333>,
 						<533333333>;
@@ -2287,6 +2283,7 @@
 			qcom,bootargs_smem = <507>;
 			qcom,bootargs_version = <2>;
 			qcom,userpd-bootargs;
+			license-file = "";
 			glink-edge {
 				interrupts = <GIC_SPI 417 IRQ_TYPE_EDGE_RISING>;
 				qcom,remote-pid = <1>;
@@ -2372,7 +2369,6 @@
 				qcom,smem-state-names = "shutdown",
 							"stop",
 							"spawn";
-				qcom,nosecure;
 				status = "disabled";
 			};
 		};
@@ -2493,3 +2489,4 @@
 };
 
 #include "ipq5332-coresight.dtsi"
+#include "ipq5332-thermal.dtsi"

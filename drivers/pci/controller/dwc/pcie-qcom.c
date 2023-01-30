@@ -318,6 +318,7 @@ struct qcom_pcie {
 	bool enumerated;
 	uint32_t rc_idx;
 	struct notifier_block pci_reboot_notifier;
+	struct notifier_block pci_panic_notifier;
 };
 
 #define to_qcom_pcie(x)		dev_get_drvdata((x)->dev)
@@ -2764,6 +2765,14 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 			pr_warn("%s: Failed to register notifier (%d)\n",
 				__func__, ret);
 			return ret;
+		}
+
+		pcie->pci_panic_notifier.notifier_call = pci_reboot_handler;
+		ret = atomic_notifier_chain_register(&panic_notifier_list,
+						&pcie->pci_panic_notifier);
+		if (ret) {
+			pr_warn("%s: Failed to register notifier (%d)\n",
+					__func__, ret);
 		}
 	}
 

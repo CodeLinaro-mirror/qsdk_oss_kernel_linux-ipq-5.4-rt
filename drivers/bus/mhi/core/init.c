@@ -1409,9 +1409,13 @@ EXPORT_SYMBOL_GPL(mhi_driver_unregister);
 static int mhi_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
 	struct mhi_device *mhi_dev = to_mhi_device(dev);
+	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 
-	return add_uevent_var(env, "MODALIAS=" MHI_DEVICE_MODALIAS_FMT,
-					mhi_dev->name);
+	add_uevent_var(env, "MODALIAS=" MHI_DEVICE_MODALIAS_FMT, mhi_dev->name);
+	if (dev->parent == mhi_cntrl->cntrl_dev)
+		add_uevent_var(env, "EXEC_ENV=%s",
+			       TO_MHI_EXEC_STR(mhi_cntrl->ee));
+	return 0;
 }
 
 static int mhi_match(struct device *dev, struct device_driver *drv)

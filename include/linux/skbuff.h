@@ -845,6 +845,8 @@ struct sk_buff {
 	/* Flag for recycle in PPE DS */
 	__u8			recycled_for_ds:1;
 	/* 1 or 3 bit hole */
+	__u8			fast_qdisc:1;
+	/* Packets processed in dev_fast_xmit_qdisc() path */
 
 #ifdef CONFIG_NET_SCHED
 	__u16			tc_index;	/* traffic control index */
@@ -1176,7 +1178,11 @@ static inline int skb_pad(struct sk_buff *skb, int pad)
 }
 #define dev_kfree_skb(a)	consume_skb(a)
 #define dev_kfree_skb_list_fast(a)	consume_skb_list_fast(a)
+#if defined(SKB_FAST_RECYCLABLE_DEBUG_ENABLE) && defined(CONFIG_SKB_RECYCLER)
 #define dev_check_skb_fast_recyclable(a)       check_skb_fast_recyclable(a)
+#else
+#define dev_check_skb_fast_recyclable(a)
+#endif
 
 int skb_append_pagefrags(struct sk_buff *skb, struct page *page,
 			 int offset, size_t size);

@@ -25,19 +25,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <125>;
+					temperature = <125000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <105>;
+					temperature = <105000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <95>;
+					temperature = <95000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -57,19 +57,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <125>;
+					temperature = <125000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <105>;
+					temperature = <105000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <95>;
+					temperature = <95000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -89,19 +89,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <125>;
+					temperature = <125000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <105>;
+					temperature = <105000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <95>;
+					temperature = <95000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -121,19 +121,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <125>;
+					temperature = <125000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <105>;
+					temperature = <105000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <95>;
+					temperature = <95000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -153,19 +153,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <125>;
+					temperature = <125000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <105>;
+					temperature = <105000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <95>;
+					temperature = <95000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -187,7 +187,7 @@
 		      <0x4a8000 0x1000>; /* SROT */
 		nvmem-cells = <&tsens_calib_sel>, <&tsens_calib_offset>;
 		nvmem-cell-names = "cal_sel", "calib_offset";
-		interrupts = <GIC_SPI 184 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 320 IRQ_TYPE_EDGE_RISING>;
 		#thermal-sensor-cells = <1>;
 		tsens-up-low-int-clr-deassert-quirk;
 		tsens-calibration;

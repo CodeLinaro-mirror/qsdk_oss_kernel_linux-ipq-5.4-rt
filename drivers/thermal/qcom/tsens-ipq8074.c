@@ -542,8 +542,11 @@ static int init_ipq807x(struct tsens_priv *tmdev)
 	if (!tmdev->tm_map)
 		return -ENODEV;
 
-	if (device_property_read_bool(tmdev->dev, "tsens-calibration"))
-		init_tsens_ctrl(tmdev);
+	if (device_property_read_bool(tmdev->dev, "tsens-calibration")) {
+		ret = init_tsens_ctrl(tmdev);
+		if (ret)
+			return ret;
+	}
 
 	/* Store all sensor address for future use */
 	for (i = 0; i < tmdev->num_sensors; i++) {

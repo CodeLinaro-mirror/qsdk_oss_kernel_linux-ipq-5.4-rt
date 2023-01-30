@@ -979,6 +979,7 @@ void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 	/* Wait for ready since EDL image was loaded */
 	if (fw_name == mhi_cntrl->edl_image) {
 		release_firmware(firmware);
+		mhi_uevent_notify(mhi_cntrl, MHI_EE_EDL);
 		goto fw_load_ready_state;
 	}
 

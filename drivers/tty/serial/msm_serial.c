@@ -1622,7 +1622,8 @@ static inline struct uart_port *msm_get_port_from_line(unsigned int line)
 
 #ifdef CONFIG_SERIAL_MSM_CONSOLE
 static void __msm_console_write(struct uart_port *port, const char *s,
-				unsigned int count, bool is_uartdm)
+				unsigned int count, bool is_uartdm,
+				bool is_early)
 {
 	unsigned long flags;
 	int i;
@@ -1630,8 +1631,13 @@ static void __msm_console_write(struct uart_port *port, const char *s,
 	bool replaced = false;
 	void __iomem *tf;
 	int locked = 1;
-	struct msm_port *msm_port = UART_TO_MSM(port);
-	struct msm_dma *dma = &msm_port->tx_dma;
+	struct msm_port *msm_port;
+	struct msm_dma *dma;
+
+	if (!is_early) {
+		msm_port = UART_TO_MSM(port);
+		dma = &msm_port->tx_dma;
+	}
 
 	if (is_uartdm)
 		tf = port->membase + UARTDM_TF;
@@ -1657,7 +1663,7 @@ static void __msm_console_write(struct uart_port *port, const char *s,
 	 * If any TX DMA operation is ongoing in BAM DMA then console write
 	 * can not be used since it uses the FIFO mode.
 	 */
-	if (dma->count) {
+	if ((!is_early) && (dma->count)) {
 		spin_unlock(&port->lock);
 		return;
 	}
@@ -1715,7 +1721,7 @@ static void msm_console_write(struct console *co, const char *s,
 	port = msm_get_port_from_line(co->index);
 	msm_port = UART_TO_MSM(port);
 
-	__msm_console_write(port, s, count, msm_port->is_uartdm);
+	__msm_console_write(port, s, count, msm_port->is_uartdm, false);
 }
 
 static int msm_console_setup(struct console *co, char *options)
@@ -1749,7 +1755,7 @@ msm_serial_early_write(struct console *con, const char *s, unsigned n)
 {
 	struct earlycon_device *dev = con->data;
 
-	__msm_console_write(&dev->port, s, n, false);
+	__msm_console_write(&dev->port, s, n, false, true);
 }
 
 static int __init
@@ -1769,7 +1775,7 @@ msm_serial_early_write_dm(struct console *con, const char *s, unsigned n)
 {
 	struct earlycon_device *dev = con->data;
 
-	__msm_console_write(&dev->port, s, n, true);
+	__msm_console_write(&dev->port, s, n, true, true);
 }
 
 static int __init

@@ -377,7 +377,8 @@ struct q6_userpd_bootargs {
 struct license_bootargs {
 	struct bootargs_header header;
 	u8 license_type;
-	dma_addr_t dma_buf;
+	u32 addr;
+	u32 size;
 } __packed;
 
 static int qcom_get_pd_fw_info(struct q6_wcss *wcss, const struct firmware *fw,
@@ -1013,6 +1014,13 @@ int enable_ipq5332_clocks(struct q6_wcss *wcss)
 {
 	int ret, loop = 0;
 
+	ret = clk_prepare_enable(wcss->axmis_clk);
+	if (ret) {
+		dev_err(wcss->dev, "q6_axis clk enable failed");
+		return ret;
+	}
+	clk_disable_unprepare(wcss->axmis_clk);
+
 	ret = reset_control_assert(wcss->wcss_q6_reset);
 	if (ret) {
 		dev_err(wcss->dev, "wcss_q6_reset assert failed\n");
@@ -1025,23 +1033,6 @@ int enable_ipq5332_clocks(struct q6_wcss *wcss)
 			udelay(1);
 			if (readl(wcss->ce_ahb_base + AXIS_CBCR) == CLK_OFF)
 				break;
-		}
-	} else {
-		ret = reset_control_deassert(wcss->wcss_aon_reset);
-		if (ret) {
-			dev_err(wcss->dev, "wcss_aon_reset deassert failed\n");
-			return ret;
-		}
-		ret = clk_prepare_enable(wcss->axi_s_clk);
-		if (ret) {
-			dev_err(wcss->dev, "wcss axi_s clk enable failed");
-			return ret;
-		}
-		clk_disable_unprepare(wcss->axi_s_clk);
-		ret = reset_control_assert(wcss->wcss_aon_reset);
-		if (ret) {
-			dev_err(wcss->dev, "wcss_aon_reset assert failed\n");
-			return ret;
 		}
 	}
 
@@ -1130,14 +1121,6 @@ int enable_ipq5332_clocks(struct q6_wcss *wcss)
 				break;
 		}
 	} else {
-		/* Enable Q6 clocks */
-		ret = clk_prepare_enable(wcss->gcc_ce_ahb_clk);
-		if (ret) {
-			dev_err(wcss->dev, "ce ahb clk enable failed");
-			return ret;
-		}
-		clk_disable_unprepare(wcss->gcc_ce_ahb_clk);
-
 		ret = clk_bulk_prepare_enable(wcss->num_clks, wcss->clks);
 		if (ret) {
 			dev_err(wcss->dev, "failed to enable clocks, err=%d\n", ret);
@@ -1656,7 +1639,7 @@ static int wcss_ipq5332_ahb_pd_start(struct rproc *rproc)
 	int ret;
 	const struct wcss_data *desc;
 	u8 pd_asid;
-	u32 val;
+	u32 val, pasid;
 	struct rproc *rpd_rproc = dev_get_drvdata(wcss->dev->parent);
 	struct q6_wcss *rpd_wcss = rpd_rproc->priv;
 
@@ -1665,7 +1648,9 @@ static int wcss_ipq5332_ahb_pd_start(struct rproc *rproc)
 		return -EINVAL;
 
 	if (wcss->need_mem_protection) {
-		ret = qcom_scm_pas_auth_and_reset(desc->pasid, 0x0, 0x0);
+		pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+		pasid = (pd_asid << 8) | UPD_SWID;
+		ret = qcom_scm_pas_auth_and_reset(pasid, 0x0, 0x0);
 		if (ret) {
 			dev_err(wcss->dev, "failed to power up ahb pd\n");
 			return ret;
@@ -2346,6 +2331,8 @@ static int wcss_ipq5332_ahb_pd_stop(struct rproc *rproc)
 	struct rproc *rpd_rproc = dev_get_drvdata(wcss->dev->parent);
 	const struct wcss_data *desc;
 	bool q6_offload;
+	u8 pd_asid;
+	u32 pasid;
 
 	rpd_wcss = rpd_rproc->priv;
 	desc = of_device_get_match_data(wcss->dev);
@@ -2363,7 +2350,9 @@ static int wcss_ipq5332_ahb_pd_stop(struct rproc *rproc)
 	}
 
 	if (wcss->need_mem_protection) {
-		ret = qcom_scm_pas_shutdown(desc->pasid);
+		pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+		pasid = (pd_asid << 8) | UPD_SWID;
+		ret = qcom_scm_pas_shutdown(pasid);
 		if (ret) {
 			dev_err(wcss->dev, "failed to power down ahb pd\n");
 			return ret;
@@ -2497,7 +2486,7 @@ static int load_license_params_to_bootargs(struct device *dev,
 
 	ret = request_firmware(&file, lic_file_name, dev);
 	if (ret) {
-		dev_err(dev, "failed to get %s\n", lic_file_name);
+		dev_err(dev, "request_firmware failed: %d\n", ret);
 		return ret;
 	}
 
@@ -2529,7 +2518,10 @@ static int load_license_params_to_bootargs(struct device *dev,
 		lic_bootargs.license_type = (u8)rd_val;
 
 	/* ADDRESS */
-	lic_bootargs.dma_buf = lic_param.dma_buf;
+	lic_bootargs.addr = (u32)lic_param.dma_buf;
+
+	/* License file size */
+	lic_bootargs.size = lic_param.size;
 	memcpy_toio(boot_args->smem_bootargs_ptr,
 					&lic_bootargs, sizeof(lic_bootargs));
 	boot_args->smem_bootargs_ptr += sizeof(lic_bootargs);
@@ -2805,6 +2797,8 @@ static int wcss_ahb_pcie_pd_load(struct rproc *rproc, const struct firmware *fw)
 {
 	struct q6_wcss *wcss = rproc->priv, *wcss_rpd;
 	struct rproc *rpd_rproc = dev_get_drvdata(wcss->dev->parent);
+	u8 pd_asid;
+	u32 pasid;
 	int ret;
 
 	wcss_rpd = rpd_rproc->priv;
@@ -2825,14 +2819,11 @@ static int wcss_ahb_pcie_pd_load(struct rproc *rproc, const struct firmware *fw)
 	}
 
 	if (wcss->need_mem_protection) {
-		const struct wcss_data *desc =
-					of_device_get_match_data(wcss->dev);
-
-		if (!desc)
-			return -EINVAL;
+		pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+		pasid = (pd_asid << 8) | UPD_SWID;
 
 		return wcss->mdt_load_sec(wcss->dev, fw, rproc->firmware,
-				     desc->pasid, wcss->mem_region,
+				     pasid, wcss->mem_region,
 				     wcss->mem_phys, wcss->mem_size,
 				     &wcss->mem_reloc);
 	}
@@ -3253,7 +3244,7 @@ static int ipq5332_init_q6_clock(struct q6_wcss *wcss)
 {
 	int ret, i;
 	const char *clks[] = { "wcss_ecahb", "q6_tsctr_1to2", "q6ss_trig",
-				"q6_axis", "q6_ahb_s", "q6ss_atbm", "q6_ahb",
+				"q6_ahb_s", "q6ss_atbm", "q6_ahb",
 				"q6ss_pclkdbg", "sys_noc_wcss_ahb" };
 	const char *cfg_clks[] = { "q6_axim", "mem_noc_q6_axi" };
 
@@ -3269,6 +3260,14 @@ static int ipq5332_init_q6_clock(struct q6_wcss *wcss)
 	for (i = 0; i < wcss->num_clks; i++)
 		wcss->clks[i].id = clks[i];
 
+	wcss->axmis_clk = devm_clk_get(wcss->dev, "q6_axis");
+	if (IS_ERR(wcss->axmis_clk)) {
+		ret = PTR_ERR(wcss->axmis_clk);
+		if (ret != -EPROBE_DEFER)
+			dev_err(wcss->dev, "failed to get q6_axis clk\n");
+		return PTR_ERR(wcss->axmis_clk);
+	}
+
 	wcss->cfg_clks = devm_kcalloc(wcss->dev, wcss->num_cfg_clks,
 					sizeof(*wcss->cfg_clks), GFP_KERNEL);
 	if (!wcss->cfg_clks) {
@@ -3278,22 +3277,6 @@ static int ipq5332_init_q6_clock(struct q6_wcss *wcss)
 
 	for (i = 0; i < wcss->num_cfg_clks; i++)
 		wcss->cfg_clks[i].id = cfg_clks[i];
-
-	wcss->axi_s_clk = devm_clk_get(wcss->dev, "wcss_axi_s");
-	if (IS_ERR(wcss->axi_s_clk)) {
-		ret = PTR_ERR(wcss->axi_s_clk);
-		if (ret != -EPROBE_DEFER)
-			dev_err(wcss->dev, "failed to get axi_s_clk clk\n");
-		return PTR_ERR(wcss->axi_s_clk);
-	}
-
-	wcss->gcc_ce_ahb_clk = devm_clk_get(wcss->dev, "ce_ahb");
-	if (IS_ERR(wcss->gcc_ce_ahb_clk)) {
-		ret = PTR_ERR(wcss->gcc_ce_ahb_clk);
-		if (ret != -EPROBE_DEFER)
-			dev_err(wcss->dev, "failed to get ce_ahb clk\n");
-		return PTR_ERR(wcss->gcc_ce_ahb_clk);
-	}
 
 	ret = devm_clk_bulk_get(wcss->dev, wcss->num_cfg_clks, wcss->cfg_clks);
 	if (ret) {
@@ -3689,7 +3672,6 @@ static const struct wcss_data q6_ipq5332_res_init = {
 	.q6_clk_enable = ipq5332_q6_clk_enable,
 	.crash_reason_smem = WCSS_CRASH_REASON,
 	.remote_id = WCSS_SMEM_HOST,
-	.aon_reset_required = true,
 	.wcss_q6_reset_required = true,
 	.ssr_name = "q6wcss",
 	.reset_cmd_id = 0x18,
@@ -3738,7 +3720,6 @@ static const struct wcss_data wcss_ahb_ipq5332_res_init = {
 	.halt_v2 = true,
 	.mdt_load_sec = qcom_mdt_load,
 	.mdt_load_nosec = qcom_mdt_load_no_init,
-	.pasid = (AHB_ASID << 8) | UPD_SWID,
 };
 
 static const struct wcss_data wcss_ahb_ipq5018_res_init = {
@@ -3772,7 +3753,6 @@ static const struct wcss_data wcss_pcie_ipq5332_res_init = {
 	.is_fw_shared = false,
 	.mdt_load_sec = qcom_mdt_load,
 	.mdt_load_nosec = qcom_mdt_load_no_init,
-	.pasid = MPD_WCNSS_PAS_ID,
 };
 
 static const struct wcss_data wcss_pcie_ipq5018_res_init = {
