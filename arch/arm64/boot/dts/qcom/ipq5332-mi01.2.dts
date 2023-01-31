@@ -73,13 +73,13 @@
 &wifi1 {
 	/* QCN9224 radio 5G */
 	hremote_node = <&qcn9224_pcie0>;
-	board_id = <0x02>;
+	board_id = <0x15>;
 	status = "ok";
 };
 
 &wifi2 {
 	/* QCN9224 radio 6G */
 	hremote_node = <&qcn9224_pcie1>;
-	board_id = <0x04>;
+	board_id = <0x16>;
 	status = "ok";
 };

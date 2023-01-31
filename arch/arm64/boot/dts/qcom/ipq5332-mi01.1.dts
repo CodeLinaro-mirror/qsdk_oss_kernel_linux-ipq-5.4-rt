@@ -430,6 +430,6 @@
 /* QCN9224 5G+6G */
 &wifi2 {
 	hremote_node = <&qcn9224_pcie1>;
-	board_id = <0x1006>;
+	board_id = <0x1019>;
 	status = "ok";
 };
