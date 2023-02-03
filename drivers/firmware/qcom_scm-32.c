@@ -1360,7 +1360,7 @@ int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 		return -ENOTSUPP;
 	}
 
-	return ret ? : le32_to_cpu(desc.ret[0]);
+	return ret;
 }
 
 static int __qti_scm_dload_v8(struct device *dev, void *cmd_buf,

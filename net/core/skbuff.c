@@ -665,6 +665,7 @@ struct sk_buff *__netdev_alloc_skb_no_skb_reset(struct net_device *dev,
 	if (unlikely(!skb)) {
 		skb_free_frag(data);
 		return NULL;
+	}
 
 	/* use OR instead of assignment to avoid clearing of bits in mask */
 	if (pfmemalloc)

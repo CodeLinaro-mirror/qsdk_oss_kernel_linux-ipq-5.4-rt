@@ -771,7 +771,7 @@ int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 
 	status = (uint64_t *)fuse_blow->status;
 	*status = res.a1;
-	return ret ? : res.a1;
+	return ret;
 }
 
 int __qti_scm_dload(struct device *dev, u32 svc_id, u32 cmd_id, void *cmd_buf,
