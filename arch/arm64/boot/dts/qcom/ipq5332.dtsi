@@ -226,7 +226,7 @@
 		};
 
 		ssuniphy_0: ssuniphy@4b0000 {
-			compatible = "qca,ipq5018-uni-ssphy";
+			compatible = "qca,ipq5332-uni-ssphy";
 			reg = <0x4b0000 0x800>;
 			clocks = <&gcc GCC_USB0_PIPE_CLK>,
 				<&gcc GCC_USB0_PHY_CFG_AHB_CLK>;
@@ -236,7 +236,6 @@
 			resets =  <&gcc GCC_USB0_PHY_BCR>;
 			reset-names = "por_rst";
 			#phy-cells = <0>;
-			no-reset-seq;
 			status = "disabled";
 		};
 
@@ -270,7 +269,6 @@
 					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
-			no-phy-init;
 			status = "disabled";
 		};
 
@@ -297,7 +295,6 @@
 					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
-			no-phy-init;
 			status = "disabled";
 		};
 
@@ -328,7 +325,6 @@
 					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
-			no-phy-init;
 			status = "disabled";
 		};
 
@@ -358,6 +354,11 @@
 			mode-fixed = <2>; /* TBD */
 			x2 = <1>;
 			status = "disabled";
+		};
+
+		seccrypt: qcom,seccrypt {
+			compatible = "qcom,seccrypt";
+			status = "ok";
 		};
 
 		intc: interrupt-controller@b000000 {
@@ -1649,22 +1650,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x4DE00000  |   20MB  |
+			 * | HREMOTE |  0x4EC00000  |   20MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x4F200000  |   1MB   |
+			 * | M3 Dump |  0x50000000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x4F300000  |   1MB   |
+			 * |   ETR   |  0x50100000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x4F400000  |   8MB   |
+			 * |  Caldb  |  0x50200000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x4FC00000  |   7MB   |
+			 * |Pageable |  0x50A00000  |   7MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x4DE00000>;
-			m3-dump-addr = <0x4F200000>;
-			etr-addr = <0x4F300000>;
-			caldb-addr = <0x4F400000>;
-			pageable-addr = <0x4FC00000>;
+			base-addr = <0x4EC00000>;
+			m3-dump-addr = <0x50000000>;
+			etr-addr = <0x50100000>;
+			caldb-addr = <0x50200000>;
+			pageable-addr = <0x50A00000>;
 			hremote-size = <0x1400000>;
 			pageable-size = <0x700000>;
 			tgt-mem-mode = <0x1>;
@@ -1920,22 +1921,22 @@
 			 * +=========+==============+=========+
 			 * |  Region | Start Offset |   Size  |
 			 * +---------+--------------+---------+
-			 * | HREMOTE |  0x50300000  |   20MB  |
+			 * | HREMOTE |  0x51100000  |   20MB  |
 			 * +---------+--------------+---------+
-			 * | M3 Dump |  0x51700000  |   1MB   |
+			 * | M3 Dump |  0x52500000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |   ETR   |  0x51800000  |   1MB   |
+			 * |   ETR   |  0x52600000  |   1MB   |
 			 * +---------+--------------+---------+
-			 * |  Caldb  |  0x51900000  |   8MB   |
+			 * |  Caldb  |  0x52700000  |   8MB   |
 			 * +---------+--------------+---------+
-			 * |Pageable |  0x52100000  |   7MB   |
+			 * |Pageable |  0x52F00000  |   7MB   |
 			 * +==================================+
 			 */
-			base-addr = <0x50300000>;
-			m3-dump-addr = <0x51700000>;
-			etr-addr = <0x51800000>;
-			caldb-addr = <0x51900000>;
-			pageable-addr = <0x52100000>;
+			base-addr = <0x51100000>;
+			m3-dump-addr = <0x52500000>;
+			etr-addr = <0x52600000>;
+			caldb-addr = <0x52700000>;
+			pageable-addr = <0x52F00000>;
 			hremote-size = <0x1400000>;
 			pageable-size = <0x700000>;
 			tgt-mem-mode = <0x1>;

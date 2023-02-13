@@ -958,6 +958,12 @@ int qti_set_qcekey_sec(void *buf, int size)
 }
 EXPORT_SYMBOL(qti_set_qcekey_sec);
 
+int qti_sec_crypt(void *buf, int size)
+{
+	return __qti_sec_crypt(__scm->dev, buf, size);
+}
+EXPORT_SYMBOL(qti_sec_crypt);
+
 /*
  * qti_qcekey_release_xpu_prot() - release XPU protection
  */
@@ -966,6 +972,12 @@ int qti_qcekey_release_xpu_prot(void)
 	return __qti_qcekey_release_xpu_prot(__scm->dev);
 }
 EXPORT_SYMBOL(qti_qcekey_release_xpu_prot);
+
+int qti_seccrypt_clearkey(void)
+{
+	return __qti_seccrypt_clearkey(__scm->dev);
+}
+EXPORT_SYMBOL(qti_seccrypt_clearkey);
 
 /**
  * qti_scm_resettype () - cold or warm reset

@@ -406,8 +406,9 @@ static void crashdump_init(struct rproc *rproc,
 				void *dest)
 {
 	void *handle;
-	struct ramdump_segment segs[MAX_SEGMENTS];
+	struct ramdump_segment *segs;
 	int ret, index = 0;
+	int num_segs;
 	struct qcom_pd_fw_info fw_info = {0};
 	struct q6_wcss *wcss = rproc->priv;
 	struct device *dev = wcss->dev;
@@ -451,7 +452,23 @@ static void crashdump_init(struct rproc *rproc,
 		goto free_device;
 	}
 
-	while (index < MAX_SEGMENTS) {
+	num_segs = of_count_phandle_with_args(np, "memory-region", NULL);
+	if (num_segs <= 0) {
+		dev_err(&rproc->dev, "Could not find memory regions to dump");
+		goto free_device;
+	}
+
+	if (wcss->pd_asid)
+		num_segs++;
+	dev_dbg(&rproc->dev, "number of segments to be dumped: %d\n", num_segs);
+
+	segs = kzalloc(num_segs * sizeof(struct ramdump_segment), GFP_KERNEL);
+	if (!segs) {
+		dev_err(&rproc->dev, "Could not allocate memory for ramdump segments");
+		goto free_device;
+	}
+
+	while (index < num_segs) {
 		node = of_parse_phandle(np, "memory-region", index);
 		if (!node)
 			break;

@@ -573,6 +573,7 @@
 			interrupts-extended = <&tlmm 33 IRQ_TYPE_LEVEL_HIGH>,
 					      <&tlmm 43 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "wake_gpio", "mdm2ap_e911";
+			slot_id = <2>;
 
 			pcie3_rp {
 				reg = <0 0 0 0 0>;

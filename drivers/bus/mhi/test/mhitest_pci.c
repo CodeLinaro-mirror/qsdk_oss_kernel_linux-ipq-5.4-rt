@@ -180,20 +180,20 @@ int mhitest_dump_info(struct mhitest_platform *mplat, bool in_panic)
 
 	mhi_ctrl = mplat->mhi_ctrl;
 	pci_read_config_word(mplat->pci_dev, PCI_DEVICE_ID, &device_id);
-	MHITEST_EMERG("Read config space again, Device_id:0x%x\n", device_id);
+	MHITEST_VERB("Read config space again, Device_id:0x%x\n", device_id);
 	if (device_id != mplat->pci_dev_id->device) {
-		MHITEST_ERR("Device Id does not match with Probe ID..\n");
+		MHITEST_VERB("Device Id does not match with Probe ID..\n");
 		return -EIO;
 	}
 
 	ret = mhi_download_rddm_image(mhi_ctrl, in_panic);
 	if (ret) {
-		MHITEST_ERR("Error .. not able to dload rddm img ret:%d\n",
+		MHITEST_VERB("Error .. not able to dload rddm img ret:%d\n",
 									ret);
 		return ret;
 	}
 
-	MHITEST_LOG("Let's dump some more things...\n");
+	MHITEST_VERB("Let's dump some more things...\n");
 	mhi_debug_reg_dump(mhi_ctrl);
 
 	rddm_img = mhi_ctrl->rddm_image;
@@ -202,9 +202,9 @@ int mhitest_dump_info(struct mhitest_platform *mplat, bool in_panic)
 	dump_seg = mplat->mhitest_rdinfo.dump_data_vaddr;
 
 	dump_data->nentries = 0;
-	MHITEST_EMERG("dump_dname:%s entries:%d\n", dump_data->name,
+	MHITEST_VERB("dump_dname:%s entries:%d\n", dump_data->name,
 						dump_data->nentries);
-	MHITEST_EMERG("----Collect FW image dump segment, nentries %d----\n",
+	MHITEST_VERB("----Collect FW image dump segment, nentries %d----\n",
 		    fw_img->entries);
 
 	for (i = 0; i < fw_img->entries; i++) {
@@ -212,14 +212,14 @@ int mhitest_dump_info(struct mhitest_platform *mplat, bool in_panic)
 		dump_seg->v_address = fw_img->mhi_buf[i].buf;
 		dump_seg->size = fw_img->mhi_buf[i].len;
 		dump_seg->type = FW_IMAGE;
-		MHITEST_EMERG("seg-%d:Address:0x%lx,v_Address %pK, size 0x%lx\n",
+		MHITEST_VERB("seg-%d:Address:0x%lx,v_Address %pK, size 0x%lx\n",
 				i, dump_seg->address, dump_seg->v_address,
 							dump_seg->size);
 		dump_seg++;
 	}
 	dump_data->nentries += fw_img->entries;
 
-	MHITEST_EMERG("----Collect RDDM image dump segment, nentries %d----\n",
+	MHITEST_VERB("----Collect RDDM image dump segment, nentries %d----\n",
 		    rddm_img->entries);
 
 	for (i = 0; i < rddm_img->entries; i++) {
@@ -227,13 +227,13 @@ int mhitest_dump_info(struct mhitest_platform *mplat, bool in_panic)
 		dump_seg->v_address = rddm_img->mhi_buf[i].buf;
 		dump_seg->size = rddm_img->mhi_buf[i].len;
 		dump_seg->type = FW_RDDM;
-		MHITEST_EMERG("seg-%d: address:0x%lx,v_address %pK,size 0x%lx\n",
+		MHITEST_VERB("seg-%d: address:0x%lx,v_address %pK,size 0x%lx\n",
 				i, dump_seg->address, dump_seg->v_address,
 								dump_seg->size);
 		dump_seg++;
 	}
 	dump_data->nentries += rddm_img->entries;
-	MHITEST_EMERG("----TODO/not need to Collect remote heap dump segment--\n");
+	MHITEST_VERB("----TODO/not need to Collect remote heap dump segment--\n");
 	if (dump_data->nentries > 0)
 		mplat->mhitest_rdinfo.dump_data_valid = true;
 

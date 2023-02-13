@@ -49,6 +49,12 @@
 #define SSCG_CTRL_REG_6		0xb0
 
 #define PHY_AUTOLOAD_PERIOD	35
+
+#define PCIE_USB_COMBO_PHY_CFG_RX_AFE_2	0x7C4
+#define APB_REG_UPHY_RX_RESCAL_CODE	(16 << 8)
+#define APB_REG_UPHY_RX_AFE_CAP1	(7 << 4)
+#define APB_REG_UPHY_RX_AFE_RES1	(6 << 0)
+
 struct qca_uni_ss_phy {
 	struct phy phy;
 	struct device *dev;
@@ -60,7 +66,6 @@ struct qca_uni_ss_phy {
 	unsigned int host;
 	struct clk *pipe_clk;
 	struct clk *phy_cfg_ahb_clk;
-	u32 no_reset_seq;
 };
 
 struct qf_read {
@@ -103,27 +108,31 @@ static int qca_uni_ss_phy_init(struct phy *x)
 		return ret;
 	}
 
-	if (!strcmp(compat_name, "qca,ipq5018-uni-ssphy")) {
-		/* assert SS PHY POR reset */
-		reset_control_assert(phy->por_rst);
-		usleep_range(1, 5);
-		/* deassert SS PHY POR reset */
-		reset_control_deassert(phy->por_rst);
-		clk_prepare_enable(phy->phy_cfg_ahb_clk);
-		clk_prepare_enable(phy->pipe_clk);
-		phy_autoload();
-		if (phy->no_reset_seq)
-			return 0;
-		/*set frequency initial value*/
-		writel(0x1cb9, phy->base + SSCG_CTRL_REG_4);
-		writel(0x023a, phy->base + SSCG_CTRL_REG_5);
-		/*set spectrum spread count*/
-		writel(0xd360, phy->base + SSCG_CTRL_REG_3);
-		/*set fstep*/
-		writel(0x1, phy->base + SSCG_CTRL_REG_1);
-		writel(0xeb, phy->base + SSCG_CTRL_REG_2);
+	/* assert SS PHY POR reset */
+	reset_control_assert(phy->por_rst);
+	usleep_range(1, 5);
+	/* deassert SS PHY POR reset */
+	reset_control_deassert(phy->por_rst);
+	clk_prepare_enable(phy->phy_cfg_ahb_clk);
+	clk_prepare_enable(phy->pipe_clk);
+	phy_autoload();
+
+	if (!strcmp(compat_name, "qca,ipq5332-uni-ssphy")) {
+		writel(APB_REG_UPHY_RX_RESCAL_CODE |
+		APB_REG_UPHY_RX_AFE_CAP1 |
+		APB_REG_UPHY_RX_AFE_RES1,
+		phy->base + PCIE_USB_COMBO_PHY_CFG_RX_AFE_2);
+		return 0;
 	}
 
+	/*set frequency initial value*/
+	writel(0x1cb9, phy->base + SSCG_CTRL_REG_4);
+	writel(0x023a, phy->base + SSCG_CTRL_REG_5);
+	/*set spectrum spread count*/
+	writel(0xd360, phy->base + SSCG_CTRL_REG_3);
+	/*set fstep*/
+	writel(0x1, phy->base + SSCG_CTRL_REG_1);
+	writel(0xeb, phy->base + SSCG_CTRL_REG_2);
 	return ret;
 }
 
@@ -146,13 +155,13 @@ static int qca_uni_ss_get_resources(struct platform_device *pdev,
 		dev_err(&pdev->dev, "couldn't compatible string: %d\n", ret);
 		return ret;
 	}
-	phy->no_reset_seq = of_property_read_bool(phy->dev->of_node, "no-reset-seq");
 
 	phy->por_rst = devm_reset_control_get(phy->dev, "por_rst");
 	if (IS_ERR(phy->por_rst))
 		return PTR_ERR(phy->por_rst);
 
-	if (!strcmp(compat_name, "qca,ipq5018-uni-ssphy")) {
+	if (!strcmp(compat_name, "qca,ipq5018-uni-ssphy") ||
+			!strcmp(compat_name, "qca,ipq5332-uni-ssphy")) {
 		phy->pipe_clk = devm_clk_get(phy->dev, "pipe_clk");
 		if (IS_ERR(phy->pipe_clk)) {
 			dev_err(phy->dev, "can not get phy clock\n");
@@ -178,6 +187,7 @@ static int qca_uni_ss_get_resources(struct platform_device *pdev,
 static const struct of_device_id qca_uni_ss_id_table[] = {
 	{ .compatible = "qca,uni-ssphy" },
 	{ .compatible = "qca,ipq5018-uni-ssphy"},
+	{ .compatible = "qca,ipq5332-uni-ssphy"},
 	{ /* Sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, qca_uni_ss_id_table);

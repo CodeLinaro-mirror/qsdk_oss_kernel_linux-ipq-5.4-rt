@@ -371,10 +371,15 @@
 
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
-					qrtr_node_id = <0x31>;
 					qti,disable-rddm-prealloc;
 					qti,rddm-seg-len = <0x1000>;
+#if defined(__CNSS2__)
+					qrtr_node_id = <0x31>;
 					memory-region = <0>, <&mhi_region1>;
+#else
+					memory-region = <&qcn9224_pcie1>;
+					qcom,board_id = <0x04>;
+#endif
 				};
 			};
 		};

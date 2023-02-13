@@ -260,11 +260,15 @@ int __qti_scm_regsave(struct device *dev, u32 svc_id, u32 cmd_id,
  */
 #define QCOM_SCM_QCE_SVC		0x2
 #define QCOM_SCM_QCE_CMD		0x3
+#define QCOM_SCM_QCE_ENC_DEC_CMD	0xB
 #define QCOM_SCM_QCE_PARAM		0x2
 #define QCOM_SCM_QCE_CRYPTO_SIP		0xA
 #define QCOM_SCM_QCE_UNLOCK_CMD		0x4
+#define QCOM_SCM_SECCRYPT_CLRKEY_CMD	0xC
 extern int __qti_set_qcekey_sec(struct device *dev, void *confBuf, int size);
+extern int __qti_sec_crypt(struct device *dev, void *confBuf, int size);
 extern int __qti_qcekey_release_xpu_prot(struct device *dev);
+extern int __qti_seccrypt_clearkey(struct device *dev);
 extern int __qti_scm_qseecom_remove_xpu(struct device *);
 extern int __qti_scm_qseecom_notify(struct device *dev,
 				    struct qsee_notify_app *req,

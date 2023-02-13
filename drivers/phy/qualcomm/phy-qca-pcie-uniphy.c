@@ -46,6 +46,11 @@
 
 #define PHY_MODE_FIXED		0x1
 
+/* IPQ5332 specific registers */
+#define PHY_CFG_PLLCFG			0x220
+#define PHY_CFG_EIOS_DTCT_REG		0x3E4
+#define PHY_CFG_GEN3_ALIGN_HOLDOFF_TIME	0x3E8
+
 enum qca_uni_pcie_phy_type {
 	PHY_TYPE_PCIE,
 	PHY_TYPE_PCIE_GEN2,
@@ -67,7 +72,6 @@ struct qca_uni_pcie_phy {
 	u32 mode;
 	u32 is_x2;
 	void __iomem *reg_base;
-	u32 no_phy_init;
         struct regmap *phy_mux_map;
         u32 phy_mux_reg;
 };
@@ -105,33 +109,35 @@ static void qca_uni_pcie_phy_init(struct qca_uni_pcie_phy *phy)
 	int loop = 0;
 	void __iomem *reg = phy->reg_base;
 
-	if (phy->no_phy_init)
-		return;
-
 	while (loop < 2) {
 		reg += (loop * 0x800);
-
-		/*set frequency initial value*/
-		writel(0x1cb9, reg + SSCG_CTRL_REG_4);
-		writel(0x023a, reg + SSCG_CTRL_REG_5);
-		/*set spectrum spread count*/
-		writel(0xd360, reg + SSCG_CTRL_REG_3);
-		if (phy->mode == PHY_MODE_FIXED) {
-			/*set fstep*/
-			writel(0x0, reg + SSCG_CTRL_REG_1);
-			writel(0x0, reg + SSCG_CTRL_REG_2);
+		if (phy->is_phy_gen3) {
+			writel(0x30, reg + PHY_CFG_PLLCFG);
+			writel(0x53EF, reg + PHY_CFG_EIOS_DTCT_REG);
+			writel(0xCF, reg + PHY_CFG_GEN3_ALIGN_HOLDOFF_TIME);
 		} else {
-			/*set fstep*/
-			writel(0x1, reg + SSCG_CTRL_REG_1);
-			writel(0xeb, reg + SSCG_CTRL_REG_2);
-			/*set FLOOP initial value*/
-			writel(0x3f9, reg + CDR_CTRL_REG_4);
-			writel(0x1c9, reg + CDR_CTRL_REG_5);
-			/*set upper boundary level*/
-			writel(0x419, reg + CDR_CTRL_REG_2);
-			/*set fixed offset*/
-			writel(0x200, reg + CDR_CTRL_REG_1);
-			writel(0xf101, reg + PCS_INTERNAL_CONTROL_2);
+			/*set frequency initial value*/
+			writel(0x1cb9, reg + SSCG_CTRL_REG_4);
+			writel(0x023a, reg + SSCG_CTRL_REG_5);
+			/*set spectrum spread count*/
+			writel(0xd360, reg + SSCG_CTRL_REG_3);
+			if (phy->mode == PHY_MODE_FIXED) {
+				/*set fstep*/
+				writel(0x0, reg + SSCG_CTRL_REG_1);
+				writel(0x0, reg + SSCG_CTRL_REG_2);
+			} else {
+				/*set fstep*/
+				writel(0x1, reg + SSCG_CTRL_REG_1);
+				writel(0xeb, reg + SSCG_CTRL_REG_2);
+				/*set FLOOP initial value*/
+				writel(0x3f9, reg + CDR_CTRL_REG_4);
+				writel(0x1c9, reg + CDR_CTRL_REG_5);
+				/*set upper boundary level*/
+				writel(0x419, reg + CDR_CTRL_REG_2);
+				/*set fixed offset*/
+				writel(0x200, reg + CDR_CTRL_REG_1);
+				writel(0xf101, reg + PCS_INTERNAL_CONTROL_2);
+			}
 		}
 
 		if (phy->is_x2)
@@ -203,8 +209,6 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 	ret = of_property_read_u32(phy->dev->of_node, "x2", &phy->is_x2);
 	if (ret)
 		phy->is_x2 = 0;
-
-	phy->no_phy_init = of_property_read_bool(phy->dev->of_node, "no-phy-init");
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	phy->reg_base = devm_ioremap_resource(phy->dev, res);

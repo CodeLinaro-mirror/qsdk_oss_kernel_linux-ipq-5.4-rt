@@ -1194,6 +1194,8 @@ void mhi_power_down(struct mhi_controller *mhi_cntrl, bool graceful)
 	mhi_pm_disable_transition(mhi_cntrl);
 	free_irq(mhi_cntrl->irq[0], mhi_cntrl);
 
+	mhi_free_fw_license_or_secdat(mhi_cntrl);
+
 	mhi_free_boot_args(mhi_cntrl);
 
 	if (!mhi_cntrl->pre_init) {

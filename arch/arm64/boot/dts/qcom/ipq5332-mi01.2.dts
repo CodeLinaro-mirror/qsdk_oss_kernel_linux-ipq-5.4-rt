@@ -32,13 +32,17 @@
 			status = "ok";
 			pcie0_rp {
 				reg = <0 0 0 0 0>;
-
 				qcom,mhi@2 {
 					reg = <0 0 0 0 0>;
-					qrtr_node_id = <0x30>;
 					qti,disable-rddm-prealloc;
 					qti,rddm-seg-len = <0x1000>;
+#if defined(__CNSS2__)
+					qrtr_node_id = <0x30>;
 					memory-region = <0>, <&mhi_region0>;
+#else
+					memory-region = <&qcn9224_pcie0>;
+					qcom,board_id = <0x02>;
+#endif
 				};
 			};
 		};
@@ -49,7 +53,11 @@
 	qcom,rproc = <&q6_wcss_pd1>;
 	qcom,multipd_arch;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
+#if defined(__CNSS2__)
 	mem-region = <&q6_region>;
+#else
+	memory-region = <&q6_region>;
+#endif
 	qcom,board_id = <0x12>;
 	status = "ok";
 };
@@ -73,13 +81,13 @@
 &wifi1 {
 	/* QCN9224 radio 5G */
 	hremote_node = <&qcn9224_pcie0>;
-	board_id = <0x02>;
+	board_id = <0x15>;
 	status = "ok";
 };
 
 &wifi2 {
 	/* QCN9224 radio 6G */
 	hremote_node = <&qcn9224_pcie1>;
-	board_id = <0x04>;
+	board_id = <0x16>;
 	status = "ok";
 };

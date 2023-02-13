@@ -718,7 +718,9 @@
 	status = "ok";
 };
 
+/* MLO GLOBAL MEM REGION size is 22MB for RDP with 4 QCN9224 radios */
 &mlo_global_mem0 {
+	size = <0x0 0x1800000>;
 	status = "ok";
 };
 

@@ -1380,6 +1380,31 @@ int __qti_set_qcekey_sec(struct device *dev, void *confBuf, int size)
 	return ret ? : res.a1;
 }
 
+int __qti_sec_crypt(struct device *dev, void *confBuf, int size)
+{
+	int ret;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+	dma_addr_t conf_phys;
+
+	conf_phys = dma_map_single(dev, confBuf, size, DMA_TO_DEVICE);
+
+	ret = dma_mapping_error(dev, conf_phys);
+	if (ret) {
+		dev_err(dev, "Allocation fail for conf buffer\n");
+		return -ENOMEM;
+	}
+	desc.arginfo = SCM_ARGS(2, QCOM_SCM_RW, QCOM_SCM_VAL);
+	desc.args[0] = (u64)conf_phys;
+	desc.args[1] = size;
+
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_QCE_CRYPTO_SIP,
+			QCOM_SCM_QCE_ENC_DEC_CMD, &desc, &res);
+
+	dma_unmap_single(dev, conf_phys, size, DMA_TO_DEVICE);
+	return ret ? : res.a1;
+}
+
 int __qti_qcekey_release_xpu_prot(struct device *dev)
 {
 	int ret;
@@ -1389,6 +1414,19 @@ int __qti_qcekey_release_xpu_prot(struct device *dev)
 	desc.arginfo = SCM_ARGS(0, QCOM_SCM_VAL);
 	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_QCE_CRYPTO_SIP,
 			QCOM_SCM_QCE_UNLOCK_CMD, &desc, &res);
+
+	return ret ? : res.a1;
+}
+
+int __qti_seccrypt_clearkey(struct device *dev)
+{
+	int ret;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+
+	desc.arginfo = SCM_ARGS(0, QCOM_SCM_VAL);
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_QCE_CRYPTO_SIP,
+			QCOM_SCM_SECCRYPT_CLRKEY_CMD, &desc, &res);
 
 	return ret ? : res.a1;
 }

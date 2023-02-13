@@ -17,7 +17,7 @@
 	compatible = "qcom,ipq5332-ap-mi01.2-qcn9160-c1", "qcom,ipq5332";
 	interrupt-parent = <&intc>;
 
-        /*                Layout for Miami + York
+        /*                Layout for IPQ5332 + QCN9160
          * +========+==============+=========================+
          * |        |              |                         |
          * | Region | Start Offset |          Size           |

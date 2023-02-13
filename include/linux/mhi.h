@@ -461,6 +461,9 @@ struct mhi_controller {
 	u32 dev_id;
 	u8 *bootargs_buf;
 	dma_addr_t bootargs_dma;
+	void *license_buf;
+	dma_addr_t license_dma_addr;
+	size_t license_buf_size;
 };
 
 /**

@@ -286,12 +286,20 @@
 		};
 
 		pcie1_phy_x2: phy_x2@4b1000 {
+			status = "disabled";
+		};
+
+		pcie1_phy: phy@4b1000 {
 			status = "ok";
 		};
 
-		pcie1: pcie@18000000 {
+		pcie2_phy: phy@4b1800 {
 			status = "ok";
-			pcie1_rp {
+		};
+
+		pcie0: pcie@20000000 {
+			status = "ok";
+			pcie0_rp {
 				reg = <0 0 0 0 0>;
 
 				qcom,mhi@1 {
@@ -300,9 +308,10 @@
 			};
 		};
 
-		pcie0: pcie@20000000 {
+		pcie1: pcie@18000000 {
+			phys = <&pcie1_phy>;
 			status = "ok";
-			pcie0_rp {
+			pcie1_rp {
 				reg = <0 0 0 0 0>;
 
 				qcom,mhi@2 {
@@ -310,5 +319,44 @@
 				};
 			};
 		};
+
+		pcie2: pcie@10000000 {
+			status = "ok";
+			pcie2_rp {
+				reg = <0 0 0 0 0>;
+
+				qcom,mhi@3 {
+					reg = <0 0 0 0 0>;
+					qrtr_node_id = <0x32>;
+					qti,disable-rddm-prealloc;
+					qti,rddm-seg-len = <0x1000>;
+					memory-region = <0>, <&mhi_region1>;
+				};
+			};
+		};
 	};
+};
+
+&wifi0 {
+	qcom,rproc = <&q6_wcss_pd1>;
+	qcom,multipd_arch;
+	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
+	mem-region = <&q6_region>;
+	qcom,board_id = <0x11>;
+	status = "ok";
+};
+
+&mhi_region1 {
+	status = "ok";
+};
+
+&qcn9224_pcie1 {
+	status = "ok";
+};
+
+/* QCN9224 5G+6G */
+&wifi2 {
+	hremote_node = <&qcn9224_pcie1>;
+	board_id = <0x02>;
+	status = "ok";
 };

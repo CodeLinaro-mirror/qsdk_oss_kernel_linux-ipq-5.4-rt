@@ -728,7 +728,7 @@ static void mhi_firmware_copy(struct mhi_controller *mhi_cntrl,
 	}
 }
 
-static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl, dma_addr_t *dma_addr, size_t *size)
+static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 {
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
 	int  ret;
@@ -782,7 +782,7 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl,
 	header_size = 4 + 4; /* size of magic, size of length */
 	buf = mhi_fw_alloc_coherent(mhi_cntrl,
 			file->size + header_size,
-					dma_addr, GFP_KERNEL);
+					&mhi_cntrl->license_dma_addr, GFP_KERNEL);
 	if (!buf) {
 		release_firmware(file);
 		dev_err(dev, "Error Allocating memory for license or ftm mode : %d\n", ret);
@@ -800,15 +800,26 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl,
 
 	memcpy(buf + header_size, file->data, file->size);
 
-	*size = file->size + header_size;
+	mhi_cntrl->license_buf_size = file->size + header_size;
 
 	/* Let device know the license or secdat data address : Assuming 32 bit only*/
 	mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
 				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1,
-					      lower_32_bits(*dma_addr));
+					      lower_32_bits(mhi_cntrl->license_dma_addr));
 
 	release_firmware(file);
+
+	dev_info(dev, "License or secdat file address copied to PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1\n");
 	return buf;
+}
+
+void mhi_free_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
+{
+	if (mhi_cntrl->license_buf != NULL) {
+		mhi_fw_free_coherent(mhi_cntrl, mhi_cntrl->license_buf_size,
+				mhi_cntrl->license_buf, mhi_cntrl->license_dma_addr);
+		mhi_cntrl->license_buf = NULL;
+	}
 }
 
 static int mhi_update_scratch_reg(struct mhi_controller *mhi_cntrl, u32 val)
@@ -898,13 +909,11 @@ void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 	const struct firmware *firmware = NULL;
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
 	const char *fw_name;
-	void *buf, *license_buf;
-	dma_addr_t dma_addr, license_dma_addr;
-	size_t size, license_buf_size;
+	void *buf;
+	dma_addr_t dma_addr;
+	size_t size;
 	int i, ret;
 	u32 instance;
-
-	license_buf = NULL;
 
 	if (MHI_PM_IN_ERROR_STATE(mhi_cntrl->pm_state)) {
 		dev_err(dev, "Device MHI is not in valid state\n");
@@ -956,12 +965,6 @@ void mhi_fw_load_handler(struct mhi_controller *mhi_cntrl)
 	if (!buf) {
 		release_firmware(firmware);
 		goto error_fw_load;
-	}
-
-	if (mhi_cntrl->dev_id == QCN9224_DEVICE_ID) {
-		/* Download the License */
-		license_buf = mhi_download_fw_license_or_secdat(mhi_cntrl,
-				&license_dma_addr, &license_buf_size);
 	}
 
 	/* Download image using BHI */
@@ -1028,12 +1031,6 @@ fw_load_ready_state:
 		goto error_ready_state;
 	}
 
-	/*
-	 * Release is TODO, waiting for Q6 side changes to read license
-	 * before BHIe.
-	 */
-
-	/*mhi_fw_free_coherent(mhi_cntrl, license_buf_size, license_buf, license_dma_addr);*/
 	dev_info(dev, "Wait for device to enter SBL or Mission mode\n");
 	return;
 
@@ -1046,9 +1043,6 @@ error_ready_state:
 error_fw_load:
 	mhi_cntrl->pm_state = MHI_PM_FW_DL_ERR;
 	wake_up_all(&mhi_cntrl->state_event);
-
-	if (license_buf)
-		mhi_fw_free_coherent(mhi_cntrl, license_buf_size, license_buf, license_dma_addr);
 }
 
 int mhi_download_amss_image(struct mhi_controller *mhi_cntrl)
@@ -1064,6 +1058,11 @@ int mhi_download_amss_image(struct mhi_controller *mhi_cntrl)
 	if(ret) {
 		dev_err(dev, "Failed to handle the boot-args, ret: %d\n",ret);
 		return ret;
+	}
+
+	if (mhi_cntrl->dev_id == QCN9224_DEVICE_ID) {
+		/* Download the License */
+		mhi_cntrl->license_buf = mhi_download_fw_license_or_secdat(mhi_cntrl);
 	}
 
 	ret = mhi_fw_load_bhie(mhi_cntrl,
