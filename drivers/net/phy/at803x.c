@@ -74,7 +74,7 @@
 #define AT803X_DEBUG_TX_CLK_DLY_EN		BIT(8)
 
 #define QCA8081_PHY_ID 0x004dd101
-#define QCA8081_PHY_ID_MASK 0xffffff00
+#define QCA8081_PHY_ID_MASK 0xffffffff
 
 #define ATH8030_PHY_ID 0x004dd076
 #define ATH8031_PHY_ID 0x004dd074
