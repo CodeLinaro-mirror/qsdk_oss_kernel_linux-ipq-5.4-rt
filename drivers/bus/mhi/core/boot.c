@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/of.h>
+#include <linux/qcom_scm.h>
 #include "internal.h"
 
 #define QRTR_INSTANCE_MASK	0x0000FFFF
@@ -32,7 +33,17 @@
 #define PCIE_REMAP_BAR_CTRL_OFFSET		0x310C
 #define PCIE_SCRATCH_0_WINDOW_VAL		0x4000003C
 #define MAX_UNWINDOWED_ADDRESS			0x80000
+#define WINDOW_ENABLE_BIT 			0x40000000
+#define WINDOW_SHIFT 				19
+#define WINDOW_VALUE_MASK 			0x3F
+#define WINDOW_START 				MAX_UNWINDOWED_ADDRESS
+#define WINDOW_RANGE_MASK 			0x7FFFF
 #define PCIE_REG_FOR_BOOT_ARGS			PCIE_SOC_PCIE_REG_PCIE_SCRATCH_0
+
+#define NONCE_SIZE 				34
+#define ECDSA_BLOB_SIZE 			2048
+#define QWES_SVC_ID 				0x1E
+#define QWES_ECDSA_REQUEST 			0x4
 
 typedef struct
 {
@@ -728,6 +739,92 @@ static void mhi_firmware_copy(struct mhi_controller *mhi_cntrl,
 	}
 }
 
+static int mhi_select_window(struct mhi_controller *mhi_cntrl, u32 addr)
+{
+	u32 window = (addr >> WINDOW_SHIFT) & WINDOW_VALUE_MASK;
+	u32 prev_window = 0, curr_window = 0;
+	u32 read_val = 0;
+	int retry = 0;
+
+	mhi_read_reg(mhi_cntrl, mhi_cntrl->regs, PCIE_REMAP_BAR_CTRL_OFFSET, &prev_window);
+
+	/* Using the last 6 bits for Window 1. Window 2 and 3 are unaffected */
+	curr_window = (prev_window & ~(WINDOW_VALUE_MASK)) | window;
+
+	if (curr_window == prev_window)
+		return 0;
+
+	curr_window |= WINDOW_ENABLE_BIT;
+
+	mhi_write_reg(mhi_cntrl, mhi_cntrl->regs, PCIE_REMAP_BAR_CTRL_OFFSET, curr_window);
+
+	mhi_read_reg(mhi_cntrl, mhi_cntrl->regs, PCIE_REMAP_BAR_CTRL_OFFSET, &read_val);
+
+	/* Wait till written value reflects */
+	while((read_val != curr_window) && (retry < 10)) {
+		mdelay(1);
+		mhi_read_reg(mhi_cntrl, mhi_cntrl->regs, PCIE_REMAP_BAR_CTRL_OFFSET, &read_val);
+		retry++;
+	}
+
+	if(read_val != curr_window)
+		return -EINVAL;
+
+	return 0;
+}
+
+static void mhi_free_nonce_buffer(struct mhi_controller *mhi_cntrl)
+{
+	if (mhi_cntrl->nonce_buf != NULL) {
+		mhi_fw_free_coherent(mhi_cntrl, NONCE_SIZE, mhi_cntrl->nonce_buf,
+				mhi_cntrl->nonce_dma_addr);
+		mhi_cntrl->nonce_buf = NULL;
+	}
+}
+
+static int mhi_get_nonce(struct mhi_controller *mhi_cntrl)
+{
+	struct device *dev = &mhi_cntrl->mhi_dev->dev;
+	unsigned int sram_addr, rd_addr;
+	unsigned int rd_val;
+	int ret, i;
+
+	dev_info(dev, "soc-binding-check enabled, reading NONCE from Endpoint\n");
+
+	mhi_read_reg(mhi_cntrl, mhi_cntrl->regs, PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1,
+			&sram_addr);
+	if (sram_addr != 0) {
+		mhi_cntrl->nonce_buf = mhi_fw_alloc_coherent(mhi_cntrl, NONCE_SIZE,
+					&mhi_cntrl->nonce_dma_addr, GFP_KERNEL);
+		if (!mhi_cntrl->nonce_buf) {
+			dev_err(dev, "SoC Binding check failed. Error Allocating memory buffer for NONCE\n");
+			return -ENOMEM;
+		}
+
+		/* Select window to read the NONCE from Q6 SRAM address */
+		ret = mhi_select_window(mhi_cntrl, sram_addr);
+		if (ret)
+			return ret;
+
+		for (i=0; i < NONCE_SIZE; i+=4) {
+			/* Calculate read address based on the Window range and read it */
+			rd_addr = ((sram_addr + i) & WINDOW_RANGE_MASK) + WINDOW_START;
+			mhi_read_reg(mhi_cntrl, mhi_cntrl->regs, rd_addr, &rd_val);
+
+			/* Copy the read value to nonce_buf */
+			memcpy(mhi_cntrl->nonce_buf + i, &rd_val, 4);
+		}
+	}
+	else {
+		dev_err(dev, "SoC Binding check failed, no NONCE from Q6\n");
+		/* Deallocate NONCE buffer */
+		mhi_free_nonce_buffer(mhi_cntrl);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 {
 	struct device *dev = &mhi_cntrl->mhi_dev->dev;
@@ -737,6 +834,10 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 	size_t header_size;
 	const char *filename = NULL;
 	char *magic = NULL;
+	size_t ecdsa_size = 4;  /* 4 Bytes at end of License buffer if no ECDSA */
+	u32 ecdsa_consumed = 0;
+	dma_addr_t ecdsa_dma_addr = 0;
+	bool binding_check = 0;
 
 	/* Check the ftm-mode or license-file is defined in device tree */
 	if (of_property_read_bool(mhi_cntrl->cntrl_dev->of_node, "ftm-mode")) {
@@ -765,6 +866,16 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 		return NULL;
 	}
 
+	binding_check = of_property_read_bool(mhi_cntrl->cntrl_dev->of_node, "soc-binding-check");
+	if (binding_check) {
+		ret = mhi_get_nonce(mhi_cntrl);
+		if (ret)
+			return NULL;
+
+		/* ECDSA 2KB + size of magic + size of length */
+		ecdsa_size = ECDSA_BLOB_SIZE + 4 + 4;
+	}
+
 	/*
 	 *  Load the file from file system into DMA memory.
 	 *  Format is
@@ -776,15 +887,23 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 			" Assuming no license or ftm mode\n", filename, ret);
 		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
 				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
+
+		/* Deallocate NONCE buffer */
+		mhi_free_nonce_buffer(mhi_cntrl);
+
 		return NULL;
 	}
 
 	header_size = 4 + 4; /* size of magic, size of length */
+
 	buf = mhi_fw_alloc_coherent(mhi_cntrl,
-			file->size + header_size,
+			file->size + header_size + ecdsa_size,
 					&mhi_cntrl->license_dma_addr, GFP_KERNEL);
 	if (!buf) {
 		release_firmware(file);
+		/* Deallocate NONCE buffer */
+		mhi_free_nonce_buffer(mhi_cntrl);
+
 		dev_err(dev, "Error Allocating memory for license or ftm mode : %d\n", ret);
 		return NULL;
 	}
@@ -802,6 +921,34 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 
 	mhi_cntrl->license_buf_size = file->size + header_size;
 
+	/* Copy ECDSA blob at end of License buffer.            *
+	 * TLV Format: 4 bytes Magic + 4 bytes Length + Payload */
+	if (binding_check) {
+		/* ECDSA start = License buffer start + License buffer size */
+		ecdsa_dma_addr = mhi_cntrl->license_dma_addr + mhi_cntrl->license_buf_size;
+
+		/* Get the ECDSA Blob from TME-L at ecdsa_dma_addr + header size */
+		ret = qti_scm_get_ecdsa_blob(QWES_SVC_ID, QWES_ECDSA_REQUEST, mhi_cntrl->nonce_dma_addr,
+					NONCE_SIZE, ecdsa_dma_addr + header_size, ECDSA_BLOB_SIZE,
+					&ecdsa_consumed);
+		if (ret) {
+			dev_err(dev, "Failed to get the ECDSA blob from TZ/TME-L, ret %d\n", ret);
+			/* Deallocate the NONCE and License buffer */
+			mhi_cntrl->license_buf_size += ecdsa_size;
+			mhi_free_fw_license_or_secdat(mhi_cntrl);
+			return NULL;
+		}
+
+		/* Copy ECDSA Magic and Data length */
+		magic = "SSED";
+		memcpy(buf + mhi_cntrl->license_buf_size, magic, DATA_MAGIC_SIZE);
+
+		memcpy(buf + mhi_cntrl->license_buf_size + DATA_MAGIC_SIZE,
+				(void *)&ecdsa_consumed, sizeof(ecdsa_consumed));
+
+		mhi_cntrl->license_buf_size += ecdsa_size;
+	}
+
 	/* Let device know the license or secdat data address : Assuming 32 bit only*/
 	mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
 				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1,
@@ -815,6 +962,8 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 
 void mhi_free_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 {
+	mhi_free_nonce_buffer(mhi_cntrl);
+
 	if (mhi_cntrl->license_buf != NULL) {
 		mhi_fw_free_coherent(mhi_cntrl, mhi_cntrl->license_buf_size,
 				mhi_cntrl->license_buf, mhi_cntrl->license_dma_addr);

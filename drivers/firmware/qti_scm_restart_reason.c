@@ -27,6 +27,15 @@
 #include <linux/qcom_scm.h>
 #include "qcom_scm.h"
 
+#define NON_SECURE_WATCHDOG		0x1
+#define AHB_TIMEOUT			0x3
+#define SYSTEM_RESET_OR_REBOOT		0x10
+#define POWER_ON_RESET			0x20
+#define SECURE_WATCHDOG			0x23
+#define HLOS_PANIC			0x47
+
+#define RESET_REASON_MSG_MAX_LEN	100
+
 static int dload_dis;
 
 static void scm_restart_dload_mode_enable(void)
@@ -91,15 +100,81 @@ static const struct of_device_id scm_restart_reason_match_table[] = {
 	{ .compatible = "qti,scm_restart_reason",
 	  .data = (void *)CLEAR_MAGIC,
 	},
+	{ .compatible = "qti_ipq5018,scm_restart_reason",
+	  .data = (void *)ABNORMAL_MAGIC,
+	},
 	{ .compatible = "qti_ipq6018,scm_restart_reason",
 	  .data = (void *)ABNORMAL_MAGIC,
 	},
 	{ .compatible = "qti_ipq9574,scm_restart_reason",
 	  .data = (void *)ABNORMAL_MAGIC,
 	},
+	{ .compatible = "qti_ipq5332,scm_restart_reason",
+	  .data = (void *)ABNORMAL_MAGIC,
+	},
 	{}
 };
 MODULE_DEVICE_TABLE(of, scm_restart_reason_match_table);
+
+static int restart_reason_logging(struct platform_device *pdev)
+{
+	unsigned int reset_reason;
+	struct device_node *imem_np;
+	void __iomem *imem_base;
+	char reset_reason_msg[RESET_REASON_MSG_MAX_LEN];
+
+	imem_np = of_find_compatible_node(NULL, NULL,
+				  "qcom,msm-imem-restart-reason-buf-addr");
+	if (!imem_np) {
+		dev_err(&pdev->dev,
+		"restart_reason_buf_addr imem DT node does not exist\n");
+		return -ENODEV;
+	}
+
+	imem_base = of_iomap(imem_np, 0);
+	if (!imem_base) {
+		dev_err(&pdev->dev,
+		"restart_reason_buf_addr imem offset mapping failed\n");
+		return -ENOMEM;
+	}
+
+	memcpy_fromio(&reset_reason, imem_base, 4);
+	iounmap(imem_base);
+	switch(reset_reason) {
+		case NON_SECURE_WATCHDOG:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "Non-Secure Watchdog");
+			break;
+		case AHB_TIMEOUT:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "AHB Timeout");
+			break;
+		case SYSTEM_RESET_OR_REBOOT:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "System reset or reboot");
+			break;
+		case POWER_ON_RESET:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "Power on Reset");
+			break;
+		case SECURE_WATCHDOG:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "Secure Watchdog");
+			break;
+		case HLOS_PANIC:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "HLOS Panic");
+			break;
+		default:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "Invalid");
+			break;
+	}
+
+	dev_info(&pdev->dev, "reset_reason : %s [0x%X]\n", reset_reason_msg,
+		reset_reason);
+	return 0;
+}
 
 static int scm_restart_reason_probe(struct platform_device *pdev)
 {
@@ -108,10 +183,19 @@ static int scm_restart_reason_probe(struct platform_device *pdev)
 	struct device_node *np;
 	unsigned int magic_cookie = SET_MAGIC_WARMRESET;
 	unsigned int dload_warm_reset = 0;
+	unsigned int no_reset_reason = 0;
 
 	np = of_node_get(pdev->dev.of_node);
 	if (!np)
 		return 0;
+
+	no_reset_reason = of_property_read_bool(np, "no-reset-reason");
+	if (!no_reset_reason) {
+		ret = restart_reason_logging(pdev);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "reset reason logging failed!\n");
+		}
+	}
 
 	id = of_match_device(scm_restart_reason_match_table, &pdev->dev);
 	if (!id)

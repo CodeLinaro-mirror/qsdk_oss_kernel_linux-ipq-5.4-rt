@@ -2339,7 +2339,7 @@ void pcie_remove_bus(void)
 #ifdef CONFIG_IPQ_APSS_5018
 	for (i = 0; i < 1; i++) {
 #else
-	for (i = 0; i < MAX_RC_NUM; i++) {
+	for (i = MAX_RC_NUM-1; i >= 0; i--) {
 #endif
 		pcie = pcie_dev_arr[i];
 

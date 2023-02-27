@@ -284,6 +284,12 @@ extern int qti_scm_get_device_provision_response(u32 svc_id, u32 cmd_id,
 extern int __qti_scm_get_device_provision_response(struct device *dev, u32 svc_id,
 		u32 cmd_id, void *provreq_buf, u32 provreq_buf_len,
 		void *provresp_buf, u32 provresp_buf_len, u32 *prov_resp_size);
+extern int qti_scm_get_ecdsa_blob(u32 svc_id, u32 cmd_id, dma_addr_t nonce_buf,
+		u32 nonce_buf_len, dma_addr_t ecdsa_buf, u32 ecdsa_buf_len,
+		u32 *ecdsa_consumed_len);
+extern int __qti_scm_get_ecdsa_blob(struct device *dev, u32 svc_id, u32 cmd_id,
+		dma_addr_t nonce_buf, u32 nonce_buf_len, dma_addr_t ecdsa_buf,
+		u32 ecdsa_buf_len, u32 *ecdsa_consumed_len);
 
 #else
 

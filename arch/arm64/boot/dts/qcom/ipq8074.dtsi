@@ -1867,6 +1867,7 @@
 
 	qti,scm_restart_reason {
 		compatible = "qti,scm_restart_reason";
+		no-reset-reason;
 	};
 
 	qti,sps {

@@ -567,6 +567,19 @@
 			};
 		};
 
+		msm_imem: qcom,msm-imem@8600000 {
+			compatible = "qcom,msm-imem";
+			reg = <0x08600000 0x1000>;
+			ranges = <0x0 0x08600000 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			restart-reason-buf-addr@7a4 {
+				compatible = "qcom,msm-imem-restart-reason-buf-addr";
+				reg = <0x7a4 4>;
+			};
+		};
+
 		eud: qcom,msm-eud@58000 {
 			compatible = "qcom,msm-eud";
 			reg = <0x58000 0x1000>,
@@ -1240,7 +1253,7 @@
 	};
 
 	qti,scm_restart_reason {
-		compatible = "qti,scm_restart_reason";
+		compatible = "qti_ipq5018,scm_restart_reason";
 		dload_status = <0>;
 		dload_warm_reset = <0>;
 	};

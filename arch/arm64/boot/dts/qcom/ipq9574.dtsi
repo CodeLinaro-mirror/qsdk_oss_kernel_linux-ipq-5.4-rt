@@ -952,6 +952,11 @@
 				compatible = "qcom,msm-imem-tz-log-buf-addr";
 				reg = <0x720 4>;
 			};
+
+			restart-reason-buf-addr@7a4 {
+				compatible = "qcom,msm-imem-restart-reason-buf-addr";
+				reg = <0x7a4 4>;
+			};
 		};
 
 		dcc: dcc_v2@797F000 {

@@ -67,6 +67,10 @@ int mhitest_store_mplat(struct mhitest_platform *temp)
 void mhitest_free_mplat(struct mhitest_platform *temp)
 {
 	devm_kfree(&temp->plat_dev->dev, temp);
+	if (d_instance > 0 && d_instance < MHI_MAX_DEVICE) {
+		d_instance--;
+		mplat_g[d_instance] = NULL;
+	}
 }
 
 struct mhitest_platform *get_mhitest_mplat(int id)

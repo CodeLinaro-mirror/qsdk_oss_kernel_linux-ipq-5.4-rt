@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause)
 /*
- * IPQ5332 AP-MI01.3 board device tree source
+ * IPQ5332 AP-MI04.1 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
@@ -19,14 +19,12 @@
 / {
 	#address-cells = <0x2>;
 	#size-cells = <0x2>;
-	model = "Qualcomm Technologies, Inc. IPQ5332/AP-MI01.3";
-	compatible = "qcom,ipq5332-ap-mi01.3", "qcom,ipq5332";
+	model = "Qualcomm Technologies, Inc. IPQ5332/AP-MI04.1";
+	compatible = "qcom,ipq5332-ap-mi04.1", "qcom,ipq5332";
 	interrupt-parent = <&intc>;
 
 	aliases {
 		serial0 = &blsp1_uart0;
-		ethernet0 = "/soc/dp1";
-		ethernet1 = "/soc/dp2";
 	};
 
 	chosen {

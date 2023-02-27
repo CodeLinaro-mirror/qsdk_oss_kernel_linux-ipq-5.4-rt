@@ -464,6 +464,8 @@ struct mhi_controller {
 	void *license_buf;
 	dma_addr_t license_dma_addr;
 	size_t license_buf_size;
+	void *nonce_buf;
+	dma_addr_t nonce_dma_addr;
 };
 
 /**

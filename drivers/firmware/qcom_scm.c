@@ -737,6 +737,18 @@ int qti_read_dload_reg()
 }
 EXPORT_SYMBOL(qti_read_dload_reg);
 
+int qti_scm_get_ecdsa_blob(u32 svc_id, u32 cmd_id, dma_addr_t nonce_buf,
+			u32 nonce_buf_len, dma_addr_t ecdsa_buf,
+			u32 ecdsa_buf_len, u32 *ecdsa_consumed_len)
+{
+	int ret;
+	ret = __qti_scm_get_ecdsa_blob(__scm->dev, svc_id, cmd_id, nonce_buf,
+			nonce_buf_len, ecdsa_buf, ecdsa_buf_len, ecdsa_consumed_len);
+	return ret;
+
+}
+EXPORT_SYMBOL(qti_scm_get_ecdsa_blob);
+
 int qti_scm_get_device_attestation_ephimeral_key(u32 svc_id, u32 cmd_id,
 			void *key_buf, u32 key_buf_len, u32 *key_len)
 {
