@@ -4265,6 +4265,7 @@ static struct clk_regmap *gcc_ipq5332_clocks[] = {
 	[GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK] = &gcc_pcie3x1_1_axi_s_bridge_clk.clkr,
 	[GCC_PCIE3X1_1_AXI_S_CLK] = &gcc_pcie3x1_1_axi_s_clk.clkr,
 	[GCC_PCIE3X1_1_PIPE_CLK] = &gcc_pcie3x1_1_pipe_clk.clkr,
+	[GCC_PCIE3X1_1_RCHG_CLK] = &gcc_pcie3x1_1_rchg_clk.clkr,
 	[GCC_PCIE3X1_1_RCHG_CLK_SRC] = &gcc_pcie3x1_1_rchg_clk_src.clkr,
 	[GCC_PCIE3X1_PHY_AHB_CLK] = &gcc_pcie3x1_phy_ahb_clk.clkr,
 	[GCC_PCIE3X2_AHB_CLK] = &gcc_pcie3x2_ahb_clk.clkr,
