@@ -308,6 +308,7 @@ static void psci_sys_reset(enum reboot_mode reboot_mode, const char *cmd)
 
 static void psci_sys_poweroff(void)
 {
+	mdelay(10);
 	invoke_psci_fn(PSCI_0_2_FN_SYSTEM_OFF, 0, 0, 0);
 }
 
