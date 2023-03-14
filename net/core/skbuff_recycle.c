@@ -725,7 +725,7 @@ static inline bool consume_skb_can_fast_recycle_debug(const struct sk_buff *skb,
 void check_skb_fast_recyclable(struct sk_buff *skb)
 {
 	bool check = true;
-	check = consume_skb_can_recycle_debug(skb, SKB_RECYCLE_MIN_SIZE, SKB_RECYCLE_MAX_SIZE);
+	check = consume_skb_can_fast_recycle_debug(skb, SKB_RECYCLE_MIN_SIZE, SKB_RECYCLE_MAX_SIZE);
 	if (!check)
 		BUG_ON(1);
 }
