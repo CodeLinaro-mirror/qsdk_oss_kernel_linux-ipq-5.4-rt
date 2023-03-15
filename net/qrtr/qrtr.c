@@ -167,11 +167,6 @@ struct qrtr_node {
 	void *ilc;
 };
 
-struct qrtr_tx_flow_waiter {
-	struct list_head node;
-	struct sock *sk;
-};
-
 /**
  * struct qrtr_tx_flow - tx flow control
  * @resume_tx: waiters for a resume tx from the remote
@@ -435,8 +430,6 @@ static inline int kref_put_rwsem_lock(struct kref *kref,
  */
 static void __qrtr_node_release(struct kref *kref)
 {
-	struct qrtr_tx_flow_waiter *waiter;
-	struct qrtr_tx_flow_waiter *temp;
 	struct radix_tree_iter iter;
 	struct qrtr_tx_flow *flow;
 	struct qrtr_node *node = container_of(kref, struct qrtr_node, ref);
@@ -459,11 +452,6 @@ static void __qrtr_node_release(struct kref *kref)
 	mutex_lock(&node->qrtr_tx_lock);
 	radix_tree_for_each_slot(slot, &node->qrtr_tx_flow, &iter, 0) {
 		flow = *slot;
-		list_for_each_entry_safe(waiter, temp, &flow->resume_tx.head, node) {
-			list_del(&waiter->node);
-			sock_put(waiter->sk);
-			kfree(waiter);
-		}
 		kfree(flow);
 		radix_tree_delete(&node->qrtr_tx_flow, iter.index);
 	}
@@ -999,9 +987,6 @@ static void qrtr_node_rx_work(struct kthread_work *work)
 	struct qrtr_ctrl_pkt *pkt;
 	void __rcu **slot;
 	struct radix_tree_iter iter;
-	struct qrtr_tx_flow_waiter *waiter;
-	struct qrtr_tx_flow_waiter *temp;
-	unsigned long node_id;
 	struct qrtr_tx_flow *flow;
 
 	struct sk_buff *skb;
@@ -1041,25 +1026,9 @@ static void qrtr_node_rx_work(struct kthread_work *work)
 					mutex_lock(&node->qrtr_tx_lock);
 					radix_tree_for_each_slot(slot, &node->qrtr_tx_flow, &iter, 0) {
 						flow = *slot;
-
-						/* extract node id from the index key */
-						node_id = (iter.index & 0xFFFFFFFF00000000) >> 32;
-
-						if (node_id != le32_to_cpu(pkt->proc.node))
-							continue;
-
-						list_for_each_entry_safe(waiter, temp, &flow->resume_tx.head, node) {
-							list_del(&waiter->node);
-							sock_put(waiter->sk);
-							kfree(waiter);
-						}
-
-						kfree(flow);
-						radix_tree_delete(&node->qrtr_tx_flow, iter.index);
+						wake_up_interruptible_all(&flow->resume_tx);
 					}
-
 					mutex_unlock(&node->qrtr_tx_lock);
-					wake_up_interruptible_all(&node->resume_tx);
 
 					/* Translate DEL_PROC to BYE for local enqueue */
 					cb->type = QRTR_TYPE_BYE;
@@ -1195,6 +1164,7 @@ void qrtr_endpoint_unregister(struct qrtr_endpoint *ep)
 	struct sockaddr_qrtr src = {AF_QIPCRTR, node->nid, QRTR_PORT_CTRL};
 	struct sockaddr_qrtr dst = {AF_QIPCRTR, qrtr_local_nid, QRTR_PORT_CTRL};
 	struct qrtr_ctrl_pkt *pkt;
+	struct qrtr_tx_flow *flow;
 	struct sk_buff *skb;
 	void __rcu **slot;
 
@@ -1220,6 +1190,13 @@ void qrtr_endpoint_unregister(struct qrtr_endpoint *ep)
 	up_read(&qrtr_node_lock);
 
 	/* Wake up any transmitters waiting for resume-tx from the node */
+	mutex_lock(&node->qrtr_tx_lock);
+	radix_tree_for_each_slot(slot, &node->qrtr_tx_flow, &iter, 0) {
+		flow = *slot;
+		wake_up_interruptible_all(&flow->resume_tx);
+	}
+	mutex_unlock(&node->qrtr_tx_lock);
+
 	wake_up_interruptible_all(&node->resume_tx);
 
 	qrtr_node_release(node);

@@ -406,6 +406,12 @@
 					memory-region = <&qcn9224_pcie1>;
 					qcom,board_id = <0x01>;
 					qcom,wsi = <&wsi>;
+					qcom,pta-num = <0>;
+					qcom,coex-mode = <0x2>;
+					qcom,bt-active-time = <0x18>;
+					qcom,bt-priority-time = <0x12>;
+					qcom,coex-algo = <0x2>;
+					qcom,pta-priority = <0x80800505>;
 #endif
 				};
 			};

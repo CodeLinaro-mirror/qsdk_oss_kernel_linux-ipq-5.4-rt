@@ -842,11 +842,14 @@ struct sk_buff {
 	__u8			is_from_recycler:1;
 	/* Flag for fast recycle in fast xmit path */
 	__u8			fast_recycled:1;
+
 	/* Flag for recycle in PPE DS */
 	__u8			recycled_for_ds:1;
 	/* 1 or 3 bit hole */
 	__u8			fast_qdisc:1;
 	/* Packets processed in dev_fast_xmit_qdisc() path */
+	__u8			int_pri:4;
+	/* Priority info for hardware qdiscs */
 
 #ifdef CONFIG_NET_SCHED
 	__u16			tc_index;	/* traffic control index */
@@ -2356,6 +2359,25 @@ static inline int pskb_may_pull(struct sk_buff *skb, unsigned int len)
 }
 
 void skb_condense(struct sk_buff *skb);
+
+/**
+ *	skb_set_int_pri - sets the int_pri field in skb with given value.
+ *	@skb: buffer to fill
+ *	@int_pri: value that is to be filled
+ */
+static inline void skb_set_int_pri(struct sk_buff *skb, uint8_t int_pri)
+{
+	skb->int_pri = int_pri;
+}
+
+/**
+ *	skb_get_int_pri - gets the int_pri value from the given skb.
+ *	@skb: buffer to check
+ */
+static inline uint8_t skb_get_int_pri(struct sk_buff *skb)
+{
+	return skb->int_pri;
+}
 
 /**
  *	skb_headroom - bytes at buffer head

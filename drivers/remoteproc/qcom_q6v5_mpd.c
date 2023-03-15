@@ -2490,7 +2490,7 @@ static void *q6_wcss_da_to_va(struct rproc *rproc, u64 da, int len)
 	return wcss->mem_region + offset;
 }
 
-static int load_license_params_to_bootargs(struct device *dev,
+static void load_license_params_to_bootargs(struct device *dev,
 					struct bootargs_smem_info *boot_args)
 {
 	int ret = 0;
@@ -2503,12 +2503,13 @@ static int load_license_params_to_bootargs(struct device *dev,
 	ret = of_property_read_string(dev->of_node, "license-file",
 							&lic_file_name);
 	if (ret)
-		return ret;
+		return;
 
 	ret = request_firmware(&file, lic_file_name, dev);
 	if (ret) {
-		dev_err(dev, "request_firmware failed: %d\n", ret);
-		return ret;
+		dev_err(dev, "Error in loading file (%s) : %d,"
+			" Assuming no license mode\n", lic_file_name, ret);
+		return;
 	}
 
 	/* No of elements */
@@ -2521,7 +2522,7 @@ static int load_license_params_to_bootargs(struct device *dev,
 	if (!lic_param.buf) {
 		release_firmware(file);
 		pr_err("failed to allocate memory\n");
-		return PTR_ERR(lic_param.buf);
+		return;
 	}
 	memcpy(lic_param.buf, file->data, file->size);
 	lic_param.size = file->size;
@@ -2546,7 +2547,7 @@ static int load_license_params_to_bootargs(struct device *dev,
 	memcpy_toio(boot_args->smem_bootargs_ptr,
 					&lic_bootargs, sizeof(lic_bootargs));
 	boot_args->smem_bootargs_ptr += sizeof(lic_bootargs);
-	return ret;
+	return;
 }
 
 static int load_userpd_params_to_bootargs(struct device *dev,
@@ -2777,13 +2778,9 @@ static int share_bootargs_to_q6(struct device *dev)
 		return ret;
 	}
 
-	ret = load_license_params_to_bootargs(dev, &boot_args);
-	if (ret < 0) {
-		pr_err("failed to read license file ret:%d\n", ret);
-		return ret;
-	}
+	load_license_params_to_bootargs(dev, &boot_args);
 
-	return ret;
+	return 0;
 }
 
 static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)

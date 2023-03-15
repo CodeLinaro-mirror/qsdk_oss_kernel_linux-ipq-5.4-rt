@@ -390,6 +390,7 @@
 
 &wifi0 {
 	qcom,rproc = <&q6_wcss_pd1>;
+	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,multipd_arch;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	mem-region = <&q6_region>;

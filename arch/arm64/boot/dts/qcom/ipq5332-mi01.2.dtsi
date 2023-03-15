@@ -383,7 +383,7 @@
 					memory-region = <0>, <&mhi_region1>;
 #else
 					memory-region = <&qcn9224_pcie1>;
-					qcom,board_id = <0x04>;
+					qcom,board_id = <0x16>;
 					qcom,wsi = <&wsi>;
 #endif
 				};

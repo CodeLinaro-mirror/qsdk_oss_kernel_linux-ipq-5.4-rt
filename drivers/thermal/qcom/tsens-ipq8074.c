@@ -88,7 +88,7 @@
 #define BASE0_MASK				0x001FF800
 #define BASE0_SHIFT				11
 #define BASE1_MASK				0x7FE00000
-#define BASE1_SHIFT				20
+#define BASE1_SHIFT				21
 #define TSENS11_OFFSET				0x00F000
 #define TSENS11_SHIFT				12
 #define TSENS12_OFFSET				0x0F0000

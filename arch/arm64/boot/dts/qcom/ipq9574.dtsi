@@ -237,6 +237,7 @@
 			#clock-cells = <1>;
 			clocks = <&a73pll>, <&xo>;
 			clock-names = "pll", "xo";
+			apcs-max-register = <0xFFC>;
 
 			#mbox-cells = <1>;
 		};

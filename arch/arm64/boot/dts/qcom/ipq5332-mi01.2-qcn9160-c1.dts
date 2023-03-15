@@ -231,6 +231,7 @@
 &wifi0 {
 	qcom,multipd_arch;
 	qcom,rproc = <&q6_wcss_pd1>;
+	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	qcom,board_id = <0x12>;
 	qcom,bdf-addr = <0x4be00000 0x4be00000 0x4be00000 0x0 0x0 0x0>;

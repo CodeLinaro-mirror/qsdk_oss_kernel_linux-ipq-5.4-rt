@@ -838,6 +838,7 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 	u32 ecdsa_consumed = 0;
 	dma_addr_t ecdsa_dma_addr = 0;
 	bool binding_check = 0;
+	size_t lic_aligned_size = 0;
 
 	/* Check the ftm-mode or license-file is defined in device tree */
 	if (of_property_read_bool(mhi_cntrl->cntrl_dev->of_node, "ftm-mode")) {
@@ -869,8 +870,11 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 	binding_check = of_property_read_bool(mhi_cntrl->cntrl_dev->of_node, "soc-binding-check");
 	if (binding_check) {
 		ret = mhi_get_nonce(mhi_cntrl);
-		if (ret)
+		if (ret) {
+			mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+					PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
 			return NULL;
+		}
 
 		/* ECDSA 2KB + size of magic + size of length */
 		ecdsa_size = ECDSA_BLOB_SIZE + 4 + 4;
@@ -896,11 +900,18 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 
 	header_size = 4 + 4; /* size of magic, size of length */
 
+	/* Add padding in end of License file to make sure next file in the
+	 * buffer is 4 Bytes Aligned */
+	lic_aligned_size = ALIGN(file->size, 4);
+
 	buf = mhi_fw_alloc_coherent(mhi_cntrl,
-			file->size + header_size + ecdsa_size,
+			lic_aligned_size + header_size + ecdsa_size,
 					&mhi_cntrl->license_dma_addr, GFP_KERNEL);
 	if (!buf) {
 		release_firmware(file);
+		mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+				PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
+
 		/* Deallocate NONCE buffer */
 		mhi_free_nonce_buffer(mhi_cntrl);
 
@@ -914,12 +925,11 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 	memcpy(buf, magic, DATA_MAGIC_SIZE);
 
 	memcpy(buf + DATA_MAGIC_SIZE,
-				(void *)&file->size,
-						sizeof(file->size));
+			(void *)&lic_aligned_size, sizeof(file->size));
 
 	memcpy(buf + header_size, file->data, file->size);
 
-	mhi_cntrl->license_buf_size = file->size + header_size;
+	mhi_cntrl->license_buf_size = lic_aligned_size + header_size;
 
 	/* Copy ECDSA blob at end of License buffer.            *
 	 * TLV Format: 4 bytes Magic + 4 bytes Length + Payload */
@@ -933,6 +943,9 @@ static void *mhi_download_fw_license_or_secdat(struct mhi_controller *mhi_cntrl)
 					&ecdsa_consumed);
 		if (ret) {
 			dev_err(dev, "Failed to get the ECDSA blob from TZ/TME-L, ret %d\n", ret);
+			mhi_write_reg(mhi_cntrl, mhi_cntrl->regs,
+					PCIE_PCIE_LOCAL_REG_PCIE_LOCAL_RSV1, (u32)0x0);
+
 			/* Deallocate the NONCE and License buffer */
 			mhi_cntrl->license_buf_size += ecdsa_size;
 			mhi_free_fw_license_or_secdat(mhi_cntrl);

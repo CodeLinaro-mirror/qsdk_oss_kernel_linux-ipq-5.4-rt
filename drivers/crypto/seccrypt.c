@@ -99,6 +99,7 @@ struct sec_skcipher_def {
 	unsigned int ivsize;
 	unsigned int min_keysize;
 	unsigned int max_keysize;
+	unsigned int walksize;
 };
 
 struct sec_alg_template {
@@ -366,6 +367,26 @@ static const struct sec_skcipher_def skcipher_def[] = {
 		.min_keysize    = AES_MIN_KEY_SIZE,
 		.max_keysize    = AES_MAX_KEY_SIZE,
 	},
+	{
+		.flags          = 0,
+		.name           = "cts(cbc(aes))",
+		.drv_name       = "cts-cbc-aes-qce",
+		.blocksize      = AES_BLOCK_SIZE,
+		.ivsize         = AES_BLOCK_SIZE,
+		.walksize       = 2 * AES_BLOCK_SIZE,
+		.min_keysize    = AES_MIN_KEY_SIZE,
+		.max_keysize    = AES_MAX_KEY_SIZE,
+	},
+	{
+		.flags          = 0,
+		.name           = "xts(aes)",
+		.drv_name       = "xts-aes-qce",
+		.blocksize      = AES_BLOCK_SIZE,
+		.ivsize         = AES_BLOCK_SIZE,
+		.walksize       = 2 * AES_BLOCK_SIZE,
+		.min_keysize    = 2 * AES_MIN_KEY_SIZE,
+		.max_keysize    = 2 * AES_MAX_KEY_SIZE,
+	},
 };
 
 static int sec_skcipher_register_one(const struct sec_skcipher_def *def, struct sec_crypt_device *sec)
@@ -387,6 +408,7 @@ static int sec_skcipher_register_one(const struct sec_skcipher_def *def, struct 
 	alg->base.cra_blocksize         = def->blocksize;
 	alg->chunksize                  = def->chunksize;
 	alg->ivsize                     = def->ivsize;
+	alg->walksize                   = def->walksize;
 	alg->min_keysize                = def->min_keysize;
 	alg->max_keysize                = def->max_keysize;
 	alg->setkey			= sec_skcipher_setkey;
