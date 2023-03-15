@@ -35,6 +35,7 @@
 #define SECURE_WATCHDOG			0x23
 #define HLOS_PANIC			0x47
 #define VFSM_RESET			0x68
+#define TME_L_FATAL_ERROR		0x49
 
 #define RESET_REASON_MSG_MAX_LEN	100
 
@@ -174,6 +175,10 @@ static int restart_reason_logging(struct platform_device *pdev)
 		case VFSM_RESET:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
 						"%s", "VFSM Reset");
+			break;
+		case TME_L_FATAL_ERROR:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "TME-L Fatal Error");
 			break;
 		default:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
