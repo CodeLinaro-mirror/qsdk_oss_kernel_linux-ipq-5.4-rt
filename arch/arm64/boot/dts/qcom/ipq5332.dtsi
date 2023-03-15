@@ -278,6 +278,9 @@
 			reg = <0x4b1000 0x800>;
 			phy-type = "gen3";
 			#phy-cells = <0>;
+			qti,multiplexed-phy;
+			qti,phy-mux-regs = <&tcsr_q6_block 0x2544>;
+			phy-ahb-shared-reset;
 			clocks = <&gcc GCC_PCIE3X2_PIPE_CLK>,
 				<&gcc GCC_SNOC_PCIE3_2LANE_M_CLK>,
 				<&gcc GCC_SNOC_PCIE3_2LANE_S_CLK>,
@@ -289,10 +292,8 @@
 					"phy_ahb_clk";
 
 			resets = <&gcc GCC_PCIE3X2_PHY_BCR>,
-				<&gcc GCC_PCIE3X2PHY_PHY_BCR>,
 				<&gcc GCC_PCIE3X2_PHY_AHB_CLK_ARES>;
 			reset-names = "phy",
-					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
 			status = "disabled";
@@ -304,6 +305,7 @@
 			reg = <0x4b1800 0x800>;
 			phy-type = "gen3";
 			#phy-cells = <0>;
+			phy-ahb-shared-reset;
 
 			qti,multiplexed-phy;
 			qti,phy-mux-regs = <&tcsr_q6_block 0x2544>;
@@ -319,10 +321,8 @@
 					"phy_ahb_clk";
 
 			resets = <&gcc GCC_PCIE3X1_1_PHY_BCR>,
-				<&gcc GCC_PCIE3X1_1_PHY_PHY_BCR>,
 				<&gcc GCC_PCIE3X2_PHY_AHB_CLK_ARES>;
 			reset-names = "phy",
-					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
 			status = "disabled";
@@ -346,10 +346,8 @@
 					"phy_ahb_clk";
 
 			resets = <&gcc GCC_PCIE3X2_PHY_BCR>,
-				<&gcc GCC_PCIE3X2PHY_PHY_BCR>,
 				<&gcc GCC_PCIE3X2_PHY_AHB_CLK_ARES>;
 			reset-names = "phy",
-					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
 			x2 = <1>;
@@ -1307,7 +1305,7 @@
 				0x10100000 0x1000>;
 			reg-names = "dbi", "elbi", "atu", "parf", "config";
 			device_type = "pci";
-			linux,pci-domain = <0>;
+			linux,pci-domain = <2>;
 			bus-range = <0x00 0xff>;
 			num-lanes = <1>;
 			#address-cells = <3>;
@@ -1338,7 +1336,7 @@
 			clocks = <&gcc GCC_PCIE3X1_1_AXI_M_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AXI_S_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AHB_CLK>,
-				 <&gcc GCC_PCIE3X1_1_AUX_CLK>,
+				 <&gcc GCC_PCIE3X2_AUX_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK>,
 				 <&gcc GCC_PCIE3X1_1_RCHG_CLK>;
 

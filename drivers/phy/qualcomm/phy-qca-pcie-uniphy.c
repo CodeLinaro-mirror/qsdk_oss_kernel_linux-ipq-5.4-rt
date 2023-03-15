@@ -74,6 +74,7 @@ struct qca_uni_pcie_phy {
 	void __iomem *reg_base;
         struct regmap *phy_mux_map;
         u32 phy_mux_reg;
+	bool phy_ahb_shared_reset;
 };
 
 #define	phy_to_dw_phy(x)	container_of((x), struct qca_uni_pcie_phy, phy)
@@ -91,6 +92,10 @@ static int qca_uni_pcie_phy_power_off(struct phy *x)
 
 static int qca_uni_pcie_phy_reset(struct qca_uni_pcie_phy *phy)
 {
+	/* phy_ahb reset is shared between pcie1 and pcie2 */
+	if(phy->phy_ahb_shared_reset)
+		reset_control_deassert(phy->res_phy_ahb);
+
 	reset_control_assert(phy->res_phy);
 	reset_control_assert(phy->res_phy_phy);
 	reset_control_assert(phy->res_phy_ahb);
@@ -206,6 +211,8 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 	const char *name;
 	struct resource *res;
 
+	phy->phy_ahb_shared_reset = device_property_read_bool(phy->dev, "phy-ahb-shared-reset");
+
 	ret = of_property_read_u32(phy->dev->of_node, "x2", &phy->is_x2);
 	if (ret)
 		phy->is_x2 = 0;
@@ -247,13 +254,17 @@ static int qca_uni_pcie_get_resources(struct platform_device *pdev,
 		return PTR_ERR(phy->res_phy);
 	}
 
-	phy->res_phy_phy = devm_reset_control_get(phy->dev, "phy_phy");
+	phy->res_phy_phy = devm_reset_control_get_optional(phy->dev, "phy_phy");
 	if (IS_ERR(phy->res_phy_phy)) {
 		dev_err(phy->dev, "cannot get phy_phy reset controller");
 		return PTR_ERR(phy->res_phy_phy);
 	}
 
-	phy->res_phy_ahb = devm_reset_control_get_optional(phy->dev, "phy_ahb");
+	if(phy->phy_ahb_shared_reset)
+		phy->res_phy_ahb = devm_reset_control_get_optional_shared(phy->dev, "phy_ahb");
+	else
+		phy->res_phy_ahb = devm_reset_control_get_optional(phy->dev, "phy_ahb");
+
 	if (IS_ERR(phy->res_phy_ahb)) {
 		dev_err(phy->dev, "cannot get phy_ahb reset controller");
 		return PTR_ERR(phy->res_phy_ahb);
