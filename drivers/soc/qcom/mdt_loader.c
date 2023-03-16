@@ -301,6 +301,21 @@ static int memcpy_pdseg_to_dma_blk(const char *fw_name, struct device *dev,
 	return ret;
 }
 
+static bool check_fw_shared(struct device *dev)
+{
+	const char *fw_name, *parent_fw_name;
+
+	of_property_read_string(dev->of_node, "firmware",
+				&fw_name);
+	of_property_read_string(dev->parent->of_node, "firmware",
+				&parent_fw_name);
+
+	if (!strcmp(fw_name, parent_fw_name))
+		return true;
+
+	return false;
+}
+
 int get_pd_fw_info(struct device *dev, const struct firmware *fw,
 			phys_addr_t mem_phys, size_t mem_size, u8 pd_asid,
 			struct qcom_pd_fw_info *fw_info)
@@ -314,6 +329,10 @@ int get_pd_fw_info(struct device *dev, const struct firmware *fw,
 	ssize_t offset;
 	bool relocate = false;
 	int ret = 0, i;
+	bool fw_shared;
+
+	/* Check FW is shared with parent or not */
+	fw_shared = check_fw_shared(dev);
 
 	if (!fw || !mem_phys || !mem_size)
 		return -EINVAL;
@@ -331,8 +350,8 @@ int get_pd_fw_info(struct device *dev, const struct firmware *fw,
 		 * While doing PD specific reloading, load only that PD
 		 * specific writeable entries. Skip others
 		 */
-		if (pd_asid && ((QCOM_MDT_PF_ASID(phdr->p_flags) != pd_asid) ||
-					((phdr->p_flags & PF_W) == 0)))
+		if (pd_asid && fw_shared && (QCOM_MDT_PF_ASID(phdr->p_flags) !=
+					pd_asid || (phdr->p_flags & PF_W) == 0))
 			continue;
 
 		if (phdr->p_flags & QCOM_MDT_RELOCATABLE)
@@ -370,8 +389,8 @@ int get_pd_fw_info(struct device *dev, const struct firmware *fw,
 		 * While doing PD specific reloading, load only that PD
 		 * specific writeable entries. Skip others
 		 */
-		if (pd_asid && ((QCOM_MDT_PF_ASID(phdr->p_flags) != pd_asid) ||
-					((phdr->p_flags & PF_W) == 0)))
+		if (pd_asid && fw_shared && (QCOM_MDT_PF_ASID(phdr->p_flags) !=
+					pd_asid || (phdr->p_flags & PF_W) == 0))
 			continue;
 
 		offset = phdr->p_paddr - mem_reloc;

@@ -388,8 +388,9 @@ static int qcom_get_pd_fw_info(struct q6_wcss *wcss, const struct firmware *fw,
 				struct ramdump_segment *segs, int index,
 				struct qcom_pd_fw_info *fw_info)
 {
-	int ret = get_pd_fw_info(wcss->dev, fw, wcss->mem_phys, wcss->mem_size,
-			wcss->pd_asid, fw_info);
+	int ret = get_pd_fw_info(wcss->dev, fw, wcss->mem_phys,
+			wcss->mem_size, wcss->pd_asid, fw_info);
+
 	if (ret) {
 		dev_err(wcss->dev, "couldn't get PD firmware info : %d\n", ret);
 		return ret;
@@ -457,8 +458,13 @@ static void crashdump_init(struct rproc *rproc,
 
 	num_segs = of_count_phandle_with_args(np, "memory-region", NULL);
 	if (num_segs <= 0) {
-		dev_err(&rproc->dev, "Could not find memory regions to dump");
-		goto free_device;
+		if (!wcss->pd_asid) {
+			dev_err(&rproc->dev, "Could not find memory regions to dump");
+			goto free_device;
+		}
+		dev_info(&rproc->dev, "memory regions to dump not defined in DTS");
+		dev_info(&rproc->dev, "taking dump of FW PIL segment data");
+		num_segs = 0;
 	}
 
 	if (wcss->pd_asid)
