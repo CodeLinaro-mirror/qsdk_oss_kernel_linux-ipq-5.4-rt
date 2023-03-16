@@ -9,8 +9,7 @@
 #include <crypto/authenc.h>
 #include <crypto/internal/aead.h>
 #include <crypto/internal/des.h>
-#include <crypto/sha1.h>
-#include <crypto/sha2.h>
+#include <crypto/sha.h>
 #include <crypto/scatterwalk.h>
 #include "aead.h"
 
@@ -115,7 +114,7 @@ qce_aead_prepare_dst_buf(struct aead_request *req)
 	struct qce_aead_reqctx *rctx = aead_request_ctx(req);
 	struct qce_alg_template *tmpl = to_aead_tmpl(crypto_aead_reqtfm(req));
 	struct qce_device *qce = tmpl->qce;
-	struct scatterlist *sg, *msg_sg, __sg[2];
+	struct scatterlist *sg = NULL, *msg_sg, __sg[2];
 	gfp_t gfp;
 	unsigned int assoclen = req->assoclen;
 	unsigned int totallen;
@@ -184,7 +183,7 @@ dst_tbl_free:
 static int
 qce_aead_ccm_prepare_buf_assoclen(struct aead_request *req)
 {
-	struct scatterlist *sg, *msg_sg, __sg[2];
+	struct scatterlist *sg = NULL, *msg_sg, __sg[2];
 	struct crypto_aead *tfm = crypto_aead_reqtfm(req);
 	struct qce_aead_reqctx *rctx = aead_request_ctx(req);
 	struct qce_aead_ctx *ctx = crypto_aead_ctx(tfm);
@@ -450,8 +449,8 @@ qce_aead_async_req_handle(struct crypto_async_request *async_req)
 	if (ret)
 		return ret;
 	dst_nents = dma_map_sg(qce->dev, rctx->dst_sg, rctx->dst_nents, dir_dst);
-	if (dst_nents < 0) {
-		ret = dst_nents;
+	if (!dst_nents) {
+		ret = -EIO;
 		goto error_free;
 	}
 
