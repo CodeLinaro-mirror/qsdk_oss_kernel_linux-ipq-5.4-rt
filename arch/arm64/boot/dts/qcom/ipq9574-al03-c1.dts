@@ -346,6 +346,10 @@
 			status = "ok";
 		};
 
+		qcom,test@0 {
+			qcom,wlan-ramdump-dynamic = <0x600000>;
+		};
+
 		mdio:mdio@90000 {
 			status = "ok";
 			pinctrl-0 = <&mdio_pins>;
