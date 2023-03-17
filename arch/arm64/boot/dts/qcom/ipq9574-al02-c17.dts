@@ -37,6 +37,22 @@
 
 	soc {
 		pinctrl@1000000 {
+			pci0_pin: pci0-pinmux {
+				pins = "gpio23";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-up;
+				output-low;
+			};
+
+			pci2_pin: pci2-pinmux {
+				pins = "gpio29";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-down;
+				output-low;
+			};
+
 			blsp1_uart2_pins: blsp1_uart2_pinmux {
 				pins = "gpio34", "gpio35";
 				function = "blsp2_uart";
@@ -352,6 +368,8 @@
 		};
 
 		pcie0_x1: pci@28000000 {
+			pinctrl-0 = <&pci0_pin>;
+			pinctrl-names = "default";
 			perst-gpio = <&tlmm 23 1>;
 			max-payload-size = <1>; // 1-256 TLP bytes for WKK
 			status = "ok";
@@ -382,6 +400,8 @@
 		};
 
 		pcie2_x2: pci@20000000 {
+			pinctrl-0 = <&pci2_pin>;
+			pinctrl-names = "default";
 			perst-gpio = <&tlmm 29 1>;
 			max-payload-size = <1>; // 1-256 TLP bytes for WKK
 			status = "ok";
