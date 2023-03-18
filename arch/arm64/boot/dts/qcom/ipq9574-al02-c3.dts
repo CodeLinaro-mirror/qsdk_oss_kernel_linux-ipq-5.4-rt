@@ -38,7 +38,7 @@
 
 		pcie3_x2: pci@18000000 {
 			perst-gpio = <&tlmm 32 1>;
-			pinctrl-0 = <&pcie3_wake_pins &pcie3_sdx_pins>;
+			pinctrl-0 = <&pcie3_wake_pins &pcie3_sdx_pins &pci3_pin>;
 			e911-gpio =  <&tlmm 43 GPIO_ACTIVE_HIGH>;
 
 			interrupts-extended = <&tlmm 33 IRQ_TYPE_LEVEL_HIGH>,
