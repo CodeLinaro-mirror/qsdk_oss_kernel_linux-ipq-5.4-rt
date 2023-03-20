@@ -138,20 +138,20 @@
 			 * Frequency     BIT3   BIT2   BIT1    BIT0    opp-supported-hw
 			 *              1.0GHz 1.2GHz 1.5GHz No Limit
 			 * ------------------------------------------------------------
-			 * 1080000000     1      1      1       1            0xF
-			 * 1488000000     0      0      1       1            0x3
+			 * 1100000000     1      1      1       1            0xF
+			 * 1500000000     0      0      1       1            0x3
 			 * -----------------------------------------------------------
 			 */
 
-			opp-1080000000 {
-				opp-hz = /bits/ 64 <1080000000>;
+			opp-1100000000 {
+				opp-hz = /bits/ 64 <1100000000>;
 				opp-microvolt = <850000>;
 				opp-supported-hw = <0xF>;
 				clock-latency-ns = <200000>;
 			};
 
-			opp-1488000000 {
-				opp-hz = /bits/ 64 <1488000000>;
+			opp-1500000000 {
+				opp-hz = /bits/ 64 <1500000000>;
 				opp-microvolt = <950000>;
 				opp-supported-hw = <0x3>;
 				clock-latency-ns = <200000>;
