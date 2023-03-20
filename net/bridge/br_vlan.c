@@ -831,6 +831,7 @@ int br_dev_is_vlan_filter_enabled(const struct net_device *dev)
 	struct net_bridge *br;
 	struct net_bridge_port *p;
 	struct net_bridge_vlan_group *vg = NULL;
+	struct net_device *master = NULL;
 
 	if (!dev) {
 		return -ENODEV;
@@ -849,6 +850,15 @@ int br_dev_is_vlan_filter_enabled(const struct net_device *dev)
 		/*
 		 * It's a bridge port
 		 */
+		master = netdev_master_upper_dev_get_rcu(dev);
+		if (!master) {
+			return -EINVAL;
+		}
+
+		if (!br_vlan_enabled(master)) {
+			return -ENOENT;
+		}
+
 		p = br_port_get_rcu(dev);
 		if (p)
 			vg = nbp_vlan_group(p);
@@ -1126,7 +1136,7 @@ static bool vlan_default_pvid(struct net_bridge_vlan_group *vg, u16 vid)
 	return false;
 }
 
-static void br_vlan_disable_default_pvid(struct net_bridge *br)
+void br_vlan_disable_default_pvid(struct net_bridge *br)
 {
 	struct net_bridge_port *p;
 	u16 pvid = br->default_pvid;
