@@ -1178,18 +1178,6 @@ int mhitest_pci_start_mhi(struct mhitest_platform *mplat)
 	ret = mhitest_pci_set_mhi_state(mplat, MHI_POWER_ON);
 	if (ret) {
 		MHITEST_ERR("Error not able to POWER ON\n");
-		if (ret == -ETIMEDOUT) {
-			/*
-			 * Though it is ETIMEOUT we are returning 0 here so that
-			 * we should be able to do rcremove and rmmod.
-			 * rcremove api's are not exported and so mhitest driver
-			 * cannot call them.
-			 *
-			 * Printing Error message here to inform the user.
-			 */
-			MHITEST_ERR("###### -ETIMEDOUT ERRRORR, do rcremove and rmmod to clean-up\n");
-			ret = 0;
-		}
 		goto out1;
 	}
 
@@ -1294,25 +1282,32 @@ int mhitest_pci_probe2(struct pci_dev *pci_dev, const struct pci_device_id *id)
 
 	ret = mhitest_event_work_init(mplat);
 	if (ret)
-		goto out1;
+		goto free_mplat;
 
 	ret = mhitest_store_mplat(mplat);
 	if (ret) {
 		MHITEST_ERR("Error ret:%d\n", ret);
-		goto out1;
+		goto work_deinit;
 	}
 
 	ret = mhitest_subsystem_register(mplat);
 	if (ret) {
 		MHITEST_ERR("Error subsystem register: ret:%d\n", ret);
-		goto out1;
+		goto pci_deinit;
 	}
 
 	MHITEST_EMERG("<---done\n");
 	return 0;
 
-out1:
-	kfree(mplat);
+pci_deinit:
+	mhitest_pci_set_mhi_state(mplat, MHI_DEINIT);
+	mhitest_pci_remove_all(mplat);
+	pci_load_and_free_saved_state(pci_dev, &mplat->pci_dev_default_state);
+	mhitest_remove_mplat(mplat);
+work_deinit:
+	mhitest_event_work_deinit(mplat);
+free_mplat:
+	devm_kfree(&mplat->plat_dev->dev, mplat);
 fail_probe:
 	return ret;
 }
