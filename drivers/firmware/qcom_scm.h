@@ -84,6 +84,7 @@ extern int  __qti_config_ice_sec(struct device *dev, void *confBuf, int size);
 #define QCOM_SCM_EINVAL_ARG	-2
 #define QCOM_SCM_ERROR		-1
 #define QCOM_SCM_INTERRUPTED	1
+#define QCOM_SCM_EINVAL_SIZE	18
 
 static inline int qcom_scm_remap_error(int err)
 {
