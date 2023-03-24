@@ -2205,7 +2205,7 @@ static struct clk_branch gcc_pcie3x1_0_pipe_clk = {
 				"pcie3x1_0_pipe_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2313,7 +2313,7 @@ static struct clk_branch gcc_pcie3x1_1_pipe_clk = {
 				"pcie3x1_1_pipe_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2457,7 +2457,7 @@ static struct clk_branch gcc_pcie3x2_pipe_clk = {
 				"pcie3x2_pipe_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 			.ops = &clk_branch2_ops,
 		},
 	},
