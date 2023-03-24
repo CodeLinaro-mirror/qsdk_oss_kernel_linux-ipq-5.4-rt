@@ -23,19 +23,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <100000>;
+					temperature = <120000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <80000>;
+					temperature = <100000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <70000>;
+					temperature = <90000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -55,19 +55,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <100000>;
+					temperature = <120000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <80000>;
+					temperature = <100000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <70000>;
+					temperature = <90000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -87,19 +87,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <100000>;
+					temperature = <120000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <80000>;
+					temperature = <100000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <70000>;
+					temperature = <90000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
@@ -119,19 +119,19 @@
 
 			trips {
 				cpu-critical-hi {
-					temperature = <100000>;
+					temperature = <120000>;
 					hysteresis = <2>;
 					type = "critical_high";
 				};
 
 				cpu-config-hi {
-					temperature = <80000>;
+					temperature = <100000>;
 					hysteresis = <2>;
 					type = "configurable_hi";
 				};
 
 				cpu-config-lo {
-					temperature = <70000>;
+					temperature = <90000>;
 					hysteresis = <2>;
 					type = "configurable_lo";
 				};
