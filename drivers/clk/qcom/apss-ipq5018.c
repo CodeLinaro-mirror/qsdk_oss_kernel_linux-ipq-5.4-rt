@@ -23,7 +23,6 @@
 #include <linux/clk-provider.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
-#include <soc/qcom/socinfo.h>
 
 #include <linux/reset-controller.h>
 #include <dt-bindings/clock/qca,apss-ipq5018.h>
@@ -106,7 +105,6 @@ static const struct freq_tbl ftbl_apcs_alias0_clk_src[] = {
 	F(24000000, P_XO, 1, 0, 0),
 	F(800000000, P_APSS_PLL_EARLY, 1, 0, 0),
 	F(1008000000, P_APSS_PLL_EARLY, 1, 0, 0),
-	F(1300000000, P_APSS_PLL_EARLY, 1, 0, 0),
 	{ }
 };
 
@@ -167,24 +165,6 @@ static const struct alpha_pll_config apss_pll_config = {
 	.test_ctl_hi_val = 0x00400003,
 };
 
-static const struct alpha_pll_config apss_pll_config_ipq5019 = {
-	.l = 0x36,
-	.alpha = 0xAAAAAAAA,
-	.alpha_hi = 0x2A,
-	.config_ctl_val = 0x4001075B,
-	.main_output_mask = BIT(0),
-	.aux_output_mask = BIT(1),
-	.early_output_mask = BIT(3),
-	.alpha_en_mask = BIT(24),
-	.vco_val = 0x0,
-	.vco_mask = GENMASK(21, 20),
-	.status_reg_val = 0x3,
-	.status_reg_mask = GENMASK(10, 8),
-	.lock_det = BIT(2),
-	.test_ctl_val = 0x0,
-	.test_ctl_hi_val = 0x00400003,
-};
-
 static const struct regmap_config apss_ipq5018_regmap_config = {
 	.reg_bits       = 32,
 	.reg_stride     = 4,
@@ -208,10 +188,7 @@ static int apss_ipq5018_probe(struct platform_device *pdev)
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
 
-	if(cpu_is_ipq5019())
-		clk_alpha_pll_configure(&apss_pll_early, regmap, &apss_pll_config_ipq5019);
-	else
-		clk_alpha_pll_configure(&apss_pll_early, regmap, &apss_pll_config);
+	clk_alpha_pll_configure(&apss_pll_early, regmap, &apss_pll_config);
 
 	ret = qcom_cc_really_probe(pdev, &apss_ipq5018_desc, regmap);
 	dev_dbg(&pdev->dev, "Registered ipq5018 apss clock provider\n");
