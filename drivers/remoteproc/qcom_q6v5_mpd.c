@@ -3794,6 +3794,8 @@ static const struct wcss_data q6_ipq5018_res_init = {
 
 static const struct wcss_data wcss_ahb_ipq5332_res_init = {
 	.init_clock = ipq5332_init_wcss_clock,
+	.crash_reason_smem = WCSS_CRASH_REASON,
+	.remote_id = WCSS_SMEM_HOST,
 	.wcss_clk_enable = enable_ipq5332_wcss_clocks,
 	.wcss_clk_disable = disable_ipq5332_wcss_clocks,
 	.init_irq = init_irq,
@@ -3834,6 +3836,7 @@ static const struct wcss_data wcss_ahb_ipq5018_res_init = {
 static const struct wcss_data wcss_pcie_ipq5332_res_init = {
 	.init_irq = init_irq,
 	.crash_reason_smem = WCSS_CRASH_REASON,
+	.remote_id = WCSS_SMEM_HOST,
 	.ops = &wcss_pcie_ipq5332_ops,
 	.need_mem_protection = true,
 	.need_auto_boot = false,
