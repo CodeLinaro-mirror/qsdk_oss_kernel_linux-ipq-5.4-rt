@@ -273,6 +273,7 @@
 			dmas = <&cryptobam 2>, <&cryptobam 3>;
 			dma-names = "rx", "tx";
 			qce,no-clock-init;
+			qce,cmd_desc_support;
 		};
 
 		intc: interrupt-controller@b000000 {
