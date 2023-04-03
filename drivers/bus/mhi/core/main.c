@@ -343,6 +343,8 @@ void mhi_uevent_notify(struct mhi_controller *mhi_cntrl, enum mhi_ee_type ee)
 	ret = kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, buf);
 	if (ret)
 		dev_err(dev, "Failed to send %s uevent\n", TO_MHI_EXEC_STR(ee));
+
+	kfree(buf[0]);
 }
 EXPORT_SYMBOL_GPL(mhi_uevent_notify);
 
