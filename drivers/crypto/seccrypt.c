@@ -367,6 +367,7 @@ static const struct sec_skcipher_def skcipher_def[] = {
 		.min_keysize    = AES_MIN_KEY_SIZE,
 		.max_keysize    = AES_MAX_KEY_SIZE,
 	},
+#ifndef CONFIG_ARM64
 	{
 		.flags          = 0,
 		.name           = "cts(cbc(aes))",
@@ -377,6 +378,7 @@ static const struct sec_skcipher_def skcipher_def[] = {
 		.min_keysize    = AES_MIN_KEY_SIZE,
 		.max_keysize    = AES_MAX_KEY_SIZE,
 	},
+#endif
 	{
 		.flags          = 0,
 		.name           = "xts(aes)",
