@@ -661,7 +661,7 @@ int mhi_alloc_bhie_table(struct mhi_controller *mhi_cntrl,
 		} else if (i == segments - 1) {
 			/* last entry is for vector table */
 			vec_size = sizeof(struct bhi_vec_entry) * i;
-			mhi_buf->buf = kzalloc(vec_size, gfp);
+			mhi_buf->buf = kzalloc(PAGE_ALIGN(vec_size), gfp);
 			if (!mhi_buf->buf)
 				goto error_alloc_segment;
 		} else {
