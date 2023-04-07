@@ -426,6 +426,7 @@ static void crashdump_init(struct rproc *rproc,
 	 * crashed, irrespective of userpd status.
 	 */
 	for_each_available_child_of_node(wcss->dev->of_node, upd_np) {
+		struct device_node *temp;
 		struct platform_device *upd_pdev;
 		struct rproc *upd_rproc;
 
@@ -435,6 +436,13 @@ static void crashdump_init(struct rproc *rproc,
 		upd_rproc = platform_get_drvdata(upd_pdev);
 		rproc_subsys_notify(upd_rproc,
 				SUBSYS_RAMDUMP_NOTIFICATION, false);
+
+		for_each_available_child_of_node(upd_np, temp) {
+			upd_pdev = of_find_device_by_node(temp);
+			upd_rproc = platform_get_drvdata(upd_pdev);
+			rproc_subsys_notify(upd_rproc,
+					SUBSYS_RAMDUMP_NOTIFICATION, false);
+		}
 	}
 
 	if (wcss->pd_asid)
@@ -1463,7 +1471,7 @@ static int handle_upd_in_rpd_crash(void *data)
 {
 	struct rproc *rpd_rproc = data, *upd_rproc;
 	struct q6_wcss *rpd_wcss = rpd_rproc->priv;
-	struct device_node *upd_np;
+	struct device_node *upd_np, *temp;
 	struct platform_device *upd_pdev;
 	const struct firmware *firmware_p;
 	int ret;
@@ -1498,6 +1506,30 @@ static int handle_upd_in_rpd_crash(void *data)
 			dev_err(&upd_pdev->dev, "failed to start %s\n",
 					upd_rproc->name);
 		release_firmware(firmware_p);
+
+		for_each_available_child_of_node(upd_np, temp) {
+			upd_pdev = of_find_device_by_node(temp);
+			upd_rproc = platform_get_drvdata(upd_pdev);
+
+			if (upd_rproc->state != RPROC_SUSPENDED)
+				continue;
+
+			/* load firmware */
+			ret = request_firmware(&firmware_p, upd_rproc->firmware,
+					&upd_pdev->dev);
+			if (ret < 0) {
+				dev_err(&upd_pdev->dev,
+					"request_firmware failed: %d\n", ret);
+				continue;
+			}
+
+			/* start the userpd rproc*/
+			ret = rproc_start(upd_rproc, firmware_p);
+			if (ret)
+				dev_err(&upd_pdev->dev, "failed to start %s\n",
+						upd_rproc->name);
+			release_firmware(firmware_p);
+		}
 	}
 	rpd_wcss->state = WCSS_NORMAL;
 	return 0;
@@ -1507,7 +1539,7 @@ static int q6_wcss_start(struct rproc *rproc)
 {
 	struct q6_wcss *wcss = rproc->priv;
 	int ret;
-	struct device_node *upd_np;
+	struct device_node *upd_np, *temp;
 	struct platform_device *upd_pdev;
 	struct rproc *upd_rproc;
 	struct q6_wcss *upd_wcss;
@@ -1623,6 +1655,13 @@ wait_for_reset:
 			upd_rproc = platform_get_drvdata(upd_pdev);
 			upd_wcss = upd_rproc->priv;
 			upd_wcss->state = WCSS_NORMAL;
+
+			for_each_available_child_of_node(upd_np, temp) {
+				upd_pdev = of_find_device_by_node(temp);
+				upd_rproc = platform_get_drvdata(upd_pdev);
+				upd_wcss = upd_rproc->priv;
+				upd_wcss->state = WCSS_NORMAL;
+			}
 		}
 	}
 	return ret;
@@ -1656,6 +1695,33 @@ static int q6_wcss_spawn_pd(struct rproc *rproc)
 		return ret;
 	}
 	wcss->q6.running = true;
+	return ret;
+}
+
+static int wcss_ipq5332_text_pd_start(struct rproc *rproc)
+{
+	struct q6_wcss *wcss = rproc->priv;
+	int ret = 0;
+	const struct wcss_data *desc;
+	u8 pd_asid;
+	u32 pasid;
+
+	desc = of_device_get_match_data(wcss->dev);
+	if (!desc)
+		return -EINVAL;
+
+	if (wcss->need_mem_protection) {
+		pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+		pasid = (pd_asid << 8) | UPD_SWID;
+		ret = qcom_scm_pas_auth_and_reset(pasid, 0x0, 0x0);
+		if (ret) {
+			dev_err(wcss->dev, "failed to power up ahb pd\n");
+			return ret;
+		}
+	}
+
+	wcss->state = WCSS_NORMAL;
+
 	return ret;
 }
 
@@ -2217,7 +2283,7 @@ static int q6_wcss_stop(struct rproc *rproc)
 
 	/* stop userpd's, if root pd getting crashed*/
 	if (rproc->state == RPROC_CRASHED) {
-		struct device_node *upd_np;
+		struct device_node *upd_np, *temp;
 		struct platform_device *upd_pdev;
 		struct rproc *upd_rproc;
 		struct q6_wcss *upd_wcss;
@@ -2233,6 +2299,13 @@ static int q6_wcss_stop(struct rproc *rproc)
 			upd_rproc = platform_get_drvdata(upd_pdev);
 			rproc_subsys_notify(upd_rproc,
 				SUBSYS_PREPARE_FOR_FATAL_SHUTDOWN, true);
+
+			for_each_available_child_of_node(upd_np, temp) {
+				upd_pdev = of_find_device_by_node(temp);
+				upd_rproc = platform_get_drvdata(upd_pdev);
+				rproc_subsys_notify(upd_rproc,
+					SUBSYS_PREPARE_FOR_FATAL_SHUTDOWN, true);
+			}
 		}
 
 		for_each_available_child_of_node(wcss->dev->of_node, upd_np) {
@@ -2247,12 +2320,31 @@ static int q6_wcss_stop(struct rproc *rproc)
 
 			upd_rproc->state = RPROC_CRASHED;
 
-			/* stop the userpd rproc*/
+			/* stop the userpd parent rproc*/
 			ret = rproc_stop(upd_rproc, true);
 			if (ret)
 				dev_err(&upd_pdev->dev, "failed to stop %s\n",
 							upd_rproc->name);
 			upd_rproc->state = RPROC_SUSPENDED;
+
+			for_each_available_child_of_node(upd_np, temp) {
+				upd_pdev = of_find_device_by_node(temp);
+				upd_rproc = platform_get_drvdata(upd_pdev);
+				upd_wcss = upd_rproc->priv;
+
+				if (upd_rproc->state == RPROC_OFFLINE)
+					continue;
+
+				upd_rproc->state = RPROC_CRASHED;
+
+				/* stop the userpd child rproc*/
+				ret = rproc_stop(upd_rproc, true);
+				if (ret)
+					dev_err(&upd_pdev->dev, "failed to stop %s\n",
+							upd_rproc->name);
+
+				upd_rproc->state = RPROC_SUSPENDED;
+			}
 		}
 	}
 
@@ -2347,6 +2439,36 @@ static int wcss_pcie_pd_stop(struct rproc *rproc)
 	if (rproc->state != RPROC_CRASHED)
 		rproc_shutdown(rpd_rproc);
 
+	wcss->state = WCSS_SHUTDOWN;
+	return ret;
+}
+
+static int wcss_ipq5332_text_pd_stop(struct rproc *rproc)
+{
+	struct q6_wcss *wcss = rproc->priv;
+	int ret = 0;
+	struct rproc *rpd_rproc = dev_get_drvdata(wcss->dev->parent);
+	const struct wcss_data *desc;
+	u8 pd_asid;
+	u32 pasid;
+
+	desc = of_device_get_match_data(wcss->dev);
+	if (!desc)
+		return -EINVAL;
+
+	if (wcss->need_mem_protection) {
+		pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+		pasid = (pd_asid << 8) | UPD_SWID;
+
+		ret = qcom_scm_pas_shutdown(pasid);
+		if (ret) {
+			dev_err(wcss->dev, "failed to power down ahb pd\n");
+			return ret;
+		}
+	}
+
+	if (rproc->state != RPROC_CRASHED)
+		rproc_shutdown(rpd_rproc);
 	wcss->state = WCSS_SHUTDOWN;
 	return ret;
 }
@@ -2556,18 +2678,56 @@ static void load_license_params_to_bootargs(struct device *dev,
 	return;
 }
 
+static int copy_userpd_bootargs(struct bootargs_smem_info *boot_args,
+				struct rproc *upd_rproc)
+{
+	struct q6_wcss *upd_wcss = upd_rproc->priv;
+	int ret;
+	const struct firmware *fw;
+	struct q6_userpd_bootargs upd_bootargs = {0};
+
+	/* TYPE */
+	upd_bootargs.header.type = UPD_BOOTARGS_HEADER_TYPE;
+
+	/* LENGTH */
+	upd_bootargs.header.length =
+		sizeof(struct q6_userpd_bootargs) - sizeof(upd_bootargs.header);
+
+	/* PID */
+	upd_bootargs.pid = qcom_get_pd_asid(upd_wcss->dev->of_node) + 1;
+
+	ret = request_firmware(&fw, upd_rproc->firmware,
+			upd_wcss->dev);
+	if (ret < 0) {
+		dev_err(upd_wcss->dev, "request_firmware failed: %d\n",
+				ret);
+		return ret;
+	}
+
+	/* Load address */
+	upd_bootargs.bootaddr = rproc_get_boot_addr(upd_rproc, fw);
+
+	/* PIL data size */
+	upd_bootargs.data_size = qcom_mdt_get_file_size(fw);
+
+	release_firmware(fw);
+
+	/* copy into smem bootargs array*/
+	memcpy_toio(boot_args->smem_bootargs_ptr,
+			&upd_bootargs, sizeof(struct q6_userpd_bootargs));
+	boot_args->smem_bootargs_ptr += sizeof(struct q6_userpd_bootargs);
+	return ret;
+}
+
 static int load_userpd_params_to_bootargs(struct device *dev,
 				struct bootargs_smem_info *boot_args)
 {
 	int ret = 0;
-	struct device_node *upd_np;
+	struct device_node *upd_np, *temp;
 	struct platform_device *upd_pdev;
 	struct rproc *upd_rproc;
-	struct q6_wcss *upd_wcss;
 	u16 cnt;
 	u8 upd_cnt = 0;
-	const struct firmware *fw;
-	struct q6_userpd_bootargs upd_bootargs = {0};
 
 	if (!of_property_read_bool(dev->of_node, "qcom,userpd-bootargs"))
 		return -EINVAL;
@@ -2576,6 +2736,8 @@ static int load_userpd_params_to_bootargs(struct device *dev,
 		if (strstr(upd_np->name, "pd") == NULL)
 			continue;
 		upd_cnt++;
+		for_each_available_child_of_node(upd_np, temp)
+			upd_cnt++;
 	}
 
 	/* No of elements */
@@ -2588,39 +2750,17 @@ static int load_userpd_params_to_bootargs(struct device *dev,
 			continue;
 		upd_pdev = of_find_device_by_node(upd_np);
 		upd_rproc = platform_get_drvdata(upd_pdev);
-		upd_wcss = upd_rproc->priv;
-
-		memset(&upd_bootargs, 0, sizeof(upd_bootargs));
-		/* TYPE */
-		upd_bootargs.header.type = UPD_BOOTARGS_HEADER_TYPE;
-
-		/* LENGTH */
-		upd_bootargs.header.length =
-			sizeof(upd_bootargs) - sizeof(upd_bootargs.header);
-
-		/* PID */
-		upd_bootargs.pid = qcom_get_pd_asid(upd_wcss->dev->of_node) + 1;
-
-		ret = request_firmware(&fw, upd_rproc->firmware,
-							&upd_pdev->dev);
-		if (ret < 0) {
-			dev_err(&upd_pdev->dev, "request_firmware failed: %d\n",
-									ret);
+		ret = copy_userpd_bootargs(boot_args, upd_rproc);
+		if (ret)
 			return ret;
+
+		for_each_available_child_of_node(upd_np, temp) {
+			upd_pdev = of_find_device_by_node(temp);
+			upd_rproc = platform_get_drvdata(upd_pdev);
+			ret = copy_userpd_bootargs(boot_args, upd_rproc);
+			if (ret)
+				return ret;
 		}
-
-		/* Load address */
-		upd_bootargs.bootaddr = rproc_get_boot_addr(upd_rproc, fw);
-
-		/* PIL data size */
-		upd_bootargs.data_size = qcom_mdt_get_file_size(fw);
-
-		release_firmware(fw);
-
-		/* copy into smem bootargs array*/
-		memcpy_toio(boot_args->smem_bootargs_ptr,
-					&upd_bootargs, sizeof(upd_bootargs));
-		boot_args->smem_bootargs_ptr += sizeof(upd_bootargs);
 	}
 	return ret;
 }
@@ -2892,9 +3032,7 @@ static int wcss_ahb_pcie_pd_load(struct rproc *rproc, const struct firmware *fw)
 
 	wcss_rpd = rpd_rproc->priv;
 
-	/* Simply Return in case of
-	 * 1) Root pd recovery and fw shared
-	 */
+	/* Simply Return in case of root pd recovery and fw shared*/
 	if (wcss_rpd->state == WCSS_RESTARTING && wcss->is_fw_shared)
 		return 0;
 
@@ -2961,6 +3099,13 @@ static const struct rproc_ops q6_wcss_ipq5018_ops = {
 	.get_boot_addr = rproc_elf_get_boot_addr,
 	.parse_fw = q6_wcss_register_dump_segments,
 	.report_panic = q6_wcss_panic,
+};
+
+static const struct rproc_ops wcss_text_ipq5332_ops = {
+	.start = wcss_ipq5332_text_pd_start,
+	.stop = wcss_ipq5332_text_pd_stop,
+	.load = wcss_ahb_pcie_pd_load,
+	.get_boot_addr = rproc_elf_get_boot_addr,
 };
 
 static const struct rproc_ops wcss_ahb_ipq5332_ops = {
@@ -3726,14 +3871,12 @@ static int q6_wcss_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rproc);
 
-	if (wcss->version == Q6_IPQ) {
-		ret = of_platform_populate(wcss->dev->of_node, NULL,
-						NULL, wcss->dev);
-		if (ret) {
-			dev_err(&pdev->dev, "failed to populate wcss pd nodes\n");
-			goto free_rproc;
-		}
+	ret = of_platform_populate(wcss->dev->of_node, NULL, NULL, wcss->dev);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to populate wcss pd nodes\n");
+		goto free_rproc;
 	}
+
 	return 0;
 
 free_rproc:
@@ -3862,6 +4005,16 @@ static const struct wcss_data wcss_pcie_ipq5018_res_init = {
 	.pasid = MPD_WCNSS_PAS_ID,
 };
 
+static const struct wcss_data wcss_text_ipq5332_res_init = {
+	.ops = &wcss_text_ipq5332_ops,
+	.need_mem_protection = true,
+	.need_auto_boot = false,
+	.q6ver = Q6V7,
+	.version = WCSS_AHB_IPQ,
+	.mdt_load_sec = qcom_mdt_load,
+	.mdt_load_nosec = qcom_mdt_load_no_init,
+};
+
 static const struct wcss_data q6_ipq9574_res_init = {
 	.init_clock = ipq9574_init_q6_clock,
 	.init_irq = qcom_q6v5_init,
@@ -3937,6 +4090,8 @@ static const struct of_device_id q6_wcss_of_match[] = {
 		.data = &wcss_pcie_ipq5018_res_init },
 	{ .compatible = "qcom,ipq9574-wcss-pcie-mpd",
 		.data = &wcss_pcie_ipq9574_res_init },
+	{ .compatible = "qcom,ipq5332-mpd-upd-text",
+		.data = &wcss_text_ipq5332_res_init },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, q6_wcss_of_match);
