@@ -1310,6 +1310,7 @@
 			num-lanes = <1>;
 			#address-cells = <3>;
 			#size-cells = <2>;
+			axi-halt-val = <0x1e>; /* increase halt window size to 1GB */
 
 			ranges = <0x81000000 0 0x10200000 0x10200000
 				  0 0x00100000   /* downstream I/O */
@@ -1400,6 +1401,7 @@
 			#address-cells = <3>;
 			#size-cells = <2>;
 			slv-addr-space-sz = <0x8000000>;
+			axi-halt-val = <0x1e>; /* increase halt window size to 1GB */
 
 			phys = <&pcie1_phy_x2>;
 			phy-names = "pciephy";
@@ -1487,6 +1489,7 @@
 			num-lanes = <1>;
 			#address-cells = <3>;
 			#size-cells = <2>;
+			axi-halt-val = <0x1e>; /* increase halt window size to 1GB */
 
 			phys = <&pcie0_phy>;
 			phy-names = "pciephy";
