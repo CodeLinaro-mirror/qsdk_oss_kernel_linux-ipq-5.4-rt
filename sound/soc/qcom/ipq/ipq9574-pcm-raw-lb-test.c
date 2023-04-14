@@ -529,6 +529,7 @@ static void pcm_start_test(int pcm_index)
 
 static const struct of_device_id qca_raw_lb_match_table[] = {
 	{ .compatible = "qca,ipq9574-pcm-lb", .data = (void *)IPQ9574 },
+	{ .compatible = "qca,ipq5332-pcm-lb", .data = (void *)IPQ5332 },
 	{},
 };
 

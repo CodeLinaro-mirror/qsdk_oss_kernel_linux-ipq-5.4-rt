@@ -1101,10 +1101,17 @@ int mhi_async_power_up(struct mhi_controller *mhi_cntrl)
 
 	/* Confirm that the device is in valid exec env */
 	if (!MHI_IN_PBL(current_ee) && current_ee != MHI_EE_AMSS) {
-		dev_err(dev, "%s is not a valid EE for power on\n",
-			TO_MHI_EXEC_STR(current_ee));
-		ret = -EIO;
-		goto error_bhi_offset;
+		if (current_ee == MHI_EE_SBL ) {
+			dev_dbg(dev, "Current exec env is SBL EE \n");
+			mhi_pm_sys_err_handler(mhi_cntrl);
+			mhi_write_reg(mhi_cntrl, mhi_cntrl->bhi, BHI_INTVEC, 0);
+		} else {
+			dev_err(dev, "%s is not a valid EE for power on\n",
+				TO_MHI_EXEC_STR(current_ee));
+			ret = -EIO;
+
+			goto error_bhi_offset;
+		}
 	}
 
 	state = mhi_get_mhi_state(mhi_cntrl);

@@ -896,6 +896,7 @@ static int mhi_power_up(struct mhi_controller *mhi_cntrl)
 			dev_state = mhi_get_mhi_state(mhi_cntrl);
 			if (dev_state != MHI_STATE_SYS_ERR)
 				break;
+			mhi_set_mhi_state(mhi_cntrl, MHI_STATE_RESET);
 			usleep_range(delayus, delayus << 1);
 		}
 		/* device still in error state, abort power up */

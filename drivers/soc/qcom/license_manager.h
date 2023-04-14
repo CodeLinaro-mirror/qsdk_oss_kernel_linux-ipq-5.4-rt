@@ -126,6 +126,7 @@ struct client_info {
 struct feature_info {
 	int sq_node;
 	int sq_port;
+	uint32_t reserved;
 	uint32_t len;
 	uint32_t list[QMI_LM_MAX_FEATURE_LIST_V01];
 	struct list_head node;

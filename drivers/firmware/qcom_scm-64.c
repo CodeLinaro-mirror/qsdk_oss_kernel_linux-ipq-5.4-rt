@@ -723,6 +723,41 @@ int __qti_sec_upgrade_auth(struct device *dev, unsigned int scm_cmd_id,
 	return ret ? : res.a1;
 }
 
+int __qti_sec_upgrade_auth_meta_data(struct device *dev, unsigned int scm_cmd_id,
+							unsigned int sw_type,
+							unsigned int img_size,
+							unsigned int load_addr,
+							void* hash_addr,
+							unsigned int hash_size)
+{
+	int ret;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+	dma_addr_t hash_address;
+
+	hash_address = dma_map_single(dev, hash_addr, hash_size, DMA_FROM_DEVICE);
+
+	ret = dma_mapping_error(dev, hash_address);
+	if (ret != 0) {
+		pr_err("%s: DMA Mapping Error : %d\n", __func__, ret);
+		return ret;
+	}
+
+	desc.args[0] = sw_type;
+	desc.args[1] = (u64)load_addr;
+	desc.args[2] = img_size;
+	desc.args[3] = hash_address;
+	desc.args[4] = hash_size;
+
+	desc.arginfo = QCOM_SCM_ARGS(5, QCOM_SCM_VAL, QCOM_SCM_RW, QCOM_SCM_VAL,
+							QCOM_SCM_RW, QCOM_SCM_VAL);
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QCOM_SCM_SVC_BOOT,
+			    scm_cmd_id, &desc, &res);
+	dma_unmap_single(dev, hash_address, hash_size, DMA_FROM_DEVICE);
+
+	return ret ? : res.a1;
+}
+
 int __qti_config_ice_sec(struct device *dev, void *conf_buf, int size)
 {
 	int ret;

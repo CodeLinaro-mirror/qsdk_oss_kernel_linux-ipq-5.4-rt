@@ -3,7 +3,7 @@
  * IPQ9574 AL02-C11 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -37,6 +37,38 @@
 
 	soc {
 		pinctrl@1000000 {
+			pci0_pin: pci0-pinmux {
+				pins = "gpio23";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-up;
+				output-low;
+			};
+
+			pci1_pin: pci1-pinmux {
+				pins = "gpio26";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-down;
+				output-low;
+			};
+
+			pci2_pin: pci2-pinmux {
+				pins = "gpio29";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-down;
+				output-low;
+			};
+
+			pci3_pin: pci3-pinmux {
+				pins = "gpio32";
+				function = "gpio";
+				drive-strength = <8>;
+				bias-pull-up;
+				output-low;
+			};
+
 			blsp1_uart2_pins: blsp1_uart2_pinmux {
 				pins = "gpio34", "gpio35";
 				function = "blsp2_uart";
@@ -352,6 +384,8 @@
 		};
 
 		pcie0_x1: pci@28000000 {
+			pinctrl-0 = <&pci0_pin>;
+			pinctrl-names = "default";
 			perst-gpio = <&tlmm 23 1>;
 			max-payload-size = <1>; // 1-256 TLP bytes for WKK
 			status = "ok";
@@ -381,6 +415,8 @@
 		};
 
 		pcie1_x1: pci@10000000 {
+			pinctrl-0 = <&pci1_pin>;
+			pinctrl-names = "default";
 			perst-gpio = <&tlmm 26 1>;
 			max-payload-size = <1>; // 1-256 TLP bytes for WKK
 			status = "ok";
@@ -426,6 +462,8 @@
 		};
 
 		pcie2_x2: pci@20000000 {
+			pinctrl-0 = <&pci2_pin>;
+			pinctrl-names = "default";
 			perst-gpio = <&tlmm 29 1>;
 			max-payload-size = <1>; // 1-256 TLP bytes for WKK
 			status = "ok";
@@ -471,6 +509,8 @@
 		};
 
 		pcie3_x2: pci@18000000 {
+			pinctrl-0 = <&pci3_pin>;
+			pinctrl-names = "default";
 			perst-gpio = <&tlmm 32 1>;
 			max-payload-size = <1>; // 1-256 TLP bytes for WKK
 			status = "ok";
@@ -604,7 +644,12 @@
 			qcom,rx-page-mode = <0>;		/* Rx fill ring page mode */
 			qcom,tx-map-priority-level = <1>;	/* Tx priority level per port */
 			qcom,rx-map-priority-level = <1>;	/* Rx priority level per core */
-			qcom,ppeds-num = <0>;			/* Number of PPEDS nodes */
+			qcom,ppeds-num = <4>;			/* Number of PPEDS nodes */
+			/* PPE-DS node format: <Rx-fill Tx-cmpl Rx Tx Queue-base Queue-count> */
+			qcom,ppeds-map = <1 1 1 1 32 8>,	/* PPEDS Node#0 ring and queue map */
+					<2 2 2 2 40 8>,		/* PPEDS Node#1 ring and queue map */
+					<3 3 3 3 48 8>,		/* PPEDS Node#2 ring and queue map */
+					<0 0 0 0 56 8>;		/* PPEDS Node#3 ring and queue map */
 			qcom,txdesc-map = <8 9 10 11>,		/* Port0 per-core Tx ring map */
 					<12 13 14 15>,		/* Port1 per-core Tx ring map */
 					<16 17 18 19>,		/* Port2 per-core Tx ring map */
@@ -661,7 +706,20 @@
 				   <0 352 4>,			/* Rx desc ring id #21 IRQ info */
 				   <0 353 4>,			/* Rx desc ring id #22 IRQ info */
 				   <0 354 4>,			/* Rx desc ring id #23 IRQ info */
-				   <0 261 4>;			/* Misc error IRQ info */
+				   <0 261 4>,			/* Misc error IRQ info */
+				   <0 364 4>,			/* PPEDS Node #0(TxComp ring id #1) TxComplete IRQ info */
+				   <0 332 4>,			/* PPEDS Node #0(Rx Desc ring id #1) Rx Desc IRQ info */
+				   <0 356 4>,			/* PPEDS Node #0(RxFill Desc ring id #1) Rx Fill IRQ info */
+				   <0 365 4>,			/* PPEDS Node #1(TxComp ring id #2) TxComplete IRQ info */
+				   <0 333 4>,			/* PPEDS Node #1(Rx Desc ring id #2) Rx Desc IRQ info */
+				   <0 357 4>,			/* PPEDS Node #1(RxFill Desc ring id #2) Rx Fill IRQ info */
+				   <0 366 4>,			/* PPEDS Node #2(TxComp ring id #3) TxComplete IRQ info */
+				   <0 334 4>,			/* PPEDS Node #2(Rx Desc ring id #3) Rx Desc IRQ info */
+				   <0 358 4>,			/* PPEDS Node #2(RxFill Desc ring id #3) Rx Fill IRQ info */
+				   <0 363 4>,			/* PPEDS Node #3(TxComp ring id #0) TxComplete IRQ info */
+				   <0 331 4>,			/* PPEDS Node #3(Rx Desc ring id #0) Rx Desc IRQ info */
+				   <0 355 4>;			/* PPEDS Node #3(RxFill Desc ring id #0) Rx Fill IRQ info */
+
 		};
 
 	};

@@ -494,7 +494,8 @@ static inline int cpu_is_nss_crypto_enabled(void)
 	return  cpu_is_ipq807x() || cpu_is_ipq60xx() ||
 		cpu_is_ipq50xx() || cpu_is_ipq9570() ||
 		cpu_is_ipq9550() || cpu_is_ipq9574() ||
-		cpu_is_ipq9554() || cpu_is_ipq53xx();
+		cpu_is_ipq9554() || cpu_is_ipq5332() ||
+		cpu_is_ipq5322();
 #else
 	return 0;
 #endif

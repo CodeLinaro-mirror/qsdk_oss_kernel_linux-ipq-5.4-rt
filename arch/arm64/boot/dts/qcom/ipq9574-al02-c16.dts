@@ -3,7 +3,7 @@
  * IPQ9574 AL02-C16 board device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 /dts-v1/;
@@ -78,6 +78,62 @@
 
 		pcie1_phy: phy@fc000 {
 			status = "ok";
+		};
+
+		edma@3ab00000 {
+			qcom,ppeds-num = <4>;			/* Number of PPEDS nodes */
+			/* PPE-DS node format: <Rx-fill Tx-cmpl Rx Tx Queue-base Queue-count> */
+			qcom,ppeds-map = <1 1 1 1 32 8>,	/* PPEDS Node#0 ring and queue map */
+					<2 2 2 2 40 8>,		/* PPEDS Node#1 ring and queue map */
+					<3 3 3 3 48 8>,		/* PPEDS Node#2 ring and queue map */
+					<0 0 0 0 56 8>;		/* PPEDS Node#3 ring and queue map */
+
+			interrupts = <0 367 4>,			/* Tx complete ring id #4 IRQ info */
+				   <0 368 4>,			/* Tx complete ring id #5 IRQ info */
+				   <0 369 4>,			/* Tx complete ring id #6 IRQ info */
+				   <0 370 4>,			/* Tx complete ring id #7 IRQ info */
+				   <0 371 4>,			/* Tx complete ring id #8 IRQ info */
+				   <0 372 4>,			/* Tx complete ring id #9 IRQ info */
+				   <0 373 4>,			/* Tx complete ring id #10 IRQ info */
+				   <0 374 4>,			/* Tx complete ring id #11 IRQ info */
+				   <0 375 4>,			/* Tx complete ring id #12 IRQ info */
+				   <0 376 4>,			/* Tx complete ring id #13 IRQ info */
+				   <0 377 4>,			/* Tx complete ring id #14 IRQ info */
+				   <0 378 4>,			/* Tx complete ring id #15 IRQ info */
+				   <0 379 4>,			/* Tx complete ring id #16 IRQ info */
+				   <0 380 4>,			/* Tx complete ring id #17 IRQ info */
+				   <0 381 4>,			/* Tx complete ring id #18 IRQ info */
+				   <0 382 4>,			/* Tx complete ring id #19 IRQ info */
+				   <0 383 4>,			/* Tx complete ring id #20 IRQ info */
+				   <0 384 4>,			/* Tx complete ring id #21 IRQ info */
+				   <0 509 4>,			/* Tx complete ring id #22 IRQ info */
+				   <0 508 4>,			/* Tx complete ring id #23 IRQ info */
+				   <0 507 4>,			/* Tx complete ring id #24 IRQ info */
+				   <0 506 4>,			/* Tx complete ring id #25 IRQ info */
+				   <0 505 4>,			/* Tx complete ring id #26 IRQ info */
+				   <0 504 4>,			/* Tx complete ring id #27 IRQ info */
+				   <0 503 4>,			/* Tx complete ring id #28 IRQ info */
+				   <0 502 4>,			/* Tx complete ring id #29 IRQ info */
+				   <0 501 4>,			/* Tx complete ring id #30 IRQ info */
+				   <0 500 4>,			/* Tx complete ring id #31 IRQ info */
+				   <0 351 4>,			/* Rx desc ring id #20 IRQ info */
+				   <0 352 4>,			/* Rx desc ring id #21 IRQ info */
+				   <0 353 4>,			/* Rx desc ring id #22 IRQ info */
+				   <0 354 4>,			/* Rx desc ring id #23 IRQ info */
+				   <0 261 4>,			/* Misc error IRQ info */
+				   <0 364 4>,			/* PPEDS Node #0(TxComp ring id #1) TxComplete IRQ info */
+				   <0 332 4>,			/* PPEDS Node #0(Rx Desc ring id #1) Rx Desc IRQ info */
+				   <0 356 4>,			/* PPEDS Node #0(RxFill Desc ring id #1) Rx Fill IRQ info */
+				   <0 365 4>,			/* PPEDS Node #1(TxComp ring id #2) TxComplete IRQ info */
+				   <0 333 4>,			/* PPEDS Node #1(Rx Desc ring id #2) Rx Desc IRQ info */
+				   <0 357 4>,			/* PPEDS Node #1(RxFill Desc ring id #2) Rx Fill IRQ info */
+				   <0 366 4>,			/* PPEDS Node #2(TxComp ring id #3) TxComplete IRQ info */
+				   <0 334 4>,			/* PPEDS Node #2(Rx Desc ring id #3) Rx Desc IRQ info */
+				   <0 358 4>,			/* PPEDS Node #2(RxFill Desc ring id #3) Rx Fill IRQ info */
+				   <0 363 4>,			/* PPEDS Node #3(TxComp ring id #0) TxComplete IRQ info */
+				   <0 331 4>,			/* PPEDS Node #3(Rx Desc ring id #0) Rx Desc IRQ info */
+				   <0 355 4>;			/* PPEDS Node #3(RxFill Desc ring id #0) Rx Fill IRQ info */
+
 		};
 
 	};

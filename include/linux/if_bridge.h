@@ -108,6 +108,12 @@ int br_vlan_get_pvid_rcu(const struct net_device *dev, u16 *p_pvid);
 int br_vlan_get_proto(const struct net_device *dev, u16 *p_proto);
 int br_vlan_get_info(const struct net_device *dev, u16 vid,
 		     struct bridge_vlan_info *p_vinfo);
+
+extern struct net_device *br_fdb_find_vid_by_mac(struct net_device *dev, u8 *mac, u16 *vid);
+extern int br_vlan_get_tag_skb(const struct sk_buff *skb, u16 *vid);
+extern int br_dev_is_vlan_filter_enabled(const struct net_device *dev);
+extern int br_vlan_update_stats(struct net_device* dev, u32 vid, u64 rx_bytes, u64 rx_packets, u64 tx_bytes, u64 tx_packets);
+extern int br_vlan_get_info_rcu(const struct net_device *dev, u16 vid, struct bridge_vlan_info *p_vinfo);
 #else
 static inline bool br_vlan_enabled(const struct net_device *dev)
 {
@@ -129,8 +135,32 @@ static inline int br_vlan_get_pvid_rcu(const struct net_device *dev, u16 *p_pvid
 	return -EINVAL;
 }
 
-static inline int br_vlan_get_info(const struct net_device *dev, u16 vid,
-				   struct bridge_vlan_info *p_vinfo)
+static inline int br_vlan_get_info(const struct net_device *dev, u16 vid, struct bridge_vlan_info *p_vinfo)
+{
+	return -EINVAL;
+}
+
+static inline struct net_device *br_fdb_find_vid_by_mac(struct net_device *dev, u8 *mac, u16 *vid)
+{
+	return NULL;
+}
+
+static inline int br_vlan_get_tag_skb(const struct sk_buff *skb, u16 *vid)
+{
+	return -EINVAL;
+}
+
+static inline int br_dev_is_vlan_filter_enabled(const struct net_device *dev)
+{
+	return -EINVAL;
+}
+
+static inline int br_vlan_update_stats(struct net_device* dev, u32 vid, u64 rx_bytes, u64 rx_packets, u64 tx_bytes, u64 tx_packets)
+{
+	return -EINVAL;
+}
+
+static inline int br_vlan_get_info_rcu(const struct net_device *dev, u16 vid, struct bridge_vlan_info *p_vinfo)
 {
 	return -EINVAL;
 }

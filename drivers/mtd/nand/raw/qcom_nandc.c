@@ -302,6 +302,8 @@ nandc_set_reg(nandc, reg,			\
  */
 #define NAND_ERASED_CW_SET		BIT(4)
 
+#define NAND_MID_WINBOND		0xEF
+
 /*
  * An array holding the fixed pattern
  */
@@ -1561,6 +1563,12 @@ static int read_id(struct qcom_nand_host *host, int column)
 	write_reg_dma(nandc, NAND_EXEC_CMD, 1, NAND_BAM_NEXT_SGL);
 
 	read_reg_dma(nandc, NAND_READ_ID, 1, NAND_BAM_NEXT_SGL);
+
+	if (nandc->props->is_serial_nand &&
+		((le32_to_cpu(nandc->reg_read_buf[0]) & 0xFF) ==
+		NAND_MID_WINBOND)) {
+		nandc->buf_count = 4;
+	}
 
 	return 0;
 }

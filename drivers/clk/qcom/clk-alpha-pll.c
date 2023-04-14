@@ -429,61 +429,6 @@ static int clk_alpha_pll_stromer_set_rate(struct clk_hw *hw, unsigned long rate,
 	return 0;
 }
 
-static int clk_alpha_pll_stromer_plus_set_rate(struct clk_hw *hw, unsigned long rate,
-					 unsigned long prate)
-{
-	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 l;
-	int ret;
-	u64 a;
-
-	rate = alpha_pll_stromer_round_rate(rate, prate, &l, &a);
-
-	/* Write desired values to registers */
-	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CFG_RCGR,
-		GPLL0_MAIN | DIV_1);
-	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CMD_RCGR, ROOT_EN | UPDATE);
-	/* Make sure UPDATE request goes through */
-	mb();
-	udelay(1);
-
-	regmap_write(pll->clkr.regmap, PLL_MODE(pll), 0);
-	/* Delay of 2 output clock ticks required until output is disabled */
-	mb();
-	udelay(1);
-	regmap_write(pll->clkr.regmap, PLL_L_VAL(pll), l);
-	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL(pll), a);
-	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL_U(pll),
-					a >> ALPHA_BITWIDTH);
-
-	regmap_write(pll->clkr.regmap, PLL_MODE(pll), PLL_BYPASSNL);
-	mb();
-	/* Wait five micro seconds or more */
-	udelay(5);
-	regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll), PLL_RESET_N,
-			   PLL_RESET_N);
-	mb();
-	/* The lock time should be less than 50 micro seconds worst case */
-	udelay(50);
-
-	/* Poll LOCK_DET for one */
-	ret = wait_for_pll_enable_lock(pll);
-	if (ret) {
-		pr_err("alpha pll running in 800 MHz with source GPLL0\n");
-		return ret;
-	}
-	regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll), PLL_OUTCTRL,
-			   PLL_OUTCTRL);
-
-	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CFG_RCGR, PLL_EARLY);
-	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CMD_RCGR, ROOT_EN | UPDATE);
-	/* Make sure UPDATE request goes through */
-	mb();
-	udelay(1);
-
-	return 0;
-}
-
 static int clk_alpha_pll_hwfsm_enable(struct clk_hw *hw)
 {
 	int ret;
@@ -714,6 +659,77 @@ clk_alpha_pll_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
 	}
 
 	return alpha_pll_calc_rate(prate, l, a, alpha_width);
+}
+
+static int clk_alpha_pll_stromer_plus_determine_rate(struct clk_hw *hw,
+					 struct clk_rate_request *req)
+{
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	u32 l, alpha_width = pll_alpha_width(pll);
+	u64 a;
+
+	req->rate = alpha_pll_round_rate(req->rate, req->best_parent_rate, &l,
+					 &a, alpha_width);
+	return 0;
+}
+
+static int clk_alpha_pll_stromer_plus_set_rate(struct clk_hw *hw, unsigned long rate,
+					 unsigned long prate)
+{
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	u32 l, alpha_width = pll_alpha_width(pll);
+	int ret;
+	u64 a;
+
+	rate = alpha_pll_round_rate(rate, prate, &l, &a, alpha_width);
+
+	/* Write desired values to registers */
+	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CFG_RCGR,
+		GPLL0_MAIN | DIV_1);
+	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CMD_RCGR, ROOT_EN | UPDATE);
+	/* Make sure UPDATE request goes through */
+	mb();
+	udelay(1);
+
+	regmap_write(pll->clkr.regmap, PLL_MODE(pll), 0);
+	/* Delay of 2 output clock ticks required until output is disabled */
+	mb();
+	udelay(1);
+	regmap_write(pll->clkr.regmap, PLL_L_VAL(pll), l);
+
+	if (alpha_width > ALPHA_BITWIDTH)
+		a <<= alpha_width - ALPHA_BITWIDTH;
+
+	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL(pll), a);
+	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL_U(pll),
+					a >> ALPHA_BITWIDTH);
+
+	regmap_write(pll->clkr.regmap, PLL_MODE(pll), PLL_BYPASSNL);
+	mb();
+	/* Wait five micro seconds or more */
+	udelay(5);
+	regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll), PLL_RESET_N,
+			   PLL_RESET_N);
+	mb();
+	/* The lock time should be less than 50 micro seconds worst case */
+	udelay(50);
+
+	/* Poll LOCK_DET for one */
+	ret = wait_for_pll_enable_lock(pll);
+	if (ret) {
+		pr_err("alpha pll running in 800 MHz with source GPLL0\n");
+		return ret;
+	}
+	regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll), PLL_OUTCTRL,
+			   PLL_OUTCTRL);
+
+	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CFG_RCGR, PLL_EARLY);
+	regmap_write(pll->clkr.regmap, APCS_ALIAS0_CMD_RCGR, ROOT_EN | UPDATE);
+	/* Make sure UPDATE request goes through */
+	mb();
+	udelay(1);
+
+	return 0;
 }
 
 static int clk_alpha_pll_brammo_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -1246,8 +1262,8 @@ const struct clk_ops clk_alpha_pll_stromer_plus_ops = {
 	.enable = clk_alpha_pll_enable,
 	.disable = clk_alpha_pll_disable,
 	.is_enabled = clk_alpha_pll_is_enabled,
-	.recalc_rate = clk_alpha_pll_stromer_recalc_rate,
-	.determine_rate = clk_alpha_pll_stromer_determine_rate,
+	.recalc_rate = clk_alpha_pll_recalc_rate,
+	.determine_rate = clk_alpha_pll_stromer_plus_determine_rate,
 	.set_rate = clk_alpha_pll_stromer_plus_set_rate,
 };
 EXPORT_SYMBOL_GPL(clk_alpha_pll_stromer_plus_ops);

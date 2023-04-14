@@ -138,20 +138,20 @@
 			 * Frequency     BIT3   BIT2   BIT1    BIT0    opp-supported-hw
 			 *              1.0GHz 1.2GHz 1.5GHz No Limit
 			 * ------------------------------------------------------------
-			 * 1080000000     1      1      1       1            0xF
-			 * 1488000000     0      0      1       1            0x3
+			 * 1100000000     1      1      1       1            0xF
+			 * 1500000000     0      0      1       1            0x3
 			 * -----------------------------------------------------------
 			 */
 
-			opp-1080000000 {
-				opp-hz = /bits/ 64 <1080000000>;
+			opp-1100000000 {
+				opp-hz = /bits/ 64 <1100000000>;
 				opp-microvolt = <850000>;
 				opp-supported-hw = <0xF>;
 				clock-latency-ns = <200000>;
 			};
 
-			opp-1488000000 {
-				opp-hz = /bits/ 64 <1488000000>;
+			opp-1500000000 {
+				opp-hz = /bits/ 64 <1500000000>;
 				opp-microvolt = <950000>;
 				opp-supported-hw = <0x3>;
 				clock-latency-ns = <200000>;
@@ -278,6 +278,9 @@
 			reg = <0x4b1000 0x800>;
 			phy-type = "gen3";
 			#phy-cells = <0>;
+			qti,multiplexed-phy;
+			qti,phy-mux-regs = <&tcsr_q6_block 0x2544>;
+			phy-ahb-shared-reset;
 			clocks = <&gcc GCC_PCIE3X2_PIPE_CLK>,
 				<&gcc GCC_SNOC_PCIE3_2LANE_M_CLK>,
 				<&gcc GCC_SNOC_PCIE3_2LANE_S_CLK>,
@@ -289,10 +292,8 @@
 					"phy_ahb_clk";
 
 			resets = <&gcc GCC_PCIE3X2_PHY_BCR>,
-				<&gcc GCC_PCIE3X2PHY_PHY_BCR>,
 				<&gcc GCC_PCIE3X2_PHY_AHB_CLK_ARES>;
 			reset-names = "phy",
-					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
 			status = "disabled";
@@ -304,6 +305,7 @@
 			reg = <0x4b1800 0x800>;
 			phy-type = "gen3";
 			#phy-cells = <0>;
+			phy-ahb-shared-reset;
 
 			qti,multiplexed-phy;
 			qti,phy-mux-regs = <&tcsr_q6_block 0x2544>;
@@ -319,10 +321,8 @@
 					"phy_ahb_clk";
 
 			resets = <&gcc GCC_PCIE3X1_1_PHY_BCR>,
-				<&gcc GCC_PCIE3X1_1_PHY_PHY_BCR>,
 				<&gcc GCC_PCIE3X2_PHY_AHB_CLK_ARES>;
 			reset-names = "phy",
-					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
 			status = "disabled";
@@ -346,10 +346,8 @@
 					"phy_ahb_clk";
 
 			resets = <&gcc GCC_PCIE3X2_PHY_BCR>,
-				<&gcc GCC_PCIE3X2PHY_PHY_BCR>,
 				<&gcc GCC_PCIE3X2_PHY_AHB_CLK_ARES>;
 			reset-names = "phy",
-					"phy_phy",
 					"phy_ahb";
 			mode-fixed = <2>; /* TBD */
 			x2 = <1>;
@@ -389,6 +387,51 @@
 				msi-controller;
 				reg = <0x2000 0xffd>;
 			};
+		};
+
+		lpass: lpass@0xA000000{
+			compatible = "qca,lpass-ipq5332";
+			reg =  <0xA000000 0x3BFFFF>;
+			clocks = <&gcc GCC_LPASS_SWAY_CLK>,
+			<&gcc GCC_LPASS_CORE_AXIM_CLK>,
+			<&gcc GCC_SNOC_LPASS_CFG_CLK>,
+			<&gcc GCC_PCNOC_LPASS_CLK>;
+			clock-names = "sway", "axim", "snoc_cfg", "pcnoc";
+			resets = <&gcc GCC_LPASS_BCR>;
+			reset-names = "lpass";
+			status = "disabled";
+		};
+
+		pcm: pcm@0xA3C0000{
+			compatible = "qca,ipq5332-lpass-pcm";
+			reg =  <0xA3C0000 0x23014>;
+			status = "disabled";
+
+			pcm0: pcm0@0 {
+				interrupts = <0 370 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "out0";
+				capture_memory = "lpm";
+				playback_memory = "lpm";
+				voice_loopback = <0>;
+				slave = <0>;
+				status = "disabled";
+			};
+
+			pcm1: pcm1@1 {
+				interrupts = <0 371 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "out1";
+				capture_memory = "lpm";
+				playback_memory = "lpm";
+				voice_loopback = <0>;
+				slave = <0>;
+				status = "disabled";
+			};
+
+		};
+
+		pcm_lb: pcm_lb@0 {
+			compatible = "qca,ipq5332-pcm-lb";
+			status = "disabled";
 		};
 
 		mdio@90000 {
@@ -1020,6 +1063,21 @@
 			status = "disabled";
 		};
 
+		spi2: spi@78b7000 {
+			compatible = "qcom,spi-qup-v2.2.1";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x078b7000 0x600>;
+			interrupts = <GIC_SPI 294 IRQ_TYPE_LEVEL_HIGH>;
+			spi-max-frequency = <50000000>;
+			clocks = <&gcc GCC_BLSP1_QUP3_SPI_APPS_CLK>,
+				<&gcc GCC_BLSP1_AHB_CLK>;
+			clock-names = "core", "iface";
+			dmas = <&blsp_dma 8>, <&blsp_dma 9>;
+			dma-names = "tx", "rx";
+			status = "disabled";
+		};
+
 		i2c_0: i2c@78b5000 {
 			compatible = "qcom,i2c-qup-v2.2.1";
 			#address-cells = <1>;
@@ -1247,7 +1305,7 @@
 				0x10100000 0x1000>;
 			reg-names = "dbi", "elbi", "atu", "parf", "config";
 			device_type = "pci";
-			linux,pci-domain = <0>;
+			linux,pci-domain = <2>;
 			bus-range = <0x00 0xff>;
 			num-lanes = <1>;
 			#address-cells = <3>;
@@ -1278,7 +1336,7 @@
 			clocks = <&gcc GCC_PCIE3X1_1_AXI_M_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AXI_S_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AHB_CLK>,
-				 <&gcc GCC_PCIE3X1_1_AUX_CLK>,
+				 <&gcc GCC_PCIE3X2_AUX_CLK>,
 				 <&gcc GCC_PCIE3X1_1_AXI_S_BRIDGE_CLK>,
 				 <&gcc GCC_PCIE3X1_1_RCHG_CLK>;
 
@@ -1315,6 +1373,7 @@
 			max-payload-size = <1>;
 			perst-gpio = <&tlmm 44 GPIO_ACTIVE_LOW>;
 			status = "disabled";
+			nvmem-cells = <&pcie2_disable>;
 
 			pcie2_rp: pcie2_rp {
 				reg = <0 0 0 0 0>;
@@ -1404,6 +1463,7 @@
 			max-payload-size = <1>;
 			perst-gpio = <&tlmm 47 GPIO_ACTIVE_LOW>;
 			status = "disabled";
+			nvmem-cells = <&pcie1_disable>;
 
 			pcie1_rp: pcie1_rp {
 				reg = <0 0 0 0 0>;
@@ -1490,6 +1550,7 @@
 			max-payload-size = <1>;
 			perst-gpio = <&tlmm 38 GPIO_ACTIVE_LOW>;
 			status = "disabled";
+			nvmem-cells = <&pcie0_disable>;
 
 			pcie0_rp: pcie0_rp {
 				reg = <0 0 0 0 0>;
@@ -2318,6 +2379,7 @@
 			qcom,bootargs_version = <2>;
 			qcom,userpd-bootargs;
 			license-file = "";
+			qcom,heartbeat_smem = <508>;
 			glink-edge {
 				interrupts = <GIC_SPI 417 IRQ_TYPE_EDGE_RISING>;
 				qcom,remote-pid = <1>;
@@ -2471,6 +2533,21 @@
 
 			tsens_calib_offset: calib@3A4 {
 				reg = <0x3A4 0xC>;
+			};
+
+			pcie0_disable: pcie0_disable@25 {
+				reg = <0x25 0x1>;
+				bits = <3 1>;
+			};
+
+			pcie1_disable: pcie1_disable@25 {
+				reg = <0x25 0x1>;
+				bits = <4 1>;
+			};
+
+			pcie2_disable: pcie2_disable@25 {
+				reg = <0x25 0x1>;
+				bits = <2 1>;
 			};
 		};
 	};

@@ -24,6 +24,7 @@
 #include <linux/interrupt.h>
 #include <linux/kthread.h>
 #include <linux/dma-mapping.h>
+#include <linux/debugfs.h>
 #ifdef CONFIG_IPQ_SUBSYSTEM_RAMDUMP
 #include <soc/qcom/ramdump.h>
 #endif
@@ -174,6 +175,8 @@ static int debug_wcss;
 static int userpd1_bootaddr;
 static int userpd2_bootaddr;
 static int userpd3_bootaddr;
+static struct dentry *heartbeat_hdl;
+
 /**
  * enum state - state of a wcss (private)
  * @WCSS_NORMAL: subsystem is operating normally
@@ -385,8 +388,9 @@ static int qcom_get_pd_fw_info(struct q6_wcss *wcss, const struct firmware *fw,
 				struct ramdump_segment *segs, int index,
 				struct qcom_pd_fw_info *fw_info)
 {
-	int ret = get_pd_fw_info(wcss->dev, fw, wcss->mem_phys, wcss->mem_size,
-			wcss->pd_asid, fw_info);
+	int ret = get_pd_fw_info(wcss->dev, fw, wcss->mem_phys,
+			wcss->mem_size, wcss->pd_asid, fw_info);
+
 	if (ret) {
 		dev_err(wcss->dev, "couldn't get PD firmware info : %d\n", ret);
 		return ret;
@@ -454,8 +458,13 @@ static void crashdump_init(struct rproc *rproc,
 
 	num_segs = of_count_phandle_with_args(np, "memory-region", NULL);
 	if (num_segs <= 0) {
-		dev_err(&rproc->dev, "Could not find memory regions to dump");
-		goto free_device;
+		if (!wcss->pd_asid) {
+			dev_err(&rproc->dev, "Could not find memory regions to dump");
+			goto free_device;
+		}
+		dev_info(&rproc->dev, "memory regions to dump not defined in DTS");
+		dev_info(&rproc->dev, "taking dump of FW PIL segment data");
+		num_segs = 0;
 	}
 
 	if (wcss->pd_asid)
@@ -2281,6 +2290,7 @@ static int q6_wcss_stop(struct rproc *rproc)
 		lic_param.dma_buf = 0x0;
 	}
 pas_done:
+	debugfs_remove(heartbeat_hdl);
 	qcom_q6v5_unprepare(&wcss->q6);
 
 	return 0;
@@ -2486,7 +2496,7 @@ static void *q6_wcss_da_to_va(struct rproc *rproc, u64 da, int len)
 	return wcss->mem_region + offset;
 }
 
-static int load_license_params_to_bootargs(struct device *dev,
+static void load_license_params_to_bootargs(struct device *dev,
 					struct bootargs_smem_info *boot_args)
 {
 	int ret = 0;
@@ -2499,12 +2509,13 @@ static int load_license_params_to_bootargs(struct device *dev,
 	ret = of_property_read_string(dev->of_node, "license-file",
 							&lic_file_name);
 	if (ret)
-		return ret;
+		return;
 
 	ret = request_firmware(&file, lic_file_name, dev);
 	if (ret) {
-		dev_err(dev, "request_firmware failed: %d\n", ret);
-		return ret;
+		dev_err(dev, "Error in loading file (%s) : %d,"
+			" Assuming no license mode\n", lic_file_name, ret);
+		return;
 	}
 
 	/* No of elements */
@@ -2517,7 +2528,7 @@ static int load_license_params_to_bootargs(struct device *dev,
 	if (!lic_param.buf) {
 		release_firmware(file);
 		pr_err("failed to allocate memory\n");
-		return PTR_ERR(lic_param.buf);
+		return;
 	}
 	memcpy(lic_param.buf, file->data, file->size);
 	lic_param.size = file->size;
@@ -2542,7 +2553,7 @@ static int load_license_params_to_bootargs(struct device *dev,
 	memcpy_toio(boot_args->smem_bootargs_ptr,
 					&lic_bootargs, sizeof(lic_bootargs));
 	boot_args->smem_bootargs_ptr += sizeof(lic_bootargs);
-	return ret;
+	return;
 }
 
 static int load_userpd_params_to_bootargs(struct device *dev,
@@ -2610,6 +2621,65 @@ static int load_userpd_params_to_bootargs(struct device *dev,
 		memcpy_toio(boot_args->smem_bootargs_ptr,
 					&upd_bootargs, sizeof(upd_bootargs));
 		boot_args->smem_bootargs_ptr += sizeof(upd_bootargs);
+	}
+	return ret;
+}
+
+static ssize_t show_smem_addr(struct file *file, char __user *user_buf,
+			      size_t count, loff_t *ppos)
+{
+	void *smem_pa = file->private_data;
+	char _buf[16] = {0};
+
+	snprintf(_buf, sizeof(_buf), "0x%lX\n", (uintptr_t)smem_pa);
+	return simple_read_from_buffer(user_buf, count, ppos, _buf,
+				       strnlen(_buf, 16));
+}
+
+static const struct file_operations heartbeat_smem_ops = {
+	.open = simple_open,
+	.read = show_smem_addr,
+};
+
+static int create_heartbeat_smem(struct device *dev)
+{
+	u32 smem_id;
+	void *ptr;
+	size_t size;
+	int ret;
+	const char *key = "qcom,heartbeat_smem";
+
+	ret = of_property_read_u32(dev->of_node, key, &smem_id);
+	if (ret) {
+		dev_err(dev, "failed to get heartbeat smem id\n");
+		return ret;
+	}
+
+	ret = qcom_smem_alloc(REMOTE_PID, smem_id,
+			      Q6_BOOT_ARGS_SMEM_SIZE);
+	if (ret && ret != -EEXIST) {
+		dev_err(dev, "failed to allocate heartbeat smem segment\n");
+		return ret;
+	}
+
+	ptr = qcom_smem_get(REMOTE_PID, smem_id, &size);
+	if (IS_ERR(ptr)) {
+		dev_err(dev,
+			"Unable to acquire smem item(%d) ret:%ld\n",
+			smem_id, PTR_ERR(ptr));
+		return PTR_ERR(ptr);
+	}
+
+	/* Create sysfs entry to expose smem PA */
+	heartbeat_hdl = debugfs_create_file("heartbeat_address",
+					    0400, NULL,
+					    (void *)qcom_smem_virt_to_phys(ptr),
+					    &heartbeat_smem_ops);
+	if (IS_ERR_OR_NULL(heartbeat_hdl)) {
+		ret = PTR_ERR(heartbeat_hdl);
+		dev_err(dev,
+			"Unable to create heartbeat sysfs entry ret:%ld\n",
+			PTR_ERR(ptr));
 	}
 	return ret;
 }
@@ -2708,13 +2778,15 @@ static int share_bootargs_to_q6(struct device *dev)
 		return ret;
 	}
 
-	ret = load_license_params_to_bootargs(dev, &boot_args);
-	if (ret < 0) {
-		pr_err("failed to read license file ret:%d\n", ret);
+	ret = create_heartbeat_smem(dev);
+	if (ret && ret != -EEXIST) {
+		pr_err("failed to create heartbeat smem ret:0x%X\n", ret);
 		return ret;
 	}
 
-	return ret;
+	load_license_params_to_bootargs(dev, &boot_args);
+
+	return 0;
 }
 
 static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
@@ -3722,6 +3794,8 @@ static const struct wcss_data q6_ipq5018_res_init = {
 
 static const struct wcss_data wcss_ahb_ipq5332_res_init = {
 	.init_clock = ipq5332_init_wcss_clock,
+	.crash_reason_smem = WCSS_CRASH_REASON,
+	.remote_id = WCSS_SMEM_HOST,
 	.wcss_clk_enable = enable_ipq5332_wcss_clocks,
 	.wcss_clk_disable = disable_ipq5332_wcss_clocks,
 	.init_irq = init_irq,
@@ -3762,6 +3836,7 @@ static const struct wcss_data wcss_ahb_ipq5018_res_init = {
 static const struct wcss_data wcss_pcie_ipq5332_res_init = {
 	.init_irq = init_irq,
 	.crash_reason_smem = WCSS_CRASH_REASON,
+	.remote_id = WCSS_SMEM_HOST,
 	.ops = &wcss_pcie_ipq5332_ops,
 	.need_mem_protection = true,
 	.need_auto_boot = false,

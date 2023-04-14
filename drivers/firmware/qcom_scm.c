@@ -669,6 +669,15 @@ int qti_sec_upgrade_auth(unsigned int scm_cmd_id, unsigned int sw_type,
 }
 EXPORT_SYMBOL(qti_sec_upgrade_auth);
 
+int qti_sec_upgrade_auth_meta_data(unsigned int scm_cmd_id, unsigned int sw_type,
+					unsigned int img_size, unsigned int load_addr,
+					void* hash_addr, unsigned int hash_size)
+{
+	return __qti_sec_upgrade_auth_meta_data(__scm->dev, scm_cmd_id, sw_type,
+					img_size, load_addr, hash_addr, hash_size);
+}
+EXPORT_SYMBOL(qti_sec_upgrade_auth_meta_data);
+
 /**
  * qti_scm_sec_auth_available() - Check if SEC_AUTH is supported.
  *

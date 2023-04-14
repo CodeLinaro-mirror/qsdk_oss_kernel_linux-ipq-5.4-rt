@@ -29,10 +29,13 @@
 
 #define NON_SECURE_WATCHDOG		0x1
 #define AHB_TIMEOUT			0x3
+#define NOC_ERROR			0x6
 #define SYSTEM_RESET_OR_REBOOT		0x10
 #define POWER_ON_RESET			0x20
 #define SECURE_WATCHDOG			0x23
 #define HLOS_PANIC			0x47
+#define VFSM_RESET			0x68
+#define TME_L_FATAL_ERROR		0x49
 
 #define RESET_REASON_MSG_MAX_LEN	100
 
@@ -149,6 +152,10 @@ static int restart_reason_logging(struct platform_device *pdev)
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
 						"%s", "AHB Timeout");
 			break;
+		case NOC_ERROR:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "NOC Error");
+			break;
 		case SYSTEM_RESET_OR_REBOOT:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
 						"%s", "System reset or reboot");
@@ -164,6 +171,14 @@ static int restart_reason_logging(struct platform_device *pdev)
 		case HLOS_PANIC:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
 						"%s", "HLOS Panic");
+			break;
+		case VFSM_RESET:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "VFSM Reset");
+			break;
+		case TME_L_FATAL_ERROR:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "TME-L Fatal Error");
 			break;
 		default:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,

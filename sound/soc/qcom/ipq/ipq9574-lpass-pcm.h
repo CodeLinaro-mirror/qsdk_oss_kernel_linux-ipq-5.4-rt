@@ -122,7 +122,8 @@
 enum ipq_hw_type {
 	IPQ5018,
 	IPQ9574,
-	IPQ8074
+	IPQ8074,
+	IPQ5332
 };
 
 enum ipq_pcm_sampling_rate {

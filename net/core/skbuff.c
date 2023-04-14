@@ -670,6 +670,13 @@ skb_fail:
 	return skb;
 }
 EXPORT_SYMBOL(__netdev_alloc_skb_no_skb_reset);
+#else
+struct sk_buff *__netdev_alloc_skb_no_skb_reset(struct net_device *dev,
+						unsigned int length, gfp_t gfp_mask)
+{
+	return __netdev_alloc_skb(dev, length, gfp_mask);
+}
+EXPORT_SYMBOL(__netdev_alloc_skb_no_skb_reset);
 #endif
 
 /**

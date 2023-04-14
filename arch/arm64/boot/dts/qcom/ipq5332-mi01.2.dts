@@ -28,6 +28,7 @@
 			status = "ok";
 		};
 
+
 		pcie@20000000 {
 			status = "ok";
 			pcie0_rp {
@@ -41,7 +42,8 @@
 					memory-region = <0>, <&mhi_region0>;
 #else
 					memory-region = <&qcn9224_pcie0>;
-					qcom,board_id = <0x02>;
+					qcom,board_id = <0x15>;
+					qcom,wsi = <&wsi>;
 #endif
 				};
 			};
@@ -51,12 +53,14 @@
 
 &wifi0 {
 	qcom,rproc = <&q6_wcss_pd1>;
+	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,multipd_arch;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 #if defined(__CNSS2__)
 	mem-region = <&q6_region>;
 #else
 	memory-region = <&q6_region>;
+	qcom,wsi = <&wsi>;
 #endif
 	qcom,board_id = <0x12>;
 	status = "ok";

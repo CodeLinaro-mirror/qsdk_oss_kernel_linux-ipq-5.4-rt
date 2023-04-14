@@ -188,6 +188,12 @@ extern int __qti_sec_upgrade_auth(struct device *dev, unsigned int scm_cmd_id,
 							unsigned int sw_type,
 							unsigned int img_size,
 							unsigned int load_addr);
+extern int __qti_sec_upgrade_auth_meta_data(struct device *dev, unsigned int scm_cmd_id,
+							unsigned int sw_type,
+							unsigned int img_size,
+							unsigned int load_addr,
+							void* hash_addr,
+							unsigned int hash_size);
 extern int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 					void *cmd_buf, size_t size);
 

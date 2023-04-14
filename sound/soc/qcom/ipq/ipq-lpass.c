@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -293,7 +293,7 @@ void ipq_lpass_pcm_config(struct ipq_lpass_pcm_config *configPtr,
 	value = (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_EN_ENABLE_FVAL <<
 			HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_EN_SHFT);
 
-	if (ipq_hw == IPQ9574) {
+	if (ipq_hw == IPQ9574 || ipq_hw == IPQ5332) {
 		mask |= HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_EN_BMSK |
 			HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_DIR_BMSK;
 		value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE1_EN_ENABLE_FVAL <<
@@ -301,7 +301,7 @@ void ipq_lpass_pcm_config(struct ipq_lpass_pcm_config *configPtr,
 	}
 	regOffset = HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_OFFS(pcm_index);
 
-	if (ipq_hw == IPQ9574) {
+	if (ipq_hw == IPQ9574 || ipq_hw == IPQ5332) {
 		if (TDM_SINK == dir) {
 			value |= (HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SPKR_FVAL
 				<< HWIO_LPASS_LPAIF_PCM_LANE_CONFIG_a_LANE0_DIR_SHFT);
@@ -668,7 +668,7 @@ static void ipq_lpass_dma_config_channel_sink(struct lpass_dma_config *config)
 	value = (config->ifconfig) <<
 			HWIO_LPASS_LPAIF_RDDMA_CTLa_AUDIO_INTF_SHFT;
 
-	if  (ipq_hw == IPQ9574) {
+	if  (ipq_hw == IPQ9574 || ipq_hw == IPQ5332) {
 		mask |= HWIO_LPASS_LPAIF_RDDMA_CTLa_ENABLE_BMSK;
 		value |= (0x1 << HWIO_LPASS_LPAIF_RDDMA_CTLa_ENABLE_SHFT);
 	}
@@ -753,7 +753,7 @@ static void ipq_lpass_dma_config_channel_source(struct lpass_dma_config *config)
 	value = (config->ifconfig) <<
 			HWIO_LPASS_LPAIF_WRDMA_CTLa_AUDIO_INTF_SHFT;
 
-	if ( ipq_hw == IPQ9574 ) {
+	if ( ipq_hw == IPQ9574 || ipq_hw == IPQ5332) {
 		mask |= HWIO_LPASS_LPAIF_WRDMA_CTLa_ENABLE_BMSK;
 		value |= (0x1 << HWIO_LPASS_LPAIF_WRDMA_CTLa_ENABLE_SHFT);
 	}
@@ -1234,7 +1234,7 @@ void ipq_lpass_lpaif_muxsetup(uint32_t intf, uint32_t mode, uint32_t val, uint32
 }
 EXPORT_SYMBOL(ipq_lpass_lpaif_muxsetup);
 
-static uint32_t ipq_lpass_calculatespark_pll_vco(struct ipq_lpass_pll p)
+static uint32_t ipq_lpass_calculatespark_pll_vco_v1(struct ipq_lpass_pll p)
 {
 	uint32_t vco_sel = 0;
 	uint32_t temp_l;
@@ -1260,6 +1260,32 @@ static uint32_t ipq_lpass_calculatespark_pll_vco(struct ipq_lpass_pll p)
 	return vco_sel;
 }
 
+static uint32_t ipq_lpass_calculatespark_pll_vco_v2(struct ipq_lpass_pll p)
+{
+	uint32_t vco_sel = 0;
+	uint32_t temp_l;
+
+	if (p.pre_div != 0) {
+		temp_l = p.l / p.pre_div;
+	} else {
+		temp_l = p.l;
+	}
+
+	if (temp_l > 42 && temp_l < 83) {
+		vco_sel = 0;
+	} else if (temp_l > 31 && temp_l < 63) {
+		vco_sel = 1;
+	} else if (temp_l > 20 && temp_l < 42) {
+		vco_sel = 2;
+	} else if (temp_l > 10 && temp_l < 21) {
+		vco_sel = 3;
+	} else {
+		temp_l = 0;
+	}
+
+	return vco_sel;
+}
+
 static void ipq_lpass_setup_audio_pll(struct ipq_lpass_pll pll)
 {
 	uint32_t i		= 0;
@@ -1272,7 +1298,8 @@ static void ipq_lpass_setup_audio_pll(struct ipq_lpass_pll pll)
 		alpha_en = 1;
 	}
 
-	vco_sel = ipq_lpass_calculatespark_pll_vco(pll);
+	if(!(ipq_hw == IPQ5332))
+		vco_sel = ipq_lpass_calculatespark_pll_vco_v1(pll);
 
 	value = readl(HWIO_LPASS_LPAAUDIO_PLL_MODE_ADDR(sg_ipq_lpass_base));
 
@@ -1335,7 +1362,10 @@ static void ipq_lpass_Setup_dig_pll(struct ipq_lpass_pll pll)
 		alpha_en = 1;
 	}
 
-	vco_sel = ipq_lpass_calculatespark_pll_vco(pll);
+	if(ipq_hw == IPQ5332)
+		vco_sel = ipq_lpass_calculatespark_pll_vco_v2(pll);
+	else
+		vco_sel = ipq_lpass_calculatespark_pll_vco_v1(pll);
 
 	value = readl(HWIO_LPASS_LPAAUDIO_DIG_PLL_MODE_ADDR(sg_ipq_lpass_base));
 
@@ -1505,7 +1535,7 @@ static void ipq_lpass_clk_init(void)
 	uint32_t aon_srcdiv	= 0;
 	uint32_t res_srcdiv	= 0;
 	uint32_t mi2_srcdiv	= 0;
-	uint32_t fix_srcdiv	= 0;
+	uint32_t fix_srcdiv	= (ipq_hw == IPQ5332) ? 4 : 0;
 
 /*
  * LPA AUDIO PLL
@@ -1599,6 +1629,7 @@ static void ipq_lpass_clk_init(void)
 
 	ipq_lpass_setclk_lpaif_sec(0x0001,0xFFFB, 0xFFFA, 0, mi2_srcdiv, 6, 2);
 
+
 	writel(0x01, HWIO_LPASS_LPAIF_SPKR_M_ADDR(sg_ipq_lpass_base));
 	writel(0xFB, HWIO_LPASS_LPAIF_SPKR_N_ADDR(sg_ipq_lpass_base));
 	writel(0xFA, HWIO_LPASS_LPAIF_SPKR_D_ADDR(sg_ipq_lpass_base));
@@ -1629,9 +1660,9 @@ static void ipq_lpass_clk_init(void)
 	ipq_lpass_cc_update(HWIO_LPASS_LPAIF_PCMOE_CMD_RCGR_ADDR(
 			sg_ipq_lpass_base), 0x0, 1);
 
-	writel(0x01, HWIO_LPASS_QOS_FIXED_LAT_COUNTER_M_ADDR(sg_ipq_lpass_base));
-	writel(0xFC, HWIO_LPASS_QOS_FIXED_LAT_COUNTER_N_ADDR(sg_ipq_lpass_base));
-	writel(0xFB, HWIO_LPASS_QOS_FIXED_LAT_COUNTER_D_ADDR(sg_ipq_lpass_base));
+	writel((ipq_hw == IPQ5332) ? 0x0 : 0x01, HWIO_LPASS_QOS_FIXED_LAT_COUNTER_M_ADDR(sg_ipq_lpass_base));
+	writel((ipq_hw == IPQ5332) ? 0x0 : 0xFC, HWIO_LPASS_QOS_FIXED_LAT_COUNTER_N_ADDR(sg_ipq_lpass_base));
+	writel((ipq_hw == IPQ5332) ? 0x0 : 0xFB, HWIO_LPASS_QOS_FIXED_LAT_COUNTER_D_ADDR(sg_ipq_lpass_base));
 	ipq_lpass_cc_update(HWIO_LPASS_QOS_FIXED_LAT_COUNTER_CFG_RCGR_ADDR(
 			sg_ipq_lpass_base),
 			(0 << HWIO_LPASS_QOS_FIXED_LAT_COUNTER_CFG_RCGR_MODE_SHFT) |
@@ -1641,14 +1672,14 @@ static void ipq_lpass_clk_init(void)
 	ipq_lpass_cc_update(HWIO_LPASS_QOS_FIXED_LAT_COUNTER_CMD_RCGR_ADDR(
 			sg_ipq_lpass_base), 0x0, 1);
 
-	writel(0x01, HWIO_LPASS_ATIME_M_ADDR(sg_ipq_lpass_base));
-	writel(0xFD, HWIO_LPASS_ATIME_N_ADDR(sg_ipq_lpass_base));
-	writel(0xFC, HWIO_LPASS_ATIME_D_ADDR(sg_ipq_lpass_base));
+	writel((ipq_hw == IPQ5332) ? 0x0 : 0x01, HWIO_LPASS_ATIME_M_ADDR(sg_ipq_lpass_base));
+	writel((ipq_hw == IPQ5332) ? 0x0 : 0xFD, HWIO_LPASS_ATIME_N_ADDR(sg_ipq_lpass_base));
+	writel((ipq_hw == IPQ5332) ? 0x0 : 0xFC, HWIO_LPASS_ATIME_D_ADDR(sg_ipq_lpass_base));
 	ipq_lpass_cc_update(HWIO_LPASS_ATIME_CFG_RCGR_ADDR(
 			sg_ipq_lpass_base),
 			(0 << HWIO_LPASS_ATIME_CFG_RCGR_MODE_SHFT) |
 			(5 << HWIO_LPASS_ATIME_CFG_RCGR_SRC_SEL_SHFT) |
-			(aon_srcdiv << HWIO_LPASS_ATIME_CFG_RCGR_SRC_DIV_SHFT),
+			(fix_srcdiv << HWIO_LPASS_ATIME_CFG_RCGR_SRC_DIV_SHFT),
 			0);
 	ipq_lpass_cc_update(HWIO_LPASS_ATIME_CMD_RCGR_ADDR(
 			sg_ipq_lpass_base), 0x0, 1);
@@ -1836,6 +1867,7 @@ static void ipq_lpass_lpm_lpaif_reset(void)
 static const struct of_device_id ipq_lpass_id_table[] = {
 	{ .compatible = "qca,lpass-ipq5018", .data = (void *)IPQ5018 },
 	{ .compatible = "qca,lpass-ipq9574", .data = (void *)IPQ9574 },
+	{ .compatible = "qca,lpass-ipq5332", .data = (void *)IPQ5332 },
 	{},
 };
 MODULE_DEVICE_TABLE(of, ipq_lpass_id_table);
@@ -1864,9 +1896,9 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 
 	if (IS_ERR(sg_ipq_lpass_base))
 		return PTR_ERR(sg_ipq_lpass_base);
-	if (ipq_hw == IPQ9574) {
+	if ((ipq_hw == IPQ9574) || (ipq_hw == IPQ5332)) {
 /*
- * clock init for IPQ9574
+ * clock init for IPQ9574 and IPQ5332
  */
 		resource->sway_clk = devm_clk_get(dev, "sway");
 		if (IS_ERR(resource->sway_clk))
@@ -1888,16 +1920,24 @@ static int ipq_lpass_probe(struct platform_device *pdev)
 		if (IS_ERR(resource->reset))
 			return PTR_ERR(resource->reset);
 
-		ret = reset_control_deassert(resource->reset);
-		if (ret) {
-			dev_err(dev, "cannot deassert  reset\n");
-			return ret;
-		}
+		reset_control_assert(resource->reset);
+		wmb(); /* ensure data is written to hw register */
+		usleep_range(1, 5);
+		reset_control_deassert(resource->reset);
+		wmb(); /* ensure data is written to hw register */
 
 		ret = clk_prepare_enable(resource->sway_clk);
 		if (ret) {
 			dev_err(dev, "cannot prepare/enable sway_clk clock\n");
 			goto err_clk_sway;
+		}
+
+		if (ipq_hw == IPQ5332) {
+			ret = clk_set_rate(resource->sway_clk, 133333334);
+			if (ret) {
+				dev_err(dev, "AXI rate set failed (%d)\n", ret);
+				goto err_clk_sway;
+			}
 		}
 
 		ret = clk_prepare_enable(resource->axi_core_clk);
@@ -2014,7 +2054,7 @@ static int ipq_lpass_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(resource->sway_clk);
 	clk_disable_unprepare(resource->axi_core_clk);
-	if (ipq_hw == IPQ9574) {
+	if (ipq_hw == IPQ9574 || ipq_hw == IPQ5332) {
 		clk_disable_unprepare(resource->snoc_cfg_clk);
 		clk_disable_unprepare(resource->pcnoc_clk);
 	} else {

@@ -1334,6 +1334,63 @@ int __qti_sec_upgrade_auth(struct device *dev, unsigned int scm_cmd_id,
 	return ret;
 }
 
+int __qti_sec_upgrade_auth_meta_data(struct device *dev, unsigned int scm_cmd_id,
+							unsigned int sw_type,
+							unsigned int img_size,
+							unsigned int load_addr,
+							void* hash_addr,
+							unsigned int hash_size)
+{
+	int ret;
+	struct {
+		unsigned type;
+		unsigned size;
+		unsigned addr;
+		unsigned hash_address;
+		unsigned hash_size;
+	} cmd_buf;
+	dma_addr_t hash_address;
+
+	hash_address = dma_map_single(dev, hash_addr, hash_size, DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, hash_address);
+
+	if (ret != 0) {
+		pr_err("%s: DMA Mapping Error : %d\n", __func__, ret);
+		return ret;
+	}
+
+	if (!is_scm_armv8()) {
+		cmd_buf.type = sw_type;
+		cmd_buf.size = img_size;
+		cmd_buf.addr = load_addr;
+		cmd_buf.hash_address = hash_address;
+		cmd_buf.hash_size = hash_size;
+		ret = qcom_scm_call(dev, QCOM_SCM_SVC_BOOT,
+					scm_cmd_id, &cmd_buf,
+					sizeof(cmd_buf), NULL, 0);
+        } else {
+		__le32 scm_ret;
+		struct scm_desc desc = {0};
+
+		desc.args[0] = sw_type;
+		desc.args[1] = (u64)load_addr;
+		desc.args[2] = img_size;
+		desc.args[3] = hash_address;
+		desc.args[4] = hash_size;
+		desc.arginfo = SCM_ARGS(5, QCOM_SCM_VAL, QCOM_SCM_RW, QCOM_SCM_VAL,
+							QCOM_SCM_RW, QCOM_SCM_VAL);
+		ret = qti_scm_call2(dev, SCM_SIP_FNID(QCOM_SCM_SVC_BOOT,
+							scm_cmd_id), &desc);
+		scm_ret = desc.ret[0];
+
+		if (!ret)
+			ret = le32_to_cpu(scm_ret);
+	}
+	dma_unmap_single(dev, hash_address, hash_size, DMA_FROM_DEVICE);
+
+	return ret;
+}
+
 int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 			    void *cmd_buf, size_t size)
 {

@@ -247,6 +247,21 @@ inline bool skb_recycler_consume(struct sk_buff *skb)
  *	a controlled fast xmit path, thus removing the need for additional checks
  *	before recycling the buffers back to pool
  */
+#ifdef CONFIG_DEBUG_OBJECTS_SKBUFF
+inline bool skb_recycler_consume_list_fast(struct sk_buff_head *skb_list)
+{
+	struct sk_buff *skb = NULL, *next = NULL;
+
+	skb_queue_walk_safe(skb_list, skb, next) {
+		if (skb) {
+			__skb_unlink(skb, skb_list);
+			skb_recycler_consume(skb);
+		}
+	}
+
+	return true;
+}
+#else
 inline bool skb_recycler_consume_list_fast(struct sk_buff_head *skb_list)
 {
 	unsigned long flags;
@@ -267,7 +282,7 @@ inline bool skb_recycler_consume_list_fast(struct sk_buff_head *skb_list)
 
 	return false;
 }
-
+#endif
 static void skb_recycler_free_skb(struct sk_buff_head *list)
 {
 	struct sk_buff *skb = NULL;
@@ -710,7 +725,7 @@ static inline bool consume_skb_can_fast_recycle_debug(const struct sk_buff *skb,
 void check_skb_fast_recyclable(struct sk_buff *skb)
 {
 	bool check = true;
-	check = consume_skb_can_recycle_debug(skb, SKB_RECYCLE_MIN_SIZE, SKB_RECYCLE_MAX_SIZE);
+	check = consume_skb_can_fast_recycle_debug(skb, SKB_RECYCLE_MIN_SIZE, SKB_RECYCLE_MAX_SIZE);
 	if (!check)
 		BUG_ON(1);
 }

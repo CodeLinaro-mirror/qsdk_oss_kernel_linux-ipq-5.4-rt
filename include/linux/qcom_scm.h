@@ -166,6 +166,7 @@ struct fuse_blow {
 #define QTI_SCM_SVC_FUSE		0x8
 #define QTI_KERNEL_AUTH_CMD		0x15
 #define TZ_BLOW_FUSE_SECDAT             0x20
+#define QTI_KERNEL_META_AUTH_CMD	0x23
 #define FUSEPROV_SUCCESS                0x0
 #define FUSEPROV_INVALID_HASH           0x09
 #define FUSEPROV_SECDAT_LOCK_BLOWN      0xB
@@ -210,6 +211,13 @@ extern int qti_qfprom_read_version(uint32_t sw_type,
 extern int qti_sec_upgrade_auth(unsigned int scm_cmd_id, unsigned int sw_type,
 					unsigned int img_size,
 					unsigned int load_addr);
+extern int qti_sec_upgrade_auth_meta_data(unsigned int scm_cmd_id,
+                                                        unsigned int sw_type,
+                                                        unsigned int img_size,
+                                                        unsigned int load_addr,
+                                                        void* hash_addr,
+                                                        unsigned int hash_size);
+
 extern bool qti_scm_sec_auth_available(unsigned int scm_cmd_id);
 extern int qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,
 					void *cmd_buf, size_t size);
@@ -344,6 +352,15 @@ static inline int qti_sec_upgrade_auth(unsigned int scm_cmd_id, unsigned int sw_
 {
 	return -ENODEV;
 }
+static inline int qti_sec_upgrade_auth_meta_data(unsigned int scm_cmd_id, unsigned int sw_type,
+							unsigned int img_size,
+							unsigned int load_addr,
+							void* hash_addr,
+							unsigned int hash_size)
+{
+	return -ENODEV;
+}
+
 static inline bool qti_scm_sec_auth_available(unsigned int scm_cmd_id)
 {
 	return -ENODEV;

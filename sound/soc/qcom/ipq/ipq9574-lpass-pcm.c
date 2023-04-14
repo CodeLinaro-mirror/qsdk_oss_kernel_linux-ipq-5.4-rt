@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -727,6 +727,7 @@ EXPORT_SYMBOL(ipq_pcm_deinit);
 
 static const struct of_device_id qca_raw_match_table[] = {
 	{ .compatible = "qca,ipq9574-lpass-pcm", .data = &ipq9574_lpass_pcm_cfg },
+	{ .compatible = "qca,ipq5332-lpass-pcm", .data = &ipq9574_lpass_pcm_cfg },
 	{},
 };
 
@@ -859,6 +860,10 @@ static int ipq_lpass_pcm_driver_probe(struct platform_device *pdev)
 		of_property_read_u32(node, "slave", &slave_lb);
 		pcm_conf[pcm_index].slave = slave_lb;
 
+		if(pcm_conf[pcm_index].slave)
+			pr_info("PCM%d : Slave\n", pcm_index);
+		else
+			pr_info("PCM%d : Master\n", pcm_index);
 
 		pcm_conf[pcm_index].rx_dma_buffer =
 			kzalloc(sizeof(struct lpass_dma_buffer), GFP_KERNEL);

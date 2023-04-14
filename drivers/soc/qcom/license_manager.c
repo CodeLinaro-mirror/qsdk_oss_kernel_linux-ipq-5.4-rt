@@ -687,7 +687,7 @@ static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 {
 	struct qmi_lm_feature_list_req_msg_v01 *req;
 	struct qmi_lm_feature_list_resp_msg_v01 *resp;
-	struct feature_info *licensed_features;
+	struct feature_info *licensed_features, *itr, *tmp;
 	int i, ret;
 
 	req = (struct qmi_lm_feature_list_req_msg_v01 *)decoded_msg;
@@ -715,6 +715,7 @@ static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 
 	licensed_features->sq_node = sq->sq_node;
 	licensed_features->sq_port = sq->sq_port;
+	licensed_features->reserved = req->reserved;
 	if(!req->feature_list_valid) {
 		licensed_features->len = 0;
 	} else {
@@ -730,6 +731,17 @@ static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 			licensed_features->list[i] = req->feature_list[i];
 
 	}
+
+	if (!list_empty(&lm_svc->clients_feature_list)) {
+		list_for_each_entry_safe(itr, tmp, &lm_svc->clients_feature_list,
+								node) {
+			if (itr->sq_node == sq->sq_node && itr->sq_port == sq->sq_port) {
+				list_del(&itr->node);
+				kfree(itr);
+			}
+		}
+	}
+
 	list_add_tail(&licensed_features->node, &lm_svc->clients_feature_list);
 	resp->resp.result = QMI_RESULT_SUCCESS_V01;
 
@@ -774,6 +786,9 @@ static ssize_t show_licensed_features(struct kobject *k,
 						max_buf_len-len,
 						" %d\n",itr->list[i]);
 			}
+			len += scnprintf(buf+len, max_buf_len-len,
+					"\nAdditional Info: 0x%08x\n",
+					itr->reserved);
 		}
 	} else
 		len += scnprintf(buf+len, max_buf_len-len,

@@ -632,6 +632,7 @@ int mhitest_pci_register_mhi(struct mhitest_platform *mplat)
 	MHITEST_LOG("MHI CTRL :%p\n", mhi_ctrl);
 
 	mplat->mhi_ctrl = mhi_ctrl;
+	mhi_ctrl->dev_id = mplat->device_id;
 	dev_set_drvdata(&pci_dev->dev, mplat);
 	mhi_ctrl->cntrl_dev = &pci_dev->dev;
 

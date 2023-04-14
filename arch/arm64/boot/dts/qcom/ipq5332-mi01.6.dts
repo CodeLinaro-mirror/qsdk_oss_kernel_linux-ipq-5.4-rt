@@ -31,7 +31,6 @@
 
 	chosen {
 		stdout-path = "serial0";
-		bootargs-append = " clk_ignore_unused";
 	};
 
 	soc {
@@ -125,6 +124,43 @@
 					bias-pull-up;
 				};
 			};
+
+			audio_pins_pri: audio_pinmux_pri {
+				mux_1 {
+					pins = "gpio29";
+					function = "audio_pri";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+				mux_2 {
+					pins = "gpio30";
+					function = "audio_pri";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+				mux_3 {
+					pins = "gpio31";
+					function = "audio_pri";
+					drive-strength = <4>;
+					bias-pull-down;
+				};
+
+				mux_4 {
+					pins = "gpio32";
+					function = "audio_pri";
+					drive-strength = <4>;
+					bias-pull-down;
+				};
+			};
+
+			spi_2_pins: spi-2-pins {
+				pins = "gpio33", "gpio34", "gpio35", "gpio36";
+				function = "blsp2_spi0";
+				drive-strength = <8>;
+				bias-pull-down;
+			};
 		};
 
 		dp1 {
@@ -176,6 +212,13 @@
 				reg = <4>;
 				fixup;
 			};
+		};
+
+
+		pcm: pcm@0xA3C0000{
+			pinctrl-0 = <&audio_pins_pri>;
+			pinctrl-names = "primary";
+			status = "disabled";
 		};
 
 		ess-instance {
@@ -349,6 +392,13 @@
 			};
 		};
 
+		spi_2: spi@78b7000 {
+			pinctrl-0 = <&spi_2_pins>;
+			pinctrl-names = "default";
+			cs-select = <0>;
+			status = "disabled";
+		};
+
 		i2c_1: i2c@78b6000 {
 			pinctrl-0 = <&i2c_1_pins>;
 			pinctrl-names = "default";
@@ -393,6 +443,11 @@
 			status = "ok";
 		};
 
+		wsi: wsi {
+			id = <0>;
+			num_chip = <2>;
+		};
+
 		pcie1: pcie@18000000 {
 			status = "ok";
 			pcie1_rp {
@@ -400,10 +455,16 @@
 
 				qcom,mhi@1 {
 					reg = <0 0 0 0 0>;
-					qrtr_node_id = <0x31>;
 					qti,disable-rddm-prealloc;
 					qti,rddm-seg-len = <0x1000>;
+#if defined(__CNSS2__)
+					qrtr_node_id = <0x31>;
 					memory-region = <0>, <&mhi_region1>;
+#else
+					memory-region = <&qcn9224_pcie1>;
+					qcom,board_id = <0x1019>;
+					qcom,wsi = <&wsi>;
+#endif
 				};
 			};
 		};
@@ -412,10 +473,16 @@
 
 &wifi0 {
 	qcom,rproc = <&q6_wcss_pd1>;
+	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,multipd_arch;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
+#if defined(__CNSS2__)
 	mem-region = <&q6_region>;
-	qcom,board_id = <0x11>;
+#else
+	memory-region = <&q6_region>;
+	qcom,wsi = <&wsi>;
+#endif
+	qcom,board_id = <0x16>;
 	status = "ok";
 };
 
