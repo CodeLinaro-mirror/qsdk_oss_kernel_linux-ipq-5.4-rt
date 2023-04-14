@@ -1701,6 +1701,13 @@ static int qcom_pcie_post_init_2_9_0_5018(struct qcom_pcie *pcie)
 
 	writel(0, pcie->parf + PCIE20_PARF_Q2A_FLUSH);
 
+	if (pcie->axi_wr_addr_halt) {
+		val = readl(pcie->parf + PCIE20_PARF_AXI_MSTR_WR_ADDR_HALT_V2);
+		val &= ~PCIE20_PARF_AXI_MSTR_WR_ADDR_HALT_V2_MASK;
+		writel(val | pcie->axi_wr_addr_halt,
+			pcie->parf + PCIE20_PARF_AXI_MSTR_WR_ADDR_HALT_V2);
+	}
+
 	writel(BUS_MASTER_EN, pci->dbi_base + PCIE20_COMMAND_STATUS);
 
 	writel(DBI_RO_WR_EN, pci->dbi_base + PCIE20_MISC_CONTROL_1_REG);
