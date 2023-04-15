@@ -870,14 +870,24 @@ static void aqr107_link_change_notify(struct phy_device *phydev)
 
 static int aqr107_suspend(struct phy_device *phydev)
 {
-	return phy_set_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
+	int err;
+
+	err = phy_set_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
 				MDIO_CTRL1_LPOWER);
+	usleep_range(10000,20000);
+
+	return err;
 }
 
 static int aqr107_resume(struct phy_device *phydev)
 {
-	return phy_clear_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
+	int err;
+
+	err = phy_clear_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
 				  MDIO_CTRL1_LPOWER);
+	usleep_range(10000,20000);
+
+	return err;
 }
 
 static int aqr107_probe(struct phy_device *phydev)
