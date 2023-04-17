@@ -2349,11 +2349,9 @@
 					<&gcc GCC_Q6_AHB_S_CLK>,
 					<&gcc GCC_Q6SS_ATBM_CLK>,
 					<&gcc GCC_Q6_AHB_CLK>,
-					<&gcc GCC_Q6_AXIM_CLK>,
 					<&gcc GCC_Q6SS_PCLKDBG_CLK>,
 					<&gcc GCC_WCSS_ECAHB_CLK>,
-					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>,
-					<&gcc GCC_MEM_NOC_Q6_AXI_CLK>;
+					<&gcc GCC_SYS_NOC_WCSS_AHB_CLK>;
 
 			assigned-clock-rates = <300000000>,
 						<120000000>,
@@ -2361,11 +2359,9 @@
 						<133333333>,
 						<240000000>,
 						<133333333>,
-						<533333333>,
 						<120000000>,
 						<133333333>,
-						<133333333>,
-						<533333333>;
+						<133333333>;
 
 			qcom,halt-regs = <&tcsr_q6_block 0xa000 0xd000 0x0>;
 
