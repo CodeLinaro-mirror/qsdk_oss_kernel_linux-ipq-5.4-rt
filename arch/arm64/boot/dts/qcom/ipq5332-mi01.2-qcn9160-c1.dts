@@ -134,7 +134,7 @@
 
 		q6_mem_regions: q6_mem_regions@4a900000 {
 			no-map;
-			reg = <0x0 0x4a900000 0x0 0x6100000>;
+			reg = <0x0 0x4a900000 0x0 0x5000000>;
 		};
 
 		q6_code_data: q6_code_data@4A900000 {
