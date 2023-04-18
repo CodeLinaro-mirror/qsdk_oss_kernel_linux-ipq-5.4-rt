@@ -1249,9 +1249,8 @@ int mhi_sync_power_up(struct mhi_controller *mhi_cntrl)
 	ret = (MHI_IN_MISSION_MODE(mhi_cntrl->ee)) ? 0 : -ETIMEDOUT;
 	if (ret) {
 		for (i = 0; error_reg[i].name; i++) {
-			ret = mhi_read_reg(mhi_cntrl, mhi_cntrl->bhi,
-					   error_reg[i].offset, &val);
-			if (ret)
+			if (mhi_read_reg(mhi_cntrl, mhi_cntrl->bhi,
+					   error_reg[i].offset, &val))
 				break;
 			dev_err(dev, "reg:%s value:0x%x\n",
 				error_reg[i].name, val);
