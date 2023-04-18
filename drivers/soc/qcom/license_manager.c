@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  *
  */
-#include "license_manager.h"
+#include "soc/qcom/license_manager.h"
 
 struct qmi_handle *lm_clnt_hdl;
 
@@ -23,6 +23,78 @@ static unsigned int use_license_from_rootfs = 0;
 
 module_param(use_license_from_rootfs, uint, 0644);
 MODULE_PARM_DESC(use_license_from_rootfs, "Use license files from rootfs: 0,1");
+
+static const char * const license_path = "/license";
+static const char * const license_extn = ".pfm";
+
+struct qmi_elem_info qmi_lm_feature_list_req_msg_v01_ei[] = {
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u32),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x01,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   reserved),
+	},
+	{
+		.data_type      = QMI_OPT_FLAG,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x10,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   feature_list_valid),
+	},
+	{
+		.data_type      = QMI_DATA_LEN,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x10,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   feature_list_len),
+	},
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = QMI_LM_MAX_FEATURE_LIST_V01,
+		.elem_size      = sizeof(u32),
+		.array_type       = VAR_LEN_ARRAY,
+		.tlv_type       = 0x10,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   feature_list),
+	},
+	{
+		.data_type      = QMI_EOTI,
+		.array_type       = NO_ARRAY,
+		.tlv_type       = QMI_COMMON_TLV_TYPE,
+	},
+};
+EXPORT_SYMBOL(qmi_lm_feature_list_req_msg_v01_ei);
+
+struct qmi_elem_info qmi_lm_feature_list_resp_msg_v01_ei[] = {
+	{
+		.data_type      = QMI_STRUCT,
+		.elem_len       = 1,
+		.elem_size      = sizeof(struct qmi_response_type_v01),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x02,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_resp_msg_v01,
+					   resp),
+		.ei_array      = qmi_response_type_v01_ei,
+	},
+	{
+		.data_type      = QMI_EOTI,
+		.array_type       = NO_ARRAY,
+		.tlv_type       = QMI_COMMON_TLV_TYPE,
+	},
+};
+EXPORT_SYMBOL(qmi_lm_feature_list_resp_msg_v01_ei);
 
 static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 			struct sockaddr_qrtr *sq,
