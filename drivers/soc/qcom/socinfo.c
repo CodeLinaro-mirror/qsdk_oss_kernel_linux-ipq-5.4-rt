@@ -226,7 +226,6 @@ static const struct soc_id soc_id[] = {
 	{ CPU_IPQ5028, "IPQ5028" },
 	{ CPU_IPQ5000, "IPQ5000" },
 	{ CPU_IPQ5016, "IPQ5016" },
-	{ CPU_IPQ5019, "IPQ5019" },
 	{ CPU_IPQ0509, "IPQ0509" },
 	{ CPU_IPQ0518, "IPQ0518" },
 	{ CPU_IPQ9514, "IPQ9514" },

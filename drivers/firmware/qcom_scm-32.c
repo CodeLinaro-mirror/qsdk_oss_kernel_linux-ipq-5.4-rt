@@ -784,6 +784,11 @@ int __qti_scm_tls_hardening(struct device *dev, uint32_t req_addr,
 	desc.args[3] = resp_size;
 
 	ret = qti_scm_call2(dev, SCM_SIP_FNID(QTI_SVC_CRYPTO, cmd_id), &desc);
+	if(desc.ret[0] == QCOM_SCM_EINVAL_SIZE) {
+		pr_err("%s: TZ does not support data larger than 2K bytes: -%lld\n",
+				__func__, desc.ret[0]);
+	}
+
 	scm_ret = desc.ret[0];
 	if (!ret)
 		return le32_to_cpu(scm_ret);

@@ -47,7 +47,6 @@
 #define CPU_IPQ0509 504
 #define CPU_IPQ0518 505
 #define CPU_IPQ5016 520
-#define CPU_IPQ5019 569
 
 #define CPU_IPQ9514 510
 #define CPU_IPQ9554 512
@@ -266,15 +265,6 @@ static inline int cpu_is_ipq6005(void)
 #endif
 }
 
-static inline int cpu_is_ipq5019(void)
-{
-#ifdef CONFIG_ARCH_QCOM
-	return read_ipq_cpu_type() == CPU_IPQ5019;
-#else
-	return 0;
-#endif
-}
-
 static inline int cpu_is_ipq5332(void)
 {
 #ifdef CONFIG_ARCH_QCOM
@@ -459,9 +449,9 @@ static inline int cpu_is_ipq50xx(void)
 {
 #ifdef CONFIG_ARCH_QCOM
 	return  cpu_is_ipq5010() || cpu_is_ipq5018() ||
-		cpu_is_ipq5016() || cpu_is_ipq5019() ||
 		cpu_is_ipq5028() || cpu_is_ipq5000() ||
-		cpu_is_ipq0509() || cpu_is_ipq0518();
+		cpu_is_ipq0509() || cpu_is_ipq0518() ||
+		cpu_is_ipq5016();
 #else
 	return 0;
 #endif

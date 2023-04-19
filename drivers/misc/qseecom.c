@@ -1639,23 +1639,65 @@ static ssize_t
 store_rsa_plain_data(struct device *dev, struct device_attribute *attr,
 		       const char *buf, size_t count)
 {
+	static void __iomem *file_buf;
+	struct file *file;
+	struct kstat st;
+	char *file_name;
+	loff_t pos = 0;
+	long size;
+	int ret;
+
 	rsa_plain_data_buf = memset(rsa_plain_data_buf, 0,
 				   MAX_RSA_PLAIN_DATA_SIZE);
 	rsa_plain_data_len = 0;
 
-	if (count == 0 || count > MAX_RSA_PLAIN_DATA_SIZE) {
+	file_name = kzalloc(count+1, GFP_KERNEL);
+	if (file_name == NULL)
+		return -ENOMEM;
+
+	strlcpy(file_name, buf, count+1);
+
+	file = filp_open(file_name, O_RDONLY, 0);
+	if (IS_ERR(file)) {
+		pr_err("%s File open failed\n", file_name);
+		ret = -EBADF;
+		goto free_mem;
+	}
+
+	ret = vfs_getattr(&file->f_path, &st, STATX_SIZE, AT_STATX_SYNC_AS_STAT);
+	if (ret) {
+		pr_err("get file attributes failed\n");
+		goto file_close;
+	}
+	size = (long)st.size;
+
+	if (size == 0 || size > MAX_RSA_PLAIN_DATA_SIZE) {
 		pr_info("Invalid input\n");
 		pr_info("Plain data length is %lu bytes\n",
 		       (unsigned long)count);
 		pr_info("Plain data length must be > 0 bytes and <= %u bytes\n",
 		       (unsigned int)MAX_RSA_PLAIN_DATA_SIZE);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto file_close;
 	}
 
-	rsa_plain_data_len = count;
-	memcpy(rsa_plain_data_buf, buf, rsa_plain_data_len);
+	rsa_plain_data_len = size;
+	ret = kernel_read(file, rsa_plain_data_buf, rsa_plain_data_len, &pos);
 
-	return count;
+	if (ret != rsa_plain_data_len) {
+		pr_err("%s file read failed\n", file_name);
+		goto un_map;
+	}
+
+	ret = count;
+
+un_map:
+	iounmap(file_buf);
+file_close:
+	filp_close(file, NULL);
+free_mem:
+	kfree(file_name);
+	return ret;
 }
 
 static ssize_t
