@@ -1580,7 +1580,7 @@
 			qcom,rproc = <&q6v5_wcss>;
 			qcom,bdf-addr = <0x4B500000 0x4B500000 0x4B500000
 					 0x0 0x0 0x0>;
-			qcom,caldb-addr = <0x4D600000 0x4D600000 0x0
+			qcom,caldb-addr = <0x4CE00000 0x4CE00000 0x0
 					   0x0 0x0 0x0>;
 			qcom,caldb-size = <0x500000>;
 			interrupts = <0 559 1>, /* misc-pulse1 */
