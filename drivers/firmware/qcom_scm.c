@@ -769,6 +769,17 @@ int qti_scm_get_device_attestation_ephimeral_key(u32 svc_id, u32 cmd_id,
 }
 EXPORT_SYMBOL(qti_scm_get_device_attestation_ephimeral_key);
 
+int qti_scm_get_ipq5332_fuse_list(u32 svc_id, u32 cmd_id,
+		struct fuse_payload *fuse, size_t size)
+{
+	int ret;
+	ret = __qti_scm_get_ipq5332_fuse_list(__scm->dev,
+			svc_id, cmd_id, fuse, size);
+	return ret;
+
+}
+EXPORT_SYMBOL(qti_scm_get_ipq5332_fuse_list);
+
 int qti_scm_get_device_attestation_response(u32 svc_id, u32 cmd_id, void *req_buf,
 			u32 req_buf_len, void *extclaim_buf, u32 extclaim_buf_len,
 			void *resp_buf, u32 resp_buf_len, u32 *attest_resp_len)
