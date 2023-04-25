@@ -9,12 +9,7 @@
 /dts-v1/;
 
 #include "ipq5332.dtsi"
-
-#ifdef __IPQ_MEM_PROFILE_512_MB__
-#include "ipq5332-512MB-memory.dtsi"
-#else
-#include "ipq5332-default-memory.dtsi"
-#endif
+#include "ipq5332-memory.dtsi"
 
 / {
 	#address-cells = <0x2>;
@@ -22,6 +17,145 @@
 	model = "Qualcomm Technologies, Inc. IPQ5332/AP-MI01.3";
 	compatible = "qcom,ipq5332-ap-mi01.3", "qcom,ipq5332";
 	interrupt-parent = <&intc>;
+
+	/*	  Layout for IPQ5332 + QCN6432 + QCN6432
+	 * +==========+==============+========================+
+	 * |         |              |                         |
+	 * |  Region | Start Offset |          Size           |
+	 * |         |              |                         |
+	 * +---------+--------------+-------------------------+
+	 * |   Q6    |              |                         |
+	 * |  code/  |  0x4A900000  |          27MB           |
+	 * |  data   |              |                         |
+	 * +---------+--------------+-------------------------+
+	 * | IPQ5332 |              |                         |
+	 * |  data   |  0x4C400000  |          30MB           |
+	 * +---------+--------------+-------------------------+
+	 * | IPQ5332 |              |                         |
+	 * | M3 Dump |  0x4E200000  |           1MB           |
+	 * +---------+--------------+-------------------------+
+	 * | IPQ5332 |              |                         |
+	 * |  QDSS   |  0x4E300000  |           1MB           |
+	 * +---------+--------------+-------------------------+
+	 * | IPQ5332 |              |                         |
+	 * |  CALDB  |  0x4E400000  |           5MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_1|              |                         |
+	 * |  data   |  0x4E900000  |          30MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_1|              |                         |
+	 * | M3 Dump |  0x50700000  |           1MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_1|              |                         |
+	 * |  QDSS   |  0x50800000  |           1MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_1|              |                         |
+	 * |  CALDB  |  0x50900000  |           5MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_2|              |                         |
+	 * |  data   |  0x50E00000  |          30MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_2|              |                         |
+	 * | M3 Dump |  0x52C00000  |           1MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_2|              |                         |
+	 * |  QDSS   |  0x52D00000  |           1MB           |
+	 * +---------+--------------+-------------------------+
+	 * |QCN6432_2|              |                         |
+	 * |  CALDB  |  0x52E00000  |           5MB           |
+	 * +---------+--------------+-------------------------+
+	 * |         |              |                         |
+	 * |   MLO   |  0x53300000  |          17MB           |
+	 * +==================================================+
+	 * |                                                  |
+	 * |                                                  |
+	 * |                                                  |
+	 * |             Rest of memory for Linux             |
+	 * |                                                  |
+	 * |                                                  |
+	 * |                                                  |
+	 * +==================================================+
+	 */
+
+	reserved-memory {
+
+		/delete-node/ q6_region;
+
+		q6_mem_regions: q6_mem_regions@4A900000  {
+			no-map;
+			reg = <0x0 0x4a900000 0x0 0x8A00000>;
+		};
+
+		q6_code_data: q6_code_data@4A900000 {
+			no-map;
+			reg = <0x0 0x4a900000 0x0 0x1B00000>;
+		};
+
+		q6_ipq5332_data: q6_ipq5332_data@4C400000 {
+			no-map;
+			reg = <0x0 0x4C400000 0x0 0x1E00000>;
+		};
+
+		m3_dump: m3_dump@4E200000 {
+			no-map;
+			reg = <0x0 0x4E200000 0x0 0x100000>;
+		};
+
+		q6_etr_region: q6_etr_dump@4E300000 {
+			no-map;
+			reg = <0x0 0x4E300000 0x0 0x100000>;
+		};
+
+		q6_ipq5332_caldb: q6_ipq5332_caldb@4E400000 {
+			no-map;
+			reg = <0x0 0x4E400000 0x0 0x500000>;
+		};
+
+		q6_qcn6432_data_1: q6_qcn6432_data_1@4E900000 {
+			no-map;
+			reg = <0x0 0x4E900000 0x0 0x1E00000>;
+		};
+
+		m3_dump_qcn6432_1: m3_dump_qcn6432_1@50700000 {
+			no-map;
+			reg = <0x0 0x50700000 0x0 0x100000>;
+                };
+
+		q6_qcn6432_etr_1: q6_qcn6432_etr_1@50800000 {
+			no-map;
+			reg = <0x0 0x50800000 0x0 0x100000>;
+		};
+
+		q6_qcn6432_caldb_1: q6_qcn6432_caldb_1@50900000 {
+			no-map;
+			reg = <0x0 0x50900000 0x0 0x500000>;
+		};
+
+		q6_qcn6432_data_2: q6_qcn6432_data_2@50E00000 {
+			no-map;
+			reg = <0x0 0x50E00000 0x0 0x1E00000>;
+		};
+
+		m3_dump_qcn6432_2: m3_dump_qcn6432_2@52C00000 {
+			no-map;
+			reg = <0x0 0x52C00000 0x0 0x100000>;
+                };
+
+		q6_qcn6432_etr_2: q6_qcn6432_etr_2@52D00000 {
+			no-map;
+			reg = <0x0 0x52D00000 0x0 0x100000>;
+		};
+
+		q6_qcn6432_caldb_2: q6_qcn6432_caldb_2@52E00000 {
+			no-map;
+			reg = <0x0 0x52E00000 0x0 0x500000>;
+		};
+
+		mlo_global_mem0: mlo_global_mem_0@53300000 {
+			no-map;
+			reg = <0x0 0x53300000 0x0 0x1100000>;
+		};
+	};
 
 	aliases {
 		serial0 = &blsp1_uart0;
@@ -416,6 +550,7 @@
 		q6v5_wcss: remoteproc@d100000 {
 			boot-args = <0x1 0x4 0x3 0x0 0x26 0x2>,
 					<0x1 0x4 0x4 0x1 0x2f 0x2>;
+			memory-region = <&q6_mem_regions>;
 
 			/delete-node/ remoteproc_pd1;
 			/delete-node/ remoteproc_pd2;
@@ -478,11 +613,16 @@
 								"stop",
 								"spawn";
 					qcom,offloaded_to_q6;
+					memory-region = <&q6_ipq5332_data>,
+							<&m3_dump>,
+							<&q6_etr_region>,
+							<&q6_ipq5332_caldb>;
 				};
 
 				q6_wcss_pd2: remoteproc_pd2 {
 					compatible = "qcom,ipq5332-wcss-pcie-mpd";
 					firmware = "IPQ5332/q6_fw2.mdt";
+					iu_firmware = "qcn6432/iu_fw.mdt";
 					qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
 					interrupts-extended = <&wcss_smp2p_in 16 0>,
 							<&wcss_smp2p_in 17 0>,
@@ -499,6 +639,10 @@
 					qcom,smem-state-names = "shutdown",
 								"stop",
 								"spawn";
+					memory-region = <&q6_qcn6432_data_1>,
+							<&m3_dump_qcn6432_1>,
+							<&q6_qcn6432_etr_1>,
+							<&q6_qcn6432_caldb_1>;
 					status = "ok";
 				};
 
@@ -521,6 +665,10 @@
 					qcom,smem-state-names = "shutdown",
 								"stop",
 								"spawn";
+					memory-region = <&q6_qcn6432_data_2>,
+							<&m3_dump_qcn6432_2>,
+							<&q6_qcn6432_etr_2>,
+							<&q6_qcn6432_caldb_2>;
 					status = "ok";
 				};
 			};
@@ -529,11 +677,52 @@
 };
 
 &wifi0 {
-	qcom,rproc = <&q6_wcss_pd1>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,multipd_arch;
+	qcom,rproc = <&q6_wcss_pd1>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
-	mem-region = <&q6_region>;
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+	qcom,tgt-mem-mode = <1>;
+#else
+	qcom,tgt-mem-mode = <0>;
+#endif
+	qcom,bdf-addr = <0x4C400000 0x4C400000 0x4C400000 0x0 0x0 0x0>;
+	qcom,caldb-addr = <0x4E400000 0x4E400000 0x4E400000 0x0 0x0 0x0>;
+	qcom,caldb-size = <0x500000>;
 	qcom,board_id = <0x12>;
+	mem-region = <&q6_ipq5332_data>;
+	status = "ok";
+};
+
+&wifi4 {
+	qcom,multipd_arch;
+	qcom,rproc = <&q6_wcss_pd2>;
+	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+	qcom,tgt-mem-mode = <1>;
+#else
+	qcom,tgt-mem-mode = <0>;
+#endif
+	qcom,bdf-addr = <0x4E900000 0x4E900000 0x4E900000 0x0 0x0 0x0>;
+	qcom,caldb-addr = <0x50900000 0x50900000 0x50900000 0x0 0x0 0x0>;
+	qcom,caldb-size = <0x500000>;
+	qcom,board_id = <0x060>;
+	mem-region = <&q6_qcn6432_data_1>;
+	status = "ok";
+};
+
+&wifi5 {
+	qcom,multipd_arch;
+	qcom,rproc = <&q6_wcss_pd3>;
+	qcom,userpd-subsys-name = "q6v5_wcss_userpd3";
+#ifdef __IPQ_MEM_PROFILE_512_MB__
+	qcom,tgt-mem-mode = <1>;
+#else
+	qcom,tgt-mem-mode = <0>;
+#endif
+	qcom,bdf-addr = <0x50E00000 0x50E00000 0x50E00000 0x0 0x0 0x0>;
+	qcom,caldb-addr = <0x52E00000 0x52E00000 0x52E00000 0x0 0x0 0x0>;
+	qcom,caldb-size = <0x500000>;
+	qcom,board_id = <0x0b0>;
+	mem-region = <&q6_qcn6432_data_2>;
 	status = "ok";
 };
