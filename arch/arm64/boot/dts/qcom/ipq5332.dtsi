@@ -2252,6 +2252,18 @@
 			status = "disabled";
 		};
 
+		wifi4: wifi4@f00000 {
+			compatible = "qcom,cnss-qcn6432";
+			msi-parent = <&v2m0>;
+			status = "disabled";
+		};
+
+		wifi5: wifi5@f00000 {
+			compatible = "qcom,cnss-qcn6432";
+			msi-parent = <&v2m0>;
+			status = "disabled";
+		};
+
 		wcss: wcss-smp2p {
 			compatible = "qcom,smp2p";
 			qcom,smem = <435>, <428>;
