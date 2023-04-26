@@ -415,6 +415,114 @@
 		q6v5_wcss: remoteproc@d100000 {
 			boot-args = <0x1 0x4 0x3 0x0 0x26 0x0>,
 					<0x1 0x4 0x4 0x1 0x2f 0x0>;
+
+			/delete-node/ remoteproc_pd1;
+			/delete-node/ remoteproc_pd2;
+			/delete-node/ remoteproc_pd3;
+
+			q6_wcss_text_pd4: remoteproc_text_pd4 {
+				compatible = "qcom,ipq5332-mpd-upd-text";
+				firmware = "IPQ5332/q6_fw4.mdt";
+
+				q6_wcss_pd1: remoteproc_pd1 {
+					compatible = "qcom,ipq5332-wcss-ahb-mpd";
+					reg = <0x004ab000 0x20>;
+					reg-names = "rmb";
+					firmware = "IPQ5332/q6_fw1.mdt";
+					iu_firmware = "IPQ5332/iu_fw.mdt";
+					qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
+					interrupts-extended = <&wcss_smp2p_in 8 0>,
+							<&wcss_smp2p_in 9 0>,
+							<&wcss_smp2p_in 12 0>,
+							<&wcss_smp2p_in 11 0>;
+					interrupt-names = "fatal",
+							"ready",
+							"spawn-ack",
+							"stop-ack";
+
+					resets = <&gcc GCC_WCSSAON_ARES>,
+						<&gcc GCC_WCSS_BCR>,
+						<&gcc GCC_CE_BCR>;
+					reset-names = "wcss_aon_reset",
+						"wcss_reset",
+						"ce_reset";
+
+					clocks = <&gcc GCC_WCSS_DBG_IFC_APB_BDG_CLK>,
+						<&gcc GCC_WCSS_DBG_IFC_NTS_CLK>,
+						<&gcc GCC_WCSS_AXIS_CLK>,
+						<&gcc GCC_WCSS_DBG_IFC_ATB_CLK>,
+						<&gcc GCC_WCSS_DBG_IFC_ATB_BDG_CLK>,
+						<&gcc GCC_WCSS_DBG_IFC_APB_CLK>,
+						<&gcc GCC_WCSS_AXIM_CLK>,
+						<&gcc GCC_WCSS_DBG_IFC_NTS_BDG_CLK>,
+						<&gcc GCC_CE_AXI_CLK>,
+						<&gcc GCC_CE_PCNOC_AHB_CLK>,
+						<&gcc GCC_CE_AHB_CLK>;
+
+					clock-names = "dbg-apb-bdg",
+							"dbg-nts",
+							"wcss_axi_s_clk",
+							"dbg-atb",
+							"dbg-atb-bdg",
+							"dbg-apb",
+							"wcss_axi_m_clk",
+							"dbg-nts-bdg",
+							"ce-axi",
+							"ce-pcnoc-ahb",
+							"ce-ahb";
+					qcom,smem-states = <&wcss_smp2p_out 8>,
+							<&wcss_smp2p_out 9>,
+							<&wcss_smp2p_out 10>;
+					qcom,smem-state-names = "shutdown",
+								"stop",
+								"spawn";
+					qcom,offloaded_to_q6;
+				};
+
+				q6_wcss_pd2: remoteproc_pd2 {
+					compatible = "qcom,ipq5332-wcss-pcie-mpd";
+					firmware = "IPQ5332/q6_fw2.mdt";
+					qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
+					interrupts-extended = <&wcss_smp2p_in 16 0>,
+							<&wcss_smp2p_in 17 0>,
+							<&wcss_smp2p_in 20 0>,
+							<&wcss_smp2p_in 19 0>;
+					interrupt-names = "fatal",
+							"ready",
+							"spawn-ack",
+							"stop-ack";
+
+					qcom,smem-states = <&wcss_smp2p_out 16>,
+							<&wcss_smp2p_out 17>,
+							<&wcss_smp2p_out 18>;
+					qcom,smem-state-names = "shutdown",
+								"stop",
+								"spawn";
+					status = "ok";
+				};
+
+				q6_wcss_pd3: remoteproc_pd3 {
+					compatible = "qcom,ipq5332-wcss-pcie-mpd";
+					firmware = "IPQ5332/q6_fw3.mdt";
+					qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
+					interrupts-extended = <&wcss_smp2p_in 24 0>,
+							<&wcss_smp2p_in 25 0>,
+							<&wcss_smp2p_in 28 0>,
+							<&wcss_smp2p_in 27 0>;
+					interrupt-names = "fatal",
+							"ready",
+							"spawn-ack",
+							"stop-ack";
+
+					qcom,smem-states = <&wcss_smp2p_out 24>,
+							<&wcss_smp2p_out 25>,
+							<&wcss_smp2p_out 26>;
+					qcom,smem-state-names = "shutdown",
+								"stop",
+								"spawn";
+					status = "ok";
+				};
+			};
 		};
 	};
 };
