@@ -1377,7 +1377,7 @@ enum rate_info_flags {
 	RATE_INFO_FLAGS_DMG			= BIT(3),
 	RATE_INFO_FLAGS_HE_MCS			= BIT(4),
 	RATE_INFO_FLAGS_EDMG			= BIT(5),
-	RATE_INFO_FLAGS_EHT_MCS			= BIT(6),
+	RATE_INFO_FLAGS_EHT_MCS			= BIT(7),
 };
 
 /**
