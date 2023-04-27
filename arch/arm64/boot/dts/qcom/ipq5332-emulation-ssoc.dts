@@ -335,7 +335,7 @@
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,tgt-mem-mode = <1>;
 	qcom,bdf-addr = <0x4E300000 0x4E300000 0x4E300000 0x0 0x0 0x0>;
-	qcom,caldb-addr = <0x4F300000 0x4F300000 0x4F300000 0x0 0x0 0x0>;
+	qcom,caldb-addr = <0x50300000 0x50300000 0x50300000 0x0 0x0 0x0>;
 	qcom,caldb-size = <0x500000>;
 	mem-region = <&q6_qcn6432_data_1>;
 	status = "ok";
