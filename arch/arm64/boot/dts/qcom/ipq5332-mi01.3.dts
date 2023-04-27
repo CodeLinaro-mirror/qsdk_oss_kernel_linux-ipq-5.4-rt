@@ -492,8 +492,8 @@
 			qcom,rx-map-priority-level = <1>;	/* Rx priority level per core */
 			qcom,ppeds-num = <2>;			/* Number of PPEDS nodes */
 			/* PPE-DS node format: <Rx-fill Tx-cmpl Rx Tx Queue-base Queue-count> */
-			qcom,ppeds-map = <1 1 1 1 32 8>,	/* PPEDS Node#0 ring and queue map */
-					<2 2 2 2 40 8>;		/* PPEDS Node#1 ring and queue map */
+			qcom,ppeds-map = <1 1 1 1 32 8>,	/* PPEDS Node #1 ring and queue map */
+					<2 2 2 2 40 8>;		/* PPEDS Node #2 ring and queue map */
 			qcom,txdesc-map = <8 9 10 11>,		/* Port0 per-core Tx ring map */
 					  <12 13 14 15>,	/* Port1 per-core Tx ring map */
 					  <4 5 6 7>;		/* used only for packets from  vp*/
