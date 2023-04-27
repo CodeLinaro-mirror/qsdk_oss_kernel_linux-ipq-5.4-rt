@@ -621,6 +621,7 @@ store_context_data(struct device *dev, struct device_attribute *attr,
 			"will have even number of digits\n");
 		pr_info("Context data length is %lu bytes\n",
 			(unsigned long)count-1);
+		context_data_len = 0;
 		return -EINVAL;
 	}
 
@@ -631,6 +632,7 @@ store_context_data(struct device *dev, struct device_attribute *attr,
 		pr_info("Context data length is %lu bytes\n",
 		       (unsigned long)count);
 		pr_info("Context data length must be less than 64 bytes\n");
+		context_data_len = 0;
 		return -EINVAL;
 	}
 
