@@ -604,9 +604,10 @@
 		};
 
 		q6v5_wcss: remoteproc@d100000 {
-			boot-args = <0x1 0x4 0x3 0x0 0x26 0x0>,
-					<0x1 0x4 0x4 0x1 0x2f 0x0>;
+			boot-args = <0x1 0x4 0x3 0x0 0x26 0x2>,
+					<0x1 0x4 0x4 0x1 0x2f 0x2>;
 			memory-region = <&q6_mem_regions>;
+
 			/delete-node/ remoteproc_pd1;
 			/delete-node/ remoteproc_pd2;
 			/delete-node/ remoteproc_pd3;
@@ -696,7 +697,7 @@
 					memory-region = <&q6_qcn6432_data_1>,
 							<&m3_dump_qcn6432_1>,
 							<&q6_qcn6432_etr_1>,
-							<&q6_qcn6432_caldb_1>;		
+							<&q6_qcn6432_caldb_1>;
 					status = "ok";
 				};
 
