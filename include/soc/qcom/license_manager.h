@@ -107,6 +107,17 @@ enum req_type {
 	TYPE_MAX
 };
 
+#ifdef CONFIG_QTI_LICENSE_MANAGER
 void *lm_get_license(enum req_type type, dma_addr_t *dma_addr, size_t *buf_len, dma_addr_t nonce_dma_addr);
 void lm_free_license(void *buf, dma_addr_t dma_addr, size_t buf_len);
+#else
+static inline void *lm_get_license(enum req_type type, dma_addr_t *dma_addr, size_t *buf_len, dma_addr_t nonce_dma_addr)
+{
+	return NULL;
+}
+
+static inline void lm_free_license(void *buf, dma_addr_t dma_addr, size_t buf_len)
+{
+}
+#endif /* CONFIG_QTI_LICENSE_MANAGER */
 #endif /* __LICENSE_MANAGER_H___ */
