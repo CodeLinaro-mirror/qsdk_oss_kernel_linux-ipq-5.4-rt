@@ -25,7 +25,7 @@
 #include <linux/of_device.h>
 
 #define QMI_LICENSE_MANAGER_SERVICE_MAX_MSG_LEN 10259
-#define MAX_NUM_OF_LICENSES 10
+#define MAX_NUM_OF_LICENSES 20
 
 #define QMI_LM_SERVICE_ID_V01 0x0423
 #define QMI_LM_SERVICE_VERS_V01 0x01
@@ -36,6 +36,10 @@
 #define QMI_LM_MAX_CHIPINFO_ID_LEN_V01 32
 #define QMI_LM_MAX_FEATURE_LIST_V01 10
 #define QMI_LM_MAX_LICENSE_SIZE_V01 10240
+
+#define CLIENT_MAX 		6
+#define FEATURE_LIST_MAX 	100
+#define FILE_NAME_MAX 		128
 
 struct qmi_lm_feature_list_req_msg_v01 {
 	u32 reserved;
@@ -77,6 +81,25 @@ struct feature_info {
 	uint32_t list[QMI_LM_MAX_FEATURE_LIST_V01];
 	struct list_head node;
 };
+
+struct target_info {
+	int sq_node;
+	int sq_port;
+	uint32_t list_len;
+	uint32_t list[FEATURE_LIST_MAX];
+	uint32_t lic_file_info_len;
+	int file_status[MAX_NUM_OF_LICENSES];
+};
+
+struct client_target_info {
+	int info_len;
+	struct target_info info[CLIENT_MAX];
+	int num_of_file;
+	char file_name[MAX_NUM_OF_LICENSES][FILE_NAME_MAX];
+};
+
+#define GET_FID_INFO 		_IOWR('L', 1, struct client_target_info)
+#define LICENSE_RESCAN 		_IO('L', 2)
 
 enum req_type {
 	INTERNAL,
