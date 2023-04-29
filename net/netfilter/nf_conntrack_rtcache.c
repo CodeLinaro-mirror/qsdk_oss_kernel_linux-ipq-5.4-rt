@@ -211,7 +211,16 @@ static unsigned int nf_rtcache_forward(u_int8_t pf,
 	if (likely(state->in->ifindex == iif))
 		return NF_ACCEPT;
 
-	nf_conn_rtcache_dst_set(pf, rtc, skb_dst(skb), dir, state->in->ifindex);
+	/*
+	 * If the dst entry's refcnt is 0, then skip adding this to
+	 * the rtcache as its free is already scheduled.
+	 */
+	dst = skb_dst(skb);
+	if (unlikely(atomic_read(&dst->__refcnt) == 0)) {
+		return NF_ACCEPT;
+	}
+
+	nf_conn_rtcache_dst_set(pf, rtc, dst, dir, state->in->ifindex);
 	return NF_ACCEPT;
 }
 
