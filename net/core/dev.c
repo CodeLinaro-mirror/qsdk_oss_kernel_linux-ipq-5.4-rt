@@ -9828,6 +9828,11 @@ int register_netdevice(struct net_device *dev)
 	 */
 	dev->mpls_features |= NETIF_F_SG;
 
+	/*
+	 * Set default no qdisc on all interfaces
+	 */
+	dev->priv_flags |= IFF_NO_QUEUE;
+
 	ret = call_netdevice_notifiers(NETDEV_POST_INIT, dev);
 	ret = notifier_to_errno(ret);
 	if (ret)
