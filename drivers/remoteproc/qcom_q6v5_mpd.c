@@ -2953,7 +2953,7 @@ static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 	int ret;
 	struct device *dev = wcss->dev;
 	const char *m3_fw_name;
-	struct device_node *upd_np;
+	struct device_node *upd_np, *temp;
 	struct platform_device *upd_pdev;
 
 	if (wcss->backdoor)
@@ -2996,6 +2996,35 @@ static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 				dev_err(wcss->dev,
 					"can't load m3_fw.bXX ret:%d\n", ret);
 				return ret;
+			}
+		}
+
+		for_each_available_child_of_node(upd_np, temp) {
+			upd_pdev = of_find_device_by_node(temp);
+
+			ret = of_property_read_string(temp, "m3_firmware",
+				&m3_fw_name);
+			if (ret == -EINVAL)
+				ret = of_property_read_string(temp, "iu_firmware",
+								&m3_fw_name);
+			if (!ret && m3_fw_name) {
+				ret = request_firmware(&m3_fw, m3_fw_name,
+						&upd_pdev->dev);
+				if (ret)
+					continue;
+
+				ret = qcom_mdt_load_no_init(wcss->dev, m3_fw,
+						m3_fw_name, 0,
+						wcss->mem_region, wcss->mem_phys,
+						wcss->mem_size, &wcss->mem_reloc);
+
+				release_firmware(m3_fw);
+
+				if (ret) {
+					dev_err(wcss->dev,
+						"can't load m3_fw.bXX ret:%d\n", ret);
+					return ret;
+				}
 			}
 		}
 	}
