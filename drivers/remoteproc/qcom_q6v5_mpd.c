@@ -29,6 +29,7 @@
 #include <soc/qcom/ramdump.h>
 #endif
 #include <soc/qcom/socinfo.h>
+#include <soc/qcom/license_manager.h>
 #include "qcom_common.h"
 #include "qcom_q6v5.h"
 
@@ -1681,6 +1682,12 @@ wait_for_reset:
 			}
 		}
 	}
+
+	if (lic_param.buf) {
+		lm_free_license(lic_param.buf, lic_param.dma_buf, lic_param.size);
+		lic_param.buf = NULL;
+	}
+
 	return ret;
 
 wcss_q6_reset:
@@ -1690,6 +1697,11 @@ wcss_reset:
 	reset_control_assert(wcss->wcss_reset);
 	if (debug_wcss)
 		writel(0x0, wcss->reg_base + Q6SS_DBG_CFG);
+
+	if (lic_param.buf) {
+		lm_free_license(lic_param.buf, lic_param.dma_buf, lic_param.size);
+		lic_param.buf = NULL;
+	}
 
 	return ret;
 }
@@ -2393,11 +2405,6 @@ static int q6_wcss_stop(struct rproc *rproc)
 	if (ret)
 		return ret;
 
-	if (lic_param.dma_buf) {
-		dma_free_coherent(wcss->dev, lic_param.size, lic_param.buf,
-							lic_param.dma_buf);
-		lic_param.dma_buf = 0x0;
-	}
 pas_done:
 	debugfs_remove(heartbeat_hdl);
 	qcom_q6v5_unprepare(&wcss->q6);
@@ -2638,22 +2645,13 @@ static void *q6_wcss_da_to_va(struct rproc *rproc, u64 da, int len)
 static void load_license_params_to_bootargs(struct device *dev,
 					struct bootargs_smem_info *boot_args)
 {
-	int ret = 0;
-	const char *lic_file_name;
-	const struct firmware *file = NULL;
 	u16 cnt;
 	u32 rd_val;
 	struct license_bootargs lic_bootargs = {0x0};
 
-	ret = of_property_read_string(dev->of_node, "license-file",
-							&lic_file_name);
-	if (ret)
-		return;
-
-	ret = request_firmware(&file, lic_file_name, dev);
-	if (ret) {
-		dev_err(dev, "Error in loading file (%s) : %d,"
-			" Assuming no license mode\n", lic_file_name, ret);
+	lic_param.buf = lm_get_license(INTERNAL, &lic_param.dma_buf, &lic_param.size, 0);
+	if (!lic_param.buf) {
+		dev_info(dev, "No license file passed in bootargs\n");
 		return;
 	}
 
@@ -2661,17 +2659,6 @@ static void load_license_params_to_bootargs(struct device *dev,
 	cnt = *((u16 *)boot_args->smem_elem_cnt_ptr);
 	cnt += sizeof(struct license_bootargs);
 	memcpy_toio(boot_args->smem_elem_cnt_ptr, &cnt, sizeof(u16));
-
-	lic_param.buf = dma_alloc_coherent(dev, file->size,
-				&lic_param.dma_buf, GFP_KERNEL);
-	if (!lic_param.buf) {
-		release_firmware(file);
-		pr_err("failed to allocate memory\n");
-		return;
-	}
-	memcpy(lic_param.buf, file->data, file->size);
-	lic_param.size = file->size;
-	release_firmware(file);
 
 	/* TYPE */
 	lic_bootargs.header.type = LIC_BOOTARGS_HEADER_TYPE;
@@ -2692,6 +2679,8 @@ static void load_license_params_to_bootargs(struct device *dev,
 	memcpy_toio(boot_args->smem_bootargs_ptr,
 					&lic_bootargs, sizeof(lic_bootargs));
 	boot_args->smem_bootargs_ptr += sizeof(lic_bootargs);
+
+	dev_info(dev, "License file copied in bootargs\n");
 	return;
 }
 
