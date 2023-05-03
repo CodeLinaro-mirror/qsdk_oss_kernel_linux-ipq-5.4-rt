@@ -340,8 +340,7 @@ void *lm_get_license(enum req_type type, dma_addr_t *dma_addr, size_t *buf_len,
 	void *buf;
 	int ret;
 
-	if (!svc->license_feature || !svc->license_buf) {
-		dev_dbg(svc->dev, "skipping License file copy as the feature is not enabled\n");
+	if (!svc || !svc->license_feature || !svc->license_buf) {
 		ret = -EIO;
 		goto err;
 	}
@@ -822,7 +821,7 @@ deinit_ioctl:
 	lm_ioctl_free();
 free_lm_lic_buf:
 	if(svc->license_buf)
-		dma_free_coherent(svc->dev, svc->license_buf_len, svc->license_buf, svc->license_dma_addr);
+		dma_free_coherent(dev, LICENSE_BUF_MAX, svc->license_buf, svc->license_dma_addr);
 free_lm_svc:
 	kfree(svc);
 
@@ -831,6 +830,7 @@ free_lm_svc:
 
 static int license_manager_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct lm_svc_ctx *svc = lm_svc;
 	struct client_info *itr, *tmp;
 	struct feature_info *iter, *temp;
@@ -853,7 +853,7 @@ static int license_manager_remove(struct platform_device *pdev)
 	}
 
 	if (svc->license_buf)
-		dma_free_coherent(svc->dev, svc->license_buf_len, svc->license_buf, svc->license_dma_addr);
+		dma_free_coherent(dev, LICENSE_BUF_MAX, svc->license_buf, svc->license_dma_addr);
 	kfree(svc->lm_svc_hdl);
 	kfree(svc);
 
