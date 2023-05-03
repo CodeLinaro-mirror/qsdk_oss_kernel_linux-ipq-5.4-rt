@@ -2946,6 +2946,39 @@ static int share_bootargs_to_q6(struct device *dev)
 	return 0;
 }
 
+static int load_m3_firmware(struct device_node *np, struct q6_wcss *wcss)
+{
+	int ret;
+	const struct firmware *m3_fw;
+	const char *m3_fw_name;
+
+	ret = of_property_read_string(np, "m3_firmware", &m3_fw_name);
+	if (ret == -EINVAL)
+		ret = of_property_read_string(np, "iu_firmware", &m3_fw_name);
+
+	if (ret)
+		return 0;
+
+	ret = request_firmware(&m3_fw, m3_fw_name, wcss->dev);
+	if (ret)
+		return 0;
+
+	ret = qcom_mdt_load_no_init(wcss->dev, m3_fw,
+				m3_fw_name, 0,
+				wcss->mem_region, wcss->mem_phys,
+				wcss->mem_size, &wcss->mem_reloc);
+	release_firmware(m3_fw);
+
+	if (ret) {
+		dev_err(wcss->dev,
+				"can't load %s ret:%d\n", m3_fw_name, ret);
+		return ret;
+	}
+
+	dev_info(wcss->dev, "m3 firmware %s loaded to DDR\n", m3_fw_name);
+	return ret;
+}
+
 static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 {
 	struct q6_wcss *wcss = rproc->priv;
@@ -2953,7 +2986,7 @@ static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 	int ret;
 	struct device *dev = wcss->dev;
 	const char *m3_fw_name;
-	struct device_node *upd_np;
+	struct device_node *upd_np, *temp;
 	struct platform_device *upd_pdev;
 
 	if (wcss->backdoor)
@@ -2973,30 +3006,15 @@ static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 		if (strstr(upd_np->name, "pd") == NULL)
 			continue;
 		upd_pdev = of_find_device_by_node(upd_np);
+		ret = load_m3_firmware(upd_np, wcss);
+		if (ret)
+			return ret;
 
-		ret = of_property_read_string(upd_np, "m3_firmware",
-				&m3_fw_name);
-		if (ret == -EINVAL)
-			ret = of_property_read_string(upd_np, "iu_firmware",
-					&m3_fw_name);
-		if (!ret && m3_fw_name) {
-			ret = request_firmware(&m3_fw, m3_fw_name,
-					&upd_pdev->dev);
+		for_each_available_child_of_node(upd_np, temp) {
+			upd_pdev = of_find_device_by_node(temp);
+			ret = load_m3_firmware(temp, wcss);
 			if (ret)
-				continue;
-
-			ret = qcom_mdt_load_no_init(wcss->dev, m3_fw,
-					m3_fw_name, 0,
-					wcss->mem_region, wcss->mem_phys,
-					wcss->mem_size, &wcss->mem_reloc);
-
-			release_firmware(m3_fw);
-
-			if (ret) {
-				dev_err(wcss->dev,
-					"can't load m3_fw.bXX ret:%d\n", ret);
 				return ret;
-			}
 		}
 	}
 
