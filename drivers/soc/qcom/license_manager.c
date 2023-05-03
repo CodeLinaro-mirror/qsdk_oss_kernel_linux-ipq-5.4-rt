@@ -12,6 +12,10 @@
  *
  */
 #include <linux/module.h>
+#include <linux/kdev_t.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
+#include <linux/ioctl.h>
 #include <linux/dma-direction.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
@@ -19,7 +23,6 @@
 #include "soc/qcom/license_manager.h"
 
 #define LICENSE_BUF_MAX 	(512 * 1024) //512KB
-#define LICENSE_NAME_MAX 	128
 #define ECDSA_MAGIC 		"SSED"
 #define LICENSE_MAGIC 		"SSLD"
 #define LICENSE_META_DATA_MAGIC "SSLM"
@@ -42,6 +45,11 @@ static struct lm_svc_ctx *lm_svc;
 
 static struct kobject *lm_kobj;
 static const char *licenseinfo_file;
+
+dev_t chr_dev;
+static struct class *dev_class;
+static struct cdev lm_cdev;
+
 static unsigned int use_license_partition = 0;
 
 module_param(use_license_partition, uint, 0644);
@@ -127,7 +135,7 @@ static int lm_get_license_in_tlv(struct lm_svc_ctx *svc, bool rescan) {
 	char *end_ptr = NULL;
 	char *magic = NULL;
 	void *buf;
-	char lic_filename[LICENSE_NAME_MAX] = {'\0'};
+	char lic_filename[FILE_NAME_MAX] = {'\0'};
 	char licenseinfo_end[20] = {'\0'};
 	size_t lic_size_aligned;
 	int ret, i;
@@ -414,6 +422,139 @@ void lm_free_license(void *buf, dma_addr_t dma_addr, size_t buf_len) {
 }
 EXPORT_SYMBOL_GPL(lm_free_license);
 
+static int lm_open(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static int lm_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static long lm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	void __user *argp = (void __user *)arg;
+	struct lm_svc_ctx *svc = lm_svc;
+	struct client_target_info *client_info = NULL;
+	struct feature_info *itr, *tmp;
+	int i, len = 0, ret = 0;
+
+	switch(cmd) {
+		case LICENSE_RESCAN:
+			if (svc->license_feature && svc->license_buf && !atomic_read(&buf_use_count)) {
+				ret = lm_get_license_buffer(svc, true);
+				if (ret)
+					dev_err(svc->dev, "License file rescan failed\n");
+			} else {
+				dev_err(svc->dev, "License feature not enabled / resource busy \n");
+				ret = -EIO;
+			}
+		break;
+
+		case GET_FID_INFO:
+			client_info = kzalloc(sizeof(struct client_target_info), GFP_KERNEL);
+			if (!client_info) {
+				dev_err(svc->dev, "Unable to allocate memory for client info\n");
+				return -ENOMEM;
+			}
+
+			if (!list_empty(&svc->clients_feature_list)) {
+				len = 0;
+				list_for_each_entry_safe(itr, tmp,
+						&svc->clients_feature_list, node) {
+					client_info->info[len].sq_node = itr->sq_node;
+					client_info->info[len].sq_port = itr->sq_port;
+					client_info->info[len].list_len = itr->len;
+					for(i = 0; i < itr->len; i++)
+						client_info->info[len].list[i] = itr->list[i];
+					len++;
+				}
+
+				client_info->info_len = len;
+			}
+
+			ret = copy_to_user(argp, client_info, sizeof(struct client_target_info));
+			if (ret) {
+				dev_err(svc->dev, "copy to user error\n");
+			}
+
+			kfree(client_info);
+		break;
+
+		default:
+			dev_err(svc->dev, "%x cmd not handled", cmd);
+			ret = -ENODEV;
+	}
+
+	return ret;
+}
+
+static struct file_operations fops =
+{
+	.owner          = THIS_MODULE,
+	.open           = lm_open,
+	.unlocked_ioctl = lm_ioctl,
+	.release        = lm_release,
+};
+
+static int lm_ioctl_init(struct lm_svc_ctx *svc)
+{
+	int ret;
+	struct device *device;
+
+	ret = alloc_chrdev_region(&chr_dev, 0, 1, "lm_dev");
+	if (ret) {
+		dev_err(svc->dev, "IOCTL: major number allocation failure\n");
+		return ret;
+	}
+
+	/*Creating cdev structure*/
+	cdev_init(&lm_cdev,&fops);
+
+	/*Adding character device to the system*/
+	ret = cdev_add(&lm_cdev,chr_dev,1);
+	if (ret) {
+		dev_err(svc->dev, "IOCTL: adding device failed\n");
+		goto out_chrdev;
+	}
+
+	/* Creating struct class */
+	dev_class = class_create(THIS_MODULE,"lm_class");
+	if (IS_ERR(dev_class)){
+		dev_err(svc->dev, "IOCTL: struct class creation failed\n");
+		ret = PTR_ERR(dev_class);
+		goto out_cdev;
+	}
+
+	/* Creating device */
+	device = device_create(dev_class,NULL,chr_dev,NULL,"lm_device");
+	if (IS_ERR(device)) {
+		dev_err(svc->dev, "IOCTL: device creation failed\n");
+		ret = PTR_ERR(device);
+		goto out_class;
+	}
+
+	return 0;
+
+out_class:
+	class_destroy(dev_class);
+out_cdev:
+	cdev_del(&lm_cdev);
+out_chrdev:
+	unregister_chrdev_region(chr_dev,1);
+
+	return ret;
+}
+
+static void lm_ioctl_free(void) {
+	device_destroy(dev_class, chr_dev);
+	class_destroy(dev_class);
+	cdev_del(&lm_cdev);
+	unregister_chrdev_region(chr_dev,1);
+}
+
+
 static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 			struct sockaddr_qrtr *sq,
 			struct qmi_txn *txn,
@@ -617,11 +758,18 @@ static int license_manager_probe(struct platform_device *pdev)
 		svc->soc_bounded = of_property_read_bool(node, "soc-bounded");
 	}
 
+	/* Create IOCTL for userspace */
+	ret = lm_ioctl_init(svc);
+	if (ret) {
+		dev_err(dev, "Failed to create IOCTL\n");
+		goto free_lm_lic_buf;
+	}
+
 	svc->lm_svc_hdl = kzalloc(sizeof(struct qmi_handle), GFP_KERNEL);
 	if (!svc->lm_svc_hdl) {
 		ret = -ENOMEM;
 		dev_err(dev, "Mem allocation failed for LM svc handle %d\n", ret);
-		goto free_lm_lic_buf;
+		goto deinit_ioctl;
 	}
 	ret = qmi_handle_init(svc->lm_svc_hdl,
 				QMI_LICENSE_MANAGER_SERVICE_MAX_MSG_LEN,
@@ -670,6 +818,8 @@ release_lm_svc_handle:
 	qmi_handle_release(svc->lm_svc_hdl);
 free_lm_svc_handle:
 	kfree(svc->lm_svc_hdl);
+deinit_ioctl:
+	lm_ioctl_free();
 free_lm_lic_buf:
 	if(svc->license_buf)
 		dma_free_coherent(svc->dev, svc->license_buf_len, svc->license_buf, svc->license_dma_addr);
@@ -706,6 +856,8 @@ static int license_manager_remove(struct platform_device *pdev)
 		dma_free_coherent(svc->dev, svc->license_buf_len, svc->license_buf, svc->license_dma_addr);
 	kfree(svc->lm_svc_hdl);
 	kfree(svc);
+
+	lm_ioctl_free();
 
 	lm_svc = NULL;
 
