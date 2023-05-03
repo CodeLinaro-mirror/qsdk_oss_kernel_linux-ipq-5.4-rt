@@ -51,9 +51,16 @@ struct qmi_lm_feature_list_resp_msg_v01 {
 #define QMI_LM_FEATURE_LIST_RESP_MSG_V01_MAX_MSG_LEN 7
 
 struct lm_svc_ctx {
+	struct device *dev;
 	struct qmi_handle *lm_svc_hdl;
 	struct list_head clients_connected;
 	struct list_head clients_feature_list;
+	bool license_feature;
+	bool license_buf_valid;
+	void *license_buf;
+	dma_addr_t license_dma_addr;
+	size_t license_buf_len;
+	bool soc_bounded;
 };
 
 struct client_info {
@@ -71,4 +78,12 @@ struct feature_info {
 	struct list_head node;
 };
 
+enum req_type {
+	INTERNAL,
+	EXTERNAL,
+	TYPE_MAX
+};
+
+void *lm_get_license(enum req_type type, dma_addr_t *dma_addr, size_t *buf_len, dma_addr_t nonce_dma_addr);
+void lm_free_license(void *buf, dma_addr_t dma_addr, size_t buf_len);
 #endif /* __LICENSE_MANAGER_H___ */
