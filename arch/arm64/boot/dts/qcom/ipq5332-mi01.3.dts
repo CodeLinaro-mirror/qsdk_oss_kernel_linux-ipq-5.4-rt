@@ -735,7 +735,6 @@
 &wifi0 {
 	qcom,multipd_arch;
 	qcom,rproc = <&q6_wcss_pd1>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	qcom,tgt-mem-mode = <0>;
 	qcom,bdf-addr = <0x4C400000 0x4C400000 0x4C400000 0x0 0x0 0x0>;
@@ -749,12 +748,12 @@
 &wifi4 {
 	qcom,multipd_arch;
 	qcom,rproc = <&q6_wcss_pd2>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,tgt-mem-mode = <0>;
 	qcom,bdf-addr = <0x4E900000 0x4E900000 0x4E900000 0x0 0x0 0x0>;
 	qcom,caldb-addr = <0x50900000 0x50900000 0x50900000 0x0 0x0 0x0>;
 	qcom,caldb-size = <0x500000>;
+	qcom,board_id = <0x060>;
 	mem-region = <&q6_qcn6432_data_1>;
 	status = "ok";
 };
@@ -762,12 +761,12 @@
 &wifi5 {
 	qcom,multipd_arch;
 	qcom,rproc = <&q6_wcss_pd3>;
-	qcom,rproc_rpd = <&q6v5_wcss>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd3";
 	qcom,tgt-mem-mode = <0>;
 	qcom,bdf-addr = <0x50E00000 0x50E00000 0x50E00000 0x0 0x0 0x0>;
 	qcom,caldb-addr = <0x52E00000 0x52E00000 0x52E00000 0x0 0x0 0x0>;
 	qcom,caldb-size = <0x500000>;
+	qcom,board_id = <0x0b0>;
 	mem-region = <&q6_qcn6432_data_2>;
 	status = "ok";
 };
