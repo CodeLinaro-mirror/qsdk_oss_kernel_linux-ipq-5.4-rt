@@ -3065,7 +3065,7 @@ static int wcss_ahb_pcie_pd_load(struct rproc *rproc, const struct firmware *fw)
 			wcss_rpd->state != WCSS_RESTARTING) {
 		/* Boot rootpd rproc*/
 		ret = rproc_boot(rpd_rproc);
-		if ((ret || wcss->state == WCSS_NORMAL) && wcss->is_fw_shared)
+		if (ret || (wcss->state == WCSS_NORMAL && wcss->is_fw_shared))
 			return ret;
 	}
 
