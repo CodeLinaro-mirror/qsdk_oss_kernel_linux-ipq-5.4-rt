@@ -33,7 +33,7 @@
 #define NONCE_SIZE 		34
 #define ECDSA_DATA_SIZE 	2048 //2KB
 #define ECDSA_BUF_MAX 		2048 + 8 + 12 //2KB + ECDSA header + License meta data
-#define LICNESE_META_DATA_SIZE 	HEADER_SIZE + 8 // Header + Address + Length
+#define LICENSE_META_DATA_SIZE 	HEADER_SIZE + 8 // Header + Address + Length
 #define QWES_SVC_ID 		0x1E
 #define QWES_ECDSA_REQUEST 	0x4
 #define LICENSE_INFO_INI_START 	"licenseinfo_start"
@@ -202,10 +202,11 @@ static int lm_get_license_in_tlv(struct lm_svc_ctx *svc, bool rescan) {
 			 * license data size are 4 bytes aligned */
 			lic_size_aligned = ALIGN(license->size, 4);
 
-			if (svc->license_buf_len + lic_size_aligned > LICENSE_BUF_MAX) {
+			if (svc->license_buf_len + lic_size_aligned + HEADER_SIZE > LICENSE_BUF_MAX) {
 				dev_err(svc->dev, "License files exceeded the MAX %d Bytes\n",
 						LICENSE_BUF_MAX);
 				release_firmware(license);
+				release_firmware(licenseinfo);
 				return -ENOMEM;
 			}
 
@@ -266,7 +267,7 @@ static void *lm_get_license_meta_buffer(dma_addr_t *dma_addr) {
 	void *lic_buf;
 
 	/* Allocate buffer for ECDSA blob */
-	lic_buf = dma_alloc_coherent(svc->dev, LICNESE_META_DATA_SIZE, dma_addr, GFP_KERNEL);
+	lic_buf = dma_alloc_coherent(svc->dev, LICENSE_META_DATA_SIZE, dma_addr, GFP_KERNEL);
 	if (!lic_buf) {
 		dev_err(svc->dev, "Failed to create buffer for license meta data (SSLM) \n");
 		return ERR_PTR(-ENOMEM);
@@ -376,7 +377,7 @@ void *lm_get_license(enum req_type type, dma_addr_t *dma_addr, size_t *buf_len,
 			}
 
 			/* Copy the License meta data buffer size */
-			*buf_len = LICNESE_META_DATA_SIZE;
+			*buf_len = LICENSE_META_DATA_SIZE;
 		} else {
 			/* If license is soc bounded, then send ECDSA + SSLM */
 			if (!nonce_dma_addr) {
