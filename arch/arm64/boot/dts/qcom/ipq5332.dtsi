@@ -939,6 +939,34 @@
 					bias-pull-up;
 				};
 			};
+
+			bt_pins: bt_pins {
+				PTA_0 {
+					pins = "gpio49";
+					function = "PTA_0";
+					drive-strength = <8>;
+					bias-disable;
+				};
+				PTA_1 {
+					pins = "gpio50";
+					function = "PTA_1";
+					drive-strength = <8>;
+					bias-disable;
+				};
+				PTA_2 {
+					pins = "gpio51";
+					function = "PTA_2";
+					drive-strength = <8>;
+					bias-disable;
+				};
+				bt_reset {
+					pins = "gpio32";
+					function = "gpio";
+					drive-strength = <8>;
+					bias-pull-down;
+				};
+
+			};
 		};
 
 		gcc: gcc@1800000 {
