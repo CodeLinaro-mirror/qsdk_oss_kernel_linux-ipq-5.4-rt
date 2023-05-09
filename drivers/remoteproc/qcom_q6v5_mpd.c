@@ -29,6 +29,7 @@
 #include <soc/qcom/ramdump.h>
 #endif
 #include <soc/qcom/socinfo.h>
+#include <soc/qcom/license_manager.h>
 #include "qcom_common.h"
 #include "qcom_q6v5.h"
 
@@ -1681,6 +1682,12 @@ wait_for_reset:
 			}
 		}
 	}
+
+	if (lic_param.buf) {
+		lm_free_license(lic_param.buf, lic_param.dma_buf, lic_param.size);
+		lic_param.buf = NULL;
+	}
+
 	return ret;
 
 wcss_q6_reset:
@@ -1690,6 +1697,11 @@ wcss_reset:
 	reset_control_assert(wcss->wcss_reset);
 	if (debug_wcss)
 		writel(0x0, wcss->reg_base + Q6SS_DBG_CFG);
+
+	if (lic_param.buf) {
+		lm_free_license(lic_param.buf, lic_param.dma_buf, lic_param.size);
+		lic_param.buf = NULL;
+	}
 
 	return ret;
 }
@@ -2393,11 +2405,6 @@ static int q6_wcss_stop(struct rproc *rproc)
 	if (ret)
 		return ret;
 
-	if (lic_param.dma_buf) {
-		dma_free_coherent(wcss->dev, lic_param.size, lic_param.buf,
-							lic_param.dma_buf);
-		lic_param.dma_buf = 0x0;
-	}
 pas_done:
 	debugfs_remove(heartbeat_hdl);
 	qcom_q6v5_unprepare(&wcss->q6);
@@ -2638,22 +2645,13 @@ static void *q6_wcss_da_to_va(struct rproc *rproc, u64 da, int len)
 static void load_license_params_to_bootargs(struct device *dev,
 					struct bootargs_smem_info *boot_args)
 {
-	int ret = 0;
-	const char *lic_file_name;
-	const struct firmware *file = NULL;
 	u16 cnt;
 	u32 rd_val;
 	struct license_bootargs lic_bootargs = {0x0};
 
-	ret = of_property_read_string(dev->of_node, "license-file",
-							&lic_file_name);
-	if (ret)
-		return;
-
-	ret = request_firmware(&file, lic_file_name, dev);
-	if (ret) {
-		dev_err(dev, "Error in loading file (%s) : %d,"
-			" Assuming no license mode\n", lic_file_name, ret);
+	lic_param.buf = lm_get_license(INTERNAL, &lic_param.dma_buf, &lic_param.size, 0);
+	if (!lic_param.buf) {
+		dev_info(dev, "No license file passed in bootargs\n");
 		return;
 	}
 
@@ -2661,17 +2659,6 @@ static void load_license_params_to_bootargs(struct device *dev,
 	cnt = *((u16 *)boot_args->smem_elem_cnt_ptr);
 	cnt += sizeof(struct license_bootargs);
 	memcpy_toio(boot_args->smem_elem_cnt_ptr, &cnt, sizeof(u16));
-
-	lic_param.buf = dma_alloc_coherent(dev, file->size,
-				&lic_param.dma_buf, GFP_KERNEL);
-	if (!lic_param.buf) {
-		release_firmware(file);
-		pr_err("failed to allocate memory\n");
-		return;
-	}
-	memcpy(lic_param.buf, file->data, file->size);
-	lic_param.size = file->size;
-	release_firmware(file);
 
 	/* TYPE */
 	lic_bootargs.header.type = LIC_BOOTARGS_HEADER_TYPE;
@@ -2692,6 +2679,8 @@ static void load_license_params_to_bootargs(struct device *dev,
 	memcpy_toio(boot_args->smem_bootargs_ptr,
 					&lic_bootargs, sizeof(lic_bootargs));
 	boot_args->smem_bootargs_ptr += sizeof(lic_bootargs);
+
+	dev_info(dev, "License file copied in bootargs\n");
 	return;
 }
 
@@ -2946,6 +2935,39 @@ static int share_bootargs_to_q6(struct device *dev)
 	return 0;
 }
 
+static int load_m3_firmware(struct device_node *np, struct q6_wcss *wcss)
+{
+	int ret;
+	const struct firmware *m3_fw;
+	const char *m3_fw_name;
+
+	ret = of_property_read_string(np, "m3_firmware", &m3_fw_name);
+	if (ret == -EINVAL)
+		ret = of_property_read_string(np, "iu_firmware", &m3_fw_name);
+
+	if (ret)
+		return 0;
+
+	ret = request_firmware(&m3_fw, m3_fw_name, wcss->dev);
+	if (ret)
+		return 0;
+
+	ret = qcom_mdt_load_no_init(wcss->dev, m3_fw,
+				m3_fw_name, 0,
+				wcss->mem_region, wcss->mem_phys,
+				wcss->mem_size, &wcss->mem_reloc);
+	release_firmware(m3_fw);
+
+	if (ret) {
+		dev_err(wcss->dev,
+				"can't load %s ret:%d\n", m3_fw_name, ret);
+		return ret;
+	}
+
+	dev_info(wcss->dev, "m3 firmware %s loaded to DDR\n", m3_fw_name);
+	return ret;
+}
+
 static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 {
 	struct q6_wcss *wcss = rproc->priv;
@@ -2953,7 +2975,7 @@ static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 	int ret;
 	struct device *dev = wcss->dev;
 	const char *m3_fw_name;
-	struct device_node *upd_np;
+	struct device_node *upd_np, *temp;
 	struct platform_device *upd_pdev;
 
 	if (wcss->backdoor)
@@ -2973,30 +2995,15 @@ static int q6_wcss_load(struct rproc *rproc, const struct firmware *fw)
 		if (strstr(upd_np->name, "pd") == NULL)
 			continue;
 		upd_pdev = of_find_device_by_node(upd_np);
+		ret = load_m3_firmware(upd_np, wcss);
+		if (ret)
+			return ret;
 
-		ret = of_property_read_string(upd_np, "m3_firmware",
-				&m3_fw_name);
-		if (ret == -EINVAL)
-			ret = of_property_read_string(upd_np, "iu_firmware",
-					&m3_fw_name);
-		if (!ret && m3_fw_name) {
-			ret = request_firmware(&m3_fw, m3_fw_name,
-					&upd_pdev->dev);
+		for_each_available_child_of_node(upd_np, temp) {
+			upd_pdev = of_find_device_by_node(temp);
+			ret = load_m3_firmware(temp, wcss);
 			if (ret)
-				continue;
-
-			ret = qcom_mdt_load_no_init(wcss->dev, m3_fw,
-					m3_fw_name, 0,
-					wcss->mem_region, wcss->mem_phys,
-					wcss->mem_size, &wcss->mem_reloc);
-
-			release_firmware(m3_fw);
-
-			if (ret) {
-				dev_err(wcss->dev,
-					"can't load m3_fw.bXX ret:%d\n", ret);
 				return ret;
-			}
 		}
 	}
 

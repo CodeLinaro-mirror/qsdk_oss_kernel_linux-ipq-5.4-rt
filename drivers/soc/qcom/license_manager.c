@@ -11,279 +11,548 @@
  * GNU General Public License for more details.
  *
  */
-#include "license_manager.h"
+#include <linux/module.h>
+#include <linux/kdev_t.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
+#include <linux/ioctl.h>
+#include <linux/dma-direction.h>
+#include <linux/dma-mapping.h>
+#include <linux/firmware.h>
+#include <linux/qcom_scm.h>
+#include "soc/qcom/license_manager.h"
+
+#define LICENSE_BUF_MAX 	(512 * 1024) //512KB
+#define ECDSA_MAGIC 		"SSED"
+#define LICENSE_MAGIC 		"SSLD"
+#define LICENSE_META_DATA_MAGIC "SSLM"
+#define NEW_LINE_FEED 		0x0a
+#define MAGIC_SIZE 		4
+#define TLV_LENGTH_SIZE 	4
+#define HEADER_SIZE 		MAGIC_SIZE + TLV_LENGTH_SIZE
+#define NONCE_SIZE 		34
+#define ECDSA_DATA_SIZE 	2048 //2KB
+#define ECDSA_BUF_MAX 		2048 + 8 + 12 //2KB + ECDSA header + License meta data
+#define LICNESE_META_DATA_SIZE 	HEADER_SIZE + 8 // Header + Address + Length
+#define QWES_SVC_ID 		0x1E
+#define QWES_ECDSA_REQUEST 	0x4
+#define LICENSE_INFO_INI_START 	"licenseinfo_start"
+#define LICENSE_INFO_INI_END 	"licenseinfo_end"
 
 struct qmi_handle *lm_clnt_hdl;
 
 static struct lm_svc_ctx *lm_svc;
 
 static struct kobject *lm_kobj;
+static const char *licenseinfo_file;
 
-static uint32_t license_file_count = MAX_NUM_OF_LICENSES;
+dev_t chr_dev;
+static struct class *dev_class;
+static struct cdev lm_cdev;
 
-void license_table_creation(uint32_t lic_file_count);
-void free_license_table(void);
+static unsigned int use_license_partition = 0;
 
-static unsigned int use_license_from_rootfs = 0;
+module_param(use_license_partition, uint, 0644);
+MODULE_PARM_DESC(use_license_partition, "Use license files from rootfs: 0,1");
 
-module_param(use_license_from_rootfs, uint, 0644);
-MODULE_PARM_DESC(use_license_from_rootfs, "Use license files from rootfs: 0,1");
+static DEFINE_MUTEX(license_valid_lock);
+static atomic_t buf_use_count = ATOMIC_INIT(0);
 
-static ssize_t update_license_store(struct kobject *kobj, struct kobj_attribute *attr,
-			   const char *buf, size_t count)
-{
-	uint32_t update, ret;
-	bool *license_loaded;
+struct qmi_elem_info qmi_lm_feature_list_req_msg_v01_ei[] = {
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u32),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x01,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   reserved),
+	},
+	{
+		.data_type      = QMI_OPT_FLAG,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x10,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   feature_list_valid),
+	},
+	{
+		.data_type      = QMI_DATA_LEN,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x10,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   feature_list_len),
+	},
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = QMI_LM_MAX_FEATURE_LIST_V01,
+		.elem_size      = sizeof(u32),
+		.array_type       = VAR_LEN_ARRAY,
+		.tlv_type       = 0x10,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   feature_list),
+	},
+	{
+		.data_type      = QMI_EOTI,
+		.array_type       = NO_ARRAY,
+		.tlv_type       = QMI_COMMON_TLV_TYPE,
+	},
+};
+EXPORT_SYMBOL(qmi_lm_feature_list_req_msg_v01_ei);
 
-	ret = kstrtouint(buf, 10, (unsigned int *)&update);
+struct qmi_elem_info qmi_lm_feature_list_resp_msg_v01_ei[] = {
+	{
+		.data_type      = QMI_STRUCT,
+		.elem_len       = 1,
+		.elem_size      = sizeof(struct qmi_response_type_v01),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x02,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_resp_msg_v01,
+					   resp),
+		.ei_array      = qmi_response_type_v01_ei,
+	},
+	{
+		.data_type      = QMI_EOTI,
+		.array_type       = NO_ARRAY,
+		.tlv_type       = QMI_COMMON_TLV_TYPE,
+	},
+};
+EXPORT_SYMBOL(qmi_lm_feature_list_resp_msg_v01_ei);
 
-	if (ret){
-		pr_err("Error while parsing the input %d\n", ret);
-		return -EINVAL;
+static int lm_get_license_in_tlv(struct lm_svc_ctx *svc, bool rescan) {
+	struct device *dev = svc->dev;
+	const struct firmware *licenseinfo = NULL;
+	const struct firmware *license = NULL;
+	char *start_ptr = NULL;
+	char *end_ptr = NULL;
+	char *magic = NULL;
+	void *buf;
+	char lic_filename[FILE_NAME_MAX] = {'\0'};
+	char licenseinfo_end[20] = {'\0'};
+	size_t lic_size_aligned;
+	int ret, i;
+
+	/* Check the buffer status again */
+	if (svc->license_buf_valid && !rescan)
+		return 0;
+
+	/* Read the license_info.ini file */
+	ret = request_firmware(&licenseinfo, licenseinfo_file, dev);
+	if(ret || !licenseinfo->data || !licenseinfo->size) {
+		dev_err(svc->dev, "%s file is not present\n",licenseinfo_file);
+		/* if ret is zero, then call release_firmware */
+		if (!ret)
+			release_firmware(licenseinfo);
+		return -ENOENT;
 	}
-	if(update != 1) {
-		pr_err("Push 1 to update the licenses\n");
-		return -EINVAL;
+
+	/* Check whether the license_info.ini is intact */
+	if (licenseinfo->size < (sizeof(LICENSE_INFO_INI_START) + sizeof(LICENSE_INFO_INI_END))) {
+		dev_err(svc->dev, "%s file marker is not valid\n", licenseinfo_file);
+		release_firmware(licenseinfo);
+		return -EIO;
 	}
 
-	if (!lm_svc) {
-		pr_err("License Service is not running\n");
-		return count;
+	memcpy(licenseinfo_end, licenseinfo->data + licenseinfo->size - sizeof(LICENSE_INFO_INI_END),
+			sizeof(LICENSE_INFO_INI_END));
+
+	if(strncmp(licenseinfo->data, LICENSE_INFO_INI_START, sizeof(LICENSE_INFO_INI_START)-1) ||
+		strncmp(licenseinfo_end, LICENSE_INFO_INI_END, sizeof(LICENSE_INFO_INI_END)-1)) {
+		dev_err(svc->dev, "%s file marker is not valid\n", licenseinfo_file);
+		release_firmware(licenseinfo);
+		return -EIO;
 	}
 
-	license_loaded = &lm_svc->license_loaded;
+	dev_dbg(dev,"%s file is present and intact\n",licenseinfo_file);
 
-	if (*license_loaded) {
-		pr_err("License files loaded already, Reloading it\n");
-		free_license_table();
-		*license_loaded = false;
-	}
+	/* Reset the License data length */
+	svc->license_buf_len = 0;
 
-	license_table_creation(license_file_count);
-	*license_loaded = true;
-	pr_info("Number of license files loaded: %d\n", lm_svc->num_of_license);
+	start_ptr = end_ptr = (char *)licenseinfo->data + sizeof(LICENSE_INFO_INI_START);
 
-	return count;
-}
+	for (i = sizeof(LICENSE_INFO_INI_START); i < (licenseinfo->size - sizeof(LICENSE_INFO_INI_END)); i++) {
+		/* check for newline / line feed */
+		if(*end_ptr == NEW_LINE_FEED) {
+			memcpy(lic_filename, start_ptr, end_ptr - start_ptr);
+			/* Add NULL at end of the string */
+			lic_filename[end_ptr - start_ptr] = '\0';
 
-static struct kobj_attribute lm_update_license_attr =
-	__ATTR(update_licenses, 0200, NULL, update_license_store);
+			dev_dbg(dev,"License file: %s\n",lic_filename);
 
-void license_table_creation(uint32_t lic_file_count)
-{
-	int i,ret;
-	struct license_info **license_list = lm_svc->license_list;
-	int *num_of_license_loaded = &lm_svc->num_of_license;
-
-	for (i=0; i < lic_file_count; i++) {
-		struct license_info *license;
-
-		license = kzalloc(sizeof(struct license_info), GFP_KERNEL);
-
-		if (!license) {
-			ret = -ENOMEM;
-			pr_err("Memory allocation for license info failed %d",
-								ret);
-			continue;
-		}
-
-		ret = snprintf(license->path, PATH_MAX, "%s/license_%d%s",
-					license_path, i+1, license_extn);
-		if (ret >= PATH_MAX) {
-			ret = -ENAMETOOLONG;
-			pr_err("License file path too long, failed with error code %d\n", ret);
-			continue;
-		}
-		/*Allocate memory to hold the license file*/
-		license->order = get_order(QMI_LM_MAX_LICENSE_SIZE_V01);
-		license->page = alloc_pages(GFP_KERNEL, license->order);
-		if (!license->page) {
-			ret = -ENOMEM;
-			pr_err("Mem allocation for %s failed with error code %d\n",license->path, ret);
-			continue;
-		} else {
-			/* get the mapped virtual address of the page */
-			license->buffer = page_address(license->page);
-		}
-		memset(license->buffer, 0, QMI_LM_MAX_LICENSE_SIZE_V01);
-		ret = kernel_read_file_from_path(license->path,
-			&license->buffer, &license->size,
-			QMI_LM_MAX_LICENSE_SIZE_V01, READING_FIRMWARE_PREALLOC_BUFFER);
-		if (ret) {
-			if (ret == -EFBIG){
-				pr_err("Loading %s failed size bigger than MAX_LICENSE_SIZE %d\n",license->path, QMI_LM_MAX_LICENSE_SIZE_V01);
-			} else if(ret != -ENOENT) {
-				pr_err("Loading %s failed with error %d\n", license->path, ret);
-			} else {
-				pr_debug("Loading %s failed with no such file or directory\n",license->path);
+			ret = request_firmware(&license, lic_filename, dev);
+			if(ret || !license->data || !license->size) {
+				dev_err(svc->dev,"%s file is not present\n",lic_filename);
+				/* if ret is zero, then call release_firmware */
+				if (!ret)
+					release_firmware(license);
+				end_ptr++;
+				start_ptr=end_ptr;
+				continue;
 			}
-			free_pages((unsigned long)license->buffer, license->order);
-			kfree(license);
-		} else {
-			pr_debug("License file %s of size %lld loaded into buffer 0x%p\n", license->path, license->size, license->buffer);
 
-			license_list[*num_of_license_loaded] = license;
-			*num_of_license_loaded = *num_of_license_loaded + 1;
+			/* Copy license data in TLV format at license_buf. Each
+			 * license data size are 4 bytes aligned */
+			lic_size_aligned = ALIGN(license->size, 4);
+
+			if (svc->license_buf_len + lic_size_aligned > LICENSE_BUF_MAX) {
+				dev_err(svc->dev, "License files exceeded the MAX %d Bytes\n",
+						LICENSE_BUF_MAX);
+				release_firmware(license);
+				return -ENOMEM;
+			}
+
+			buf = svc->license_buf + svc->license_buf_len;
+
+			magic = LICENSE_MAGIC;
+
+			memcpy(buf, magic, MAGIC_SIZE);
+			memcpy(buf + MAGIC_SIZE,
+					(void *)&license->size, TLV_LENGTH_SIZE);
+			memcpy(buf + HEADER_SIZE,
+					license->data, license->size);
+
+			svc->license_buf_len = svc->license_buf_len + lic_size_aligned + HEADER_SIZE;
+
+			start_ptr = end_ptr + 1;
+
+			release_firmware(license);
 		}
+		end_ptr++;
 	}
+
+	/* set license_buffer is valid */
+	if (svc->license_buf_len) {
+		/* Add NULL TLV at the end of buffer */
+		memset(svc->license_buf + svc->license_buf_len, 0, 12);
+		svc->license_buf_valid = true;
+	}
+
+	release_firmware(licenseinfo);
+
+	return 0;
 }
 
-void free_license_table(void)
-{
-	int i;
-	struct license_info **license_list = lm_svc->license_list;
-	int num_of_license = lm_svc->num_of_license;
-
-	for ( i = 0; i < num_of_license; i++) {
-		if(license_list[i]->buffer) {
-			free_pages((unsigned long)license_list[i]->buffer,
-					license_list[i]->order);
-			pr_debug("Freed 0x%p size: %lld\n",
-				license_list[i]->buffer, license_list[i]->size);
-			kfree(license_list[i]);
-		}
-	}
-	lm_svc->num_of_license = 0;
-
-}
-
-static void qmi_handle_license_termination_mode_req(struct qmi_handle *handle,
-			struct sockaddr_qrtr *sq,
-			struct qmi_txn *txn,
-			const void *decoded_msg)
-{
-	struct qmi_lm_get_termination_mode_req_msg_v01 *req;
-	struct qmi_lm_get_termination_mode_resp_msg_v01 *resp;
-	struct client_info *client;
+static int lm_get_license_buffer(struct lm_svc_ctx *svc, bool rescan) {
 	int ret;
-	bool *license_loaded = &lm_svc->license_loaded;
-	struct feature_info *itr, *tmp;
 
-	if(*license_loaded == false) {
-		license_table_creation(license_file_count);
-		*license_loaded = true;
+	/* Check if the license buffer is valid */
+	if (svc->license_buf_valid && !rescan)
+		return 0;
+
+	mutex_lock(&license_valid_lock);
+
+	ret = lm_get_license_in_tlv(svc, rescan);
+
+	if(ret || !svc->license_buf_len)
+		svc->license_buf_valid = false;
+
+	mutex_unlock(&license_valid_lock);
+
+	return ret;
+}
+
+static void *lm_get_license_meta_buffer(dma_addr_t *dma_addr) {
+	struct lm_svc_ctx *svc = lm_svc;
+	char *magic;
+	u32 license_metadata_len = 8;
+	void *lic_buf;
+
+	/* Allocate buffer for ECDSA blob */
+	lic_buf = dma_alloc_coherent(svc->dev, LICNESE_META_DATA_SIZE, dma_addr, GFP_KERNEL);
+	if (!lic_buf) {
+		dev_err(svc->dev, "Failed to create buffer for license meta data (SSLM) \n");
+		return ERR_PTR(-ENOMEM);
 	}
 
-	req = (struct qmi_lm_get_termination_mode_req_msg_v01 *)decoded_msg;
+	/* Magic */
+	magic = LICENSE_META_DATA_MAGIC;
+	memcpy(lic_buf, magic, MAGIC_SIZE);
+	/* Length 8 bytes, Addr + Length */
+	memcpy(lic_buf + MAGIC_SIZE, (void *)&license_metadata_len,
+			TLV_LENGTH_SIZE);
+	/* Copy License addr and length */
+	memcpy(lic_buf + HEADER_SIZE,
+			(void *)&svc->license_dma_addr, 4);
+	memcpy(lic_buf + HEADER_SIZE + 4, (void *)&svc->license_buf_len,
+			TLV_LENGTH_SIZE);
 
-	resp = kzalloc(sizeof(*resp), GFP_KERNEL);
-	if (!resp) {
-		pr_err("%s: Memory allocation failed for resp buffer\n",
-							__func__);
-		return;
+	return lic_buf;
+}
+
+static void *lm_get_ecdsa_buffer(dma_addr_t *dma_addr, dma_addr_t nonce_dma_addr) {
+	struct lm_svc_ctx *svc = lm_svc;
+	u32 ecdsa_consumed;
+	char *magic;
+	int ret;
+	u32 license_metadata_len = 8;
+	void *ecdsa_buf, *lic_buf;
+
+	/* Allocate buffer for ECDSA blob */
+	ecdsa_buf = dma_alloc_coherent(svc->dev, ECDSA_BUF_MAX, dma_addr, GFP_KERNEL);
+	if (!ecdsa_buf) {
+		dev_err(svc->dev, "License is SoC bounded and failed to create ECDSA buffer\n");
+		return ERR_PTR(-ENOMEM);
 	}
 
-	client = kzalloc(sizeof(*client), GFP_KERNEL);
-	if (!client) {
-		pr_err("%s: Memory allocation failed for client ctx\n",
-							__func__);
-		goto free_resp_mem;
+	/* Get the ECDSA blob from TZ/TME-L. Pass the ECDSA start + HEADER_SIZE */
+	ret = qti_scm_get_ecdsa_blob(QWES_SVC_ID, QWES_ECDSA_REQUEST, nonce_dma_addr,
+					NONCE_SIZE, *dma_addr + HEADER_SIZE, ECDSA_DATA_SIZE,
+					&ecdsa_consumed);
+	if (ret) {
+		dev_err(svc->dev, "Failed to get the ECDSA blob from TZ/TME-L, ret %d\n", ret);
+		return ERR_PTR(ret);
 	}
 
-	pr_debug("License termination: Request rcvd: node_id: 0x%x, timestamp: "
-			"0x%llx,chip_id: 0x%x,chip_name :%s,serialno:0x%x\n",
-			sq->sq_node, req->timestamp, req->id,
-			req->name, req->serialnum);
+	/* Copy ECDSA magic and length */
+	magic = ECDSA_MAGIC;
+	ecdsa_consumed = ALIGN(ecdsa_consumed, 4);
+	memcpy(ecdsa_buf, magic, MAGIC_SIZE);
+	memcpy(ecdsa_buf + MAGIC_SIZE, (void *)&ecdsa_consumed, TLV_LENGTH_SIZE);
 
-	client->sq_node = sq->sq_node;
-	client->sq_port = sq->sq_port;
-	list_add_tail(&client->node, &lm_svc->clients_connected);
+	/* Copy License meta data at end of ECDSA TLV */
+	lic_buf = ecdsa_buf + HEADER_SIZE + ecdsa_consumed;
+	/* Magic */
+	magic = LICENSE_META_DATA_MAGIC;
+	memcpy(lic_buf, magic, MAGIC_SIZE);
+	/* Length 8 bytes, Addr + Length */
+	memcpy(lic_buf + MAGIC_SIZE, (void *)&license_metadata_len,
+			TLV_LENGTH_SIZE);
+	/* Copy License addr and length */
+	memcpy(lic_buf + HEADER_SIZE,
+			(void *)&svc->license_dma_addr, 4);
+	memcpy(lic_buf + HEADER_SIZE + 4, (void *)&svc->license_buf_len,
+			TLV_LENGTH_SIZE);
 
-	if (!list_empty(&lm_svc->clients_feature_list)) {
-		list_for_each_entry_safe(itr, tmp, &lm_svc->clients_feature_list,
-								node) {
-			if (itr->sq_node == sq->sq_node && itr->sq_port == sq->sq_port) {
-				list_del(&itr->node);
-				kfree(itr);
+	return ecdsa_buf;
+}
+
+void *lm_get_license(enum req_type type, dma_addr_t *dma_addr, size_t *buf_len,
+		dma_addr_t nonce_dma_addr) {
+	struct lm_svc_ctx *svc = lm_svc;
+	void *buf;
+	int ret;
+
+	if (!svc || !svc->license_feature || !svc->license_buf) {
+		ret = -EIO;
+		goto err;
+	}
+
+	if (type >= TYPE_MAX) {
+		dev_dbg(svc->dev, "Invalid req_type given\n");
+		ret = -EINVAL;
+		goto err;
+	}
+
+	/* Get the license buffer */
+	ret = lm_get_license_buffer(svc, false);
+	if(ret || !svc->license_buf_valid)
+		goto err;
+
+	/* SSLD format for Internal Q6 */
+	if (type == INTERNAL) {
+		*dma_addr = svc->license_dma_addr;
+		*buf_len = svc->license_buf_len;
+
+		/* increment atomic counter to keep track of buf use */
+		atomic_inc(&buf_use_count);
+
+		return svc->license_buf;
+
+	} else if (type == EXTERNAL) {
+		/* Check if license is endpoint bounded, then send SSLM */
+		if (!svc->soc_bounded) {
+			buf = lm_get_license_meta_buffer(dma_addr);
+			if (IS_ERR(buf)) {
+				dev_err(svc->dev, "SSLM buffer not prepared\n");
+				goto err;
 			}
+
+			/* Copy the License meta data buffer size */
+			*buf_len = LICNESE_META_DATA_SIZE;
+		} else {
+			/* If license is soc bounded, then send ECDSA + SSLM */
+			if (!nonce_dma_addr) {
+				dev_err(svc->dev, "NONCE is not present. It is expected as the license is SoC bounded\n");
+				goto err;
+			}
+
+			buf = lm_get_ecdsa_buffer(dma_addr, nonce_dma_addr);
+			if (IS_ERR(buf)) {
+				dev_err(svc->dev, "ECDSA buffer not prepared\n");
+				goto err;
+			}
+
+			/* Copy the ECDSA buffer size */
+			*buf_len = ECDSA_BUF_MAX;
 		}
+
+		/* increment atomic counter to keep track of buf use */
+		atomic_inc(&buf_use_count);
+
+		return buf;
 	}
-
-	resp->termination_mode =  lm_svc->termination_mode;
-	resp->reserved = 77;
-
-	ret = qmi_send_response(handle, sq, txn,
-			QMI_LM_GET_TERMINATION_MODE_RESP_V01,
-			QMI_LM_GET_TERMINATION_MODE_RESP_MSG_V01_MAX_MSG_LEN,
-			qmi_lm_get_termination_mode_resp_msg_v01_ei, resp);
-	if (ret < 0)
-		pr_err("%s: Sending license termination response failed"
-					"with error_code:%d\n", __func__, ret);
-	else
-		pr_debug("License termination: Response sent, license"
-			" termination mode 0x%x\n", resp->termination_mode);
-
-free_resp_mem:
-	kfree(resp);
+err:
+	*buf_len = 0;
+	*dma_addr = 0;
+	return NULL;
 }
+EXPORT_SYMBOL_GPL(lm_get_license);
 
-static void qmi_handle_license_download_req(struct qmi_handle *handle,
-			struct sockaddr_qrtr *sq,
-			struct qmi_txn *txn,
-			const void *decoded_msg)
+void lm_free_license(void *buf, dma_addr_t dma_addr, size_t buf_len) {
+	struct lm_svc_ctx *svc = lm_svc;
+
+	/* Decrement the atomic counter */
+	if (atomic_read(&buf_use_count) > 0)
+		atomic_dec(&buf_use_count);
+
+	/* Free the ECDSA buffer alone */
+	if (buf != NULL && buf != svc->license_buf) {
+		dev_dbg(svc->dev, "Freeing ECDSA buffer \n");
+		dma_free_coherent(svc->dev, buf_len, buf, dma_addr);
+	}
+}
+EXPORT_SYMBOL_GPL(lm_free_license);
+
+static int lm_open(struct inode *inode, struct file *file)
 {
-
-	struct qmi_lm_download_license_req_msg_v01 *req;
-	struct qmi_lm_download_license_resp_msg_v01 *resp;
-	struct license_info **license_list = lm_svc->license_list;
-	int num_of_license = lm_svc->num_of_license;
-	int ret, req_lic_index;
-
-	req = (struct qmi_lm_download_license_req_msg_v01 *)decoded_msg;
-
-	resp = kzalloc(sizeof(*resp), GFP_KERNEL);
-	if (!resp) {
-		pr_err("%s: Memory allocation failed for resp buffer\n",
-							__func__);
-		return;
-	}
-
-	pr_debug("License download: Request rcvd, node_id: 0x%x, ReservedValue :0x%x,"
-			"LicenseIndex %d\n", sq->sq_node, req->reserved,
-			req->license_index);
-
-	if (num_of_license <= 0) {
-		resp->next_lic_index = 0;
-		resp->data_valid = 0;
-		resp->reserved = 0xdead;
-
-		goto send_resp;
-	}
-
-	if (req->license_index < 0 || (req->license_index >= num_of_license)) {
-		pr_err("%s: unexpected license_index in request: %d\n",
-					__func__, req->license_index);
-		goto free_resp_buf;
-	}
-	req_lic_index = req->license_index;
-
-	memcpy(resp->data, license_list[req_lic_index]->buffer,
-				license_list[req_lic_index]->size);
-	resp->data_len = license_list[req_lic_index]->size;
-	resp->data_valid = 1;
-	resp->reserved = 0xacac;
-
-	if ((req_lic_index+1) < num_of_license)
-		resp->next_lic_index = req_lic_index+1;
-	else
-		resp->next_lic_index = 0;
-
-send_resp:
-	ret = qmi_send_response(handle, sq, txn,
-			QMI_LM_DOWNLOAD_RESP_V01,
-			QMI_LM_DOWNLOAD_LICENSE_RESP_MSG_V01_MAX_MSG_LEN,
-			qmi_lm_download_license_resp_msg_v01_ei, resp);
-	if (ret < 0)
-		pr_err("%s: Sending license termination response failed"
-					"with error_code:%d\n",__func__,ret);
-	else
-		pr_debug("License download: Response sent, license buffer "
-			"size :0x%x, valid: %d next_lic_index %d\n",
-			resp->data_len, resp->data_valid, resp->next_lic_index);
-free_resp_buf:
-	kfree(resp);
-
+	return 0;
 }
+
+static int lm_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static long lm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	void __user *argp = (void __user *)arg;
+	struct lm_svc_ctx *svc = lm_svc;
+	struct client_target_info *client_info = NULL;
+	struct feature_info *itr, *tmp;
+	int i, len = 0, ret = 0;
+
+	switch(cmd) {
+		case LICENSE_RESCAN:
+			if (svc->license_feature && svc->license_buf && !atomic_read(&buf_use_count)) {
+				ret = lm_get_license_buffer(svc, true);
+				if (ret)
+					dev_err(svc->dev, "License file rescan failed\n");
+			} else {
+				dev_err(svc->dev, "License feature not enabled / resource busy \n");
+				ret = -EIO;
+			}
+		break;
+
+		case GET_FID_INFO:
+			client_info = kzalloc(sizeof(struct client_target_info), GFP_KERNEL);
+			if (!client_info) {
+				dev_err(svc->dev, "Unable to allocate memory for client info\n");
+				return -ENOMEM;
+			}
+
+			if (!list_empty(&svc->clients_feature_list)) {
+				len = 0;
+				list_for_each_entry_safe(itr, tmp,
+						&svc->clients_feature_list, node) {
+					client_info->info[len].sq_node = itr->sq_node;
+					client_info->info[len].sq_port = itr->sq_port;
+					client_info->info[len].list_len = itr->len;
+					for(i = 0; i < itr->len; i++)
+						client_info->info[len].list[i] = itr->list[i];
+					len++;
+				}
+
+				client_info->info_len = len;
+			}
+
+			ret = copy_to_user(argp, client_info, sizeof(struct client_target_info));
+			if (ret) {
+				dev_err(svc->dev, "copy to user error\n");
+			}
+
+			kfree(client_info);
+		break;
+
+		default:
+			dev_err(svc->dev, "%x cmd not handled", cmd);
+			ret = -ENODEV;
+	}
+
+	return ret;
+}
+
+static struct file_operations fops =
+{
+	.owner          = THIS_MODULE,
+	.open           = lm_open,
+	.unlocked_ioctl = lm_ioctl,
+	.release        = lm_release,
+};
+
+static int lm_ioctl_init(struct lm_svc_ctx *svc)
+{
+	int ret;
+	struct device *device;
+
+	ret = alloc_chrdev_region(&chr_dev, 0, 1, "lm_dev");
+	if (ret) {
+		dev_err(svc->dev, "IOCTL: major number allocation failure\n");
+		return ret;
+	}
+
+	/*Creating cdev structure*/
+	cdev_init(&lm_cdev,&fops);
+
+	/*Adding character device to the system*/
+	ret = cdev_add(&lm_cdev,chr_dev,1);
+	if (ret) {
+		dev_err(svc->dev, "IOCTL: adding device failed\n");
+		goto out_chrdev;
+	}
+
+	/* Creating struct class */
+	dev_class = class_create(THIS_MODULE,"lm_class");
+	if (IS_ERR(dev_class)){
+		dev_err(svc->dev, "IOCTL: struct class creation failed\n");
+		ret = PTR_ERR(dev_class);
+		goto out_cdev;
+	}
+
+	/* Creating device */
+	device = device_create(dev_class,NULL,chr_dev,NULL,"lm_device");
+	if (IS_ERR(device)) {
+		dev_err(svc->dev, "IOCTL: device creation failed\n");
+		ret = PTR_ERR(device);
+		goto out_class;
+	}
+
+	return 0;
+
+out_class:
+	class_destroy(dev_class);
+out_cdev:
+	cdev_del(&lm_cdev);
+out_chrdev:
+	unregister_chrdev_region(chr_dev,1);
+
+	return ret;
+}
+
+static void lm_ioctl_free(void) {
+	device_destroy(dev_class, chr_dev);
+	class_destroy(dev_class);
+	cdev_del(&lm_cdev);
+	unregister_chrdev_region(chr_dev,1);
+}
+
 
 static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 			struct sockaddr_qrtr *sq,
@@ -403,7 +672,25 @@ static ssize_t show_licensed_features(struct kobject *k,
 }
 
 static struct kobj_attribute lm_licensed_features_attr =
-	__ATTR(licensed_features, 0400, show_licensed_features, NULL);
+	__ATTR(licensed_features, 0400,show_licensed_features,  NULL);
+
+static ssize_t store_license_rescan(struct kobject *k, struct kobj_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct lm_svc_ctx *svc = lm_svc;
+	int ret;
+
+	if (svc->license_feature && svc->license_buf && !atomic_read(&buf_use_count)) {
+		ret = lm_get_license_buffer(svc, true);
+		if (ret)
+			dev_err(svc->dev, "License file rescan failed\n");
+	}
+
+	return count;
+}
+
+static struct kobj_attribute lm_license_rescan_attr =
+	__ATTR(license_rescan, 0200, NULL, store_license_rescan);
 
 static void lm_qmi_svc_disconnect_cb(struct qmi_handle *qmi,
 	unsigned int node, unsigned int port)
@@ -430,20 +717,6 @@ static struct qmi_ops lm_server_ops = {
 static struct qmi_msg_handler lm_req_handlers[] = {
 	{
 		.type = QMI_REQUEST,
-		.msg_id = QMI_LM_GET_TERMINATION_MODE_REQ_V01,
-		.ei = qmi_lm_get_termination_mode_req_msg_v01_ei,
-		.decoded_size = QMI_LM_GET_TERMINATION_MODE_REQ_MSG_V01_MAX_MSG_LEN,
-		.fn = qmi_handle_license_termination_mode_req,
-	},
-	{
-		.type = QMI_REQUEST,
-		.msg_id = QMI_LM_DOWNLOAD_REQ_V01,
-		.ei = qmi_lm_download_license_req_msg_v01_ei,
-		.decoded_size = QMI_LM_DOWNLOAD_LICENSE_REQ_MSG_V01_MAX_MSG_LEN,
-		.fn = qmi_handle_license_download_req,
-	},
-	{
-		.type = QMI_REQUEST,
 		.msg_id = QMI_LM_FEATURE_LIST_REQ_V01,
 		.ei = qmi_lm_feature_list_req_msg_v01_ei,
 		.decoded_size = QMI_LM_FEATURE_LIST_REQ_MSG_V01_MAX_MSG_LEN,
@@ -454,9 +727,8 @@ static struct qmi_msg_handler lm_req_handlers[] = {
 
 static int license_manager_probe(struct platform_device *pdev)
 {
-	struct device_node *node = pdev->dev.of_node;
-	bool host_license_termination = false;
-	bool device_license_termination = false;
+	struct device *dev = &pdev->dev;
+	struct device_node *node = dev->of_node;
 	int ret = 0;
 	struct lm_svc_ctx *svc;
 
@@ -464,88 +736,80 @@ static int license_manager_probe(struct platform_device *pdev)
 	if (!svc)
 		return -ENOMEM;
 
-	device_license_termination = of_property_read_bool(node,
-						"device-license-termination");
-	pr_debug("device-license-termination : %s \n",
-				device_license_termination ? "true" : "false");
+	svc->license_feature = of_property_read_bool(node, "license-feature");
 
-	if (device_license_termination)
-		goto skip_device_mode;
+	if (svc->license_feature) {
+		svc->license_buf = dma_alloc_coherent(dev, LICENSE_BUF_MAX,
+				&svc->license_dma_addr, GFP_KERNEL);
+		if (!svc->license_buf) {
+			dev_err(dev, "Failed to allocated DMA memory for License files\n");
+			ret = -ENOMEM;
+			goto free_lm_svc;
+		}
 
-	host_license_termination = of_property_read_bool(node,
-						"host-license-termination");
-	pr_debug("host-license-termination : %s \n",
-				host_license_termination ? "true" : "false");
+		ret = of_property_read_string(node, "licenseinfo-path", &licenseinfo_file);
+		if (ret || licenseinfo_file == NULL || strlen(licenseinfo_file) == 0) {
+			dev_err(dev, "Licenseinfo-path is not present or not valid\n");
+			ret = -EINVAL;
+			goto free_lm_lic_buf;
+		}
 
-	if (!host_license_termination) {
-		pr_debug("License Termination mode not given in DT,"
-			"Assuming Device license termination by default \n");
-		device_license_termination = true;
+		svc->soc_bounded = of_property_read_bool(node, "soc-bounded");
 	}
 
-skip_device_mode:
-	svc->termination_mode =  host_license_termination ?
-			QMI_LICENSE_TERMINATION_AT_HOST_V01 :
-				QMI_LICENSE_TERMINATION_AT_DEVICE_V01;
-
-	svc->license_list = (struct license_info**)
-				kzalloc(sizeof(struct license_info*) *
-				MAX_NUM_OF_LICENSES, GFP_KERNEL);
-
-	if (!svc->license_list) {
-		ret = -ENOMEM;
-		pr_err("%s:Mem allocation failed for license_list %d\n",
-							__func__, ret);
-		goto free_lm_svc;
+	/* Create IOCTL for userspace */
+	ret = lm_ioctl_init(svc);
+	if (ret) {
+		dev_err(dev, "Failed to create IOCTL\n");
+		goto free_lm_lic_buf;
 	}
-
-	svc->license_loaded = false;
 
 	svc->lm_svc_hdl = kzalloc(sizeof(struct qmi_handle), GFP_KERNEL);
 	if (!svc->lm_svc_hdl) {
 		ret = -ENOMEM;
-		pr_err("%s:Mem allocation failed for LM svc handle %d\n",
-							__func__, ret);
-		goto free_lm_license_list;
+		dev_err(dev, "Mem allocation failed for LM svc handle %d\n", ret);
+		goto deinit_ioctl;
 	}
 	ret = qmi_handle_init(svc->lm_svc_hdl,
 				QMI_LICENSE_MANAGER_SERVICE_MAX_MSG_LEN,
 				&lm_server_ops,
 				lm_req_handlers);
 	if (ret < 0) {
-		pr_err("%s:Error registering license manager svc %d\n",
-							__func__, ret);
+		dev_err(dev, "Error registering license manager svc %d\n", ret);
 		goto free_lm_svc_handle;
 	}
 	ret = qmi_add_server(svc->lm_svc_hdl, QMI_LM_SERVICE_ID_V01,
 					QMI_LM_SERVICE_VERS_V01,
 					0);
 	if (ret < 0) {
-		pr_err("%s: failed to add license manager svc server :%d\n",
-							__func__, ret);
+		dev_err(dev, "Failed to add license manager svc server :%d\n", ret);
 		goto release_lm_svc_handle;
 	}
 
 	INIT_LIST_HEAD(&svc->clients_connected);
 	INIT_LIST_HEAD(&svc->clients_feature_list);
 
+	svc->dev = dev;
 	lm_svc = svc;
 
 	/* Creating a directory in /sys/kernel/ */
 	lm_kobj = kobject_create_and_add("license_manager", kernel_kobj);
 	if (lm_kobj) {
-		if (sysfs_create_file(lm_kobj, &lm_update_license_attr.attr)) {
-			pr_err("Cannot create update_license sysfs file for lm\n");
+		if (sysfs_create_file(lm_kobj, &lm_licensed_features_attr.attr)) {
+			dev_err(dev, "Cannot create licensed_features sysfs file for lm\n");
 			kobject_put(lm_kobj);
 		}
-		if (sysfs_create_file(lm_kobj, &lm_licensed_features_attr.attr)) {
-			pr_err("Cannot create licensed_features sysfs file for lm\n");
+		if (sysfs_create_file(lm_kobj, &lm_license_rescan_attr.attr)) {
+			dev_err(dev, "Cannot create license_rescan sysfs file for lm\n");
 			kobject_put(lm_kobj);
 		}
 	} else {
 		pr_err("Unable to create license manager sysfs entry\n");
 	}
-	pr_info("License Manager driver registered\n");
+
+	dev_info(dev, "License Manager registered. License feature is %s and %s\n",
+			svc->license_feature ? "enabled" : "disabled",
+			svc->soc_bounded ? "SoC Bounded" : "Endpoint Bounded");
 
 	return 0;
 
@@ -553,8 +817,11 @@ release_lm_svc_handle:
 	qmi_handle_release(svc->lm_svc_hdl);
 free_lm_svc_handle:
 	kfree(svc->lm_svc_hdl);
-free_lm_license_list:
-	kfree(svc->license_list);
+deinit_ioctl:
+	lm_ioctl_free();
+free_lm_lic_buf:
+	if(svc->license_buf)
+		dma_free_coherent(dev, LICENSE_BUF_MAX, svc->license_buf, svc->license_dma_addr);
 free_lm_svc:
 	kfree(svc);
 
@@ -563,6 +830,7 @@ free_lm_svc:
 
 static int license_manager_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct lm_svc_ctx *svc = lm_svc;
 	struct client_info *itr, *tmp;
 	struct feature_info *iter, *temp;
@@ -584,10 +852,12 @@ static int license_manager_remove(struct platform_device *pdev)
 		}
 	}
 
-	free_license_table();
-	kfree(svc->license_list);
+	if (svc->license_buf)
+		dma_free_coherent(dev, LICENSE_BUF_MAX, svc->license_buf, svc->license_dma_addr);
 	kfree(svc->lm_svc_hdl);
 	kfree(svc);
+
+	lm_ioctl_free();
 
 	lm_svc = NULL;
 
@@ -603,7 +873,7 @@ static struct platform_driver license_manager_driver = {
 	.probe		= license_manager_probe,
 	.remove		= license_manager_remove,
 	.driver		= {
-		.name	= "license_manager",
+		.name 	= "lm",
 		.of_match_table	= of_license_manager_match,
 	},
 };
