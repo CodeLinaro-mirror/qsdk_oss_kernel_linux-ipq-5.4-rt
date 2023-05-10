@@ -229,9 +229,11 @@
 			compatible = "qca,ipq5332-uni-ssphy";
 			reg = <0x4b0000 0x800>;
 			clocks = <&gcc GCC_USB0_PIPE_CLK>,
-				<&gcc GCC_USB0_PHY_CFG_AHB_CLK>;
+				<&gcc GCC_USB0_PHY_CFG_AHB_CLK>,
+				<&gcc GCC_PCIE3X1_PHY_AHB_CLK>;
 
-			clock-names = "pipe_clk", "phy_cfg_ahb_clk";
+			clock-names = "pipe_clk", "phy_cfg_ahb_clk",
+				"phy_ahb_clk";
 
 			resets =  <&gcc GCC_USB0_PHY_BCR>;
 			reset-names = "por_rst";
