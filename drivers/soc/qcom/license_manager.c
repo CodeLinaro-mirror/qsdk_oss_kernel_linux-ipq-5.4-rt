@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  *
  */
+#include <linux/string.h>
 #include <linux/module.h>
 #include <linux/kdev_t.h>
 #include <linux/fs.h>
@@ -23,10 +24,10 @@
 #include "soc/qcom/license_manager.h"
 
 #define LICENSE_BUF_MAX 	(512 * 1024) //512KB
+#define LICENSE_INFO_CONF_PATH 	"./license/license_info.conf"
 #define ECDSA_MAGIC 		"SSED"
 #define LICENSE_MAGIC 		"SSLD"
 #define LICENSE_META_DATA_MAGIC "SSLM"
-#define NEW_LINE_FEED 		0x0a
 #define MAGIC_SIZE 		4
 #define TLV_LENGTH_SIZE 	4
 #define HEADER_SIZE 		MAGIC_SIZE + TLV_LENGTH_SIZE
@@ -36,15 +37,15 @@
 #define LICENSE_META_DATA_SIZE 	HEADER_SIZE + 8 // Header + Address + Length
 #define QWES_SVC_ID 		0x1E
 #define QWES_ECDSA_REQUEST 	0x4
-#define LICENSE_INFO_INI_START 	"licenseinfo_start"
-#define LICENSE_INFO_INI_END 	"licenseinfo_end"
+#define LICENSE_INFO_START 	"[licensefile]"
+#define FILE_COUNT_STRING 	"filecount"
+#define FILE_STRING 		"file"
 
 struct qmi_handle *lm_clnt_hdl;
 
 static struct lm_svc_ctx *lm_svc;
 
 static struct kobject *lm_kobj;
-static const char *licenseinfo_file;
 
 dev_t chr_dev;
 static struct class *dev_class;
@@ -131,102 +132,131 @@ static int lm_get_license_in_tlv(struct lm_svc_ctx *svc, bool rescan) {
 	struct device *dev = svc->dev;
 	const struct firmware *licenseinfo = NULL;
 	const struct firmware *license = NULL;
-	char *start_ptr = NULL;
-	char *end_ptr = NULL;
+	char *ptr = NULL;
+	char *token = NULL;
 	char *magic = NULL;
 	void *buf;
-	char lic_filename[FILE_NAME_MAX] = {'\0'};
-	char licenseinfo_end[20] = {'\0'};
 	size_t lic_size_aligned;
-	int ret, i;
+	int ret = 0, file_count = 0, files_accounted = 0;
 
 	/* Check the buffer status again */
 	if (svc->license_buf_valid && !rescan)
 		return 0;
 
-	/* Read the license_info.ini file */
-	ret = request_firmware(&licenseinfo, licenseinfo_file, dev);
+	/* Request the license_info.conf file */
+	ret = request_firmware(&licenseinfo, LICENSE_INFO_CONF_PATH, dev);
 	if(ret || !licenseinfo->data || !licenseinfo->size) {
-		dev_err(svc->dev, "%s file is not present\n",licenseinfo_file);
+		dev_err(svc->dev, "%s file is not present\n",LICENSE_INFO_CONF_PATH);
 		/* if ret is zero, then call release_firmware */
 		if (!ret)
 			release_firmware(licenseinfo);
 		return -ENOENT;
 	}
 
-	/* Check whether the license_info.ini is intact */
-	if (licenseinfo->size < (sizeof(LICENSE_INFO_INI_START) + sizeof(LICENSE_INFO_INI_END))) {
-		dev_err(svc->dev, "%s file marker is not valid\n", licenseinfo_file);
-		release_firmware(licenseinfo);
-		return -EIO;
+	/* Check the license_info.conf has minimum size */
+	if (licenseinfo->size < (sizeof(LICENSE_INFO_START) + sizeof(FILE_COUNT_STRING))) {
+		dev_err(svc->dev, "%s file not meeting the minimum size\n", LICENSE_INFO_CONF_PATH);
+		ret = -EINVAL;
+		goto err_licenseinfo;
 	}
 
-	memcpy(licenseinfo_end, licenseinfo->data + licenseinfo->size - sizeof(LICENSE_INFO_INI_END),
-			sizeof(LICENSE_INFO_INI_END));
-
-	if(strncmp(licenseinfo->data, LICENSE_INFO_INI_START, sizeof(LICENSE_INFO_INI_START)-1) ||
-		strncmp(licenseinfo_end, LICENSE_INFO_INI_END, sizeof(LICENSE_INFO_INI_END)-1)) {
-		dev_err(svc->dev, "%s file marker is not valid\n", licenseinfo_file);
-		release_firmware(licenseinfo);
-		return -EIO;
+	/* Check the license_info.conf start */
+	if (strncmp(licenseinfo->data, LICENSE_INFO_START, sizeof(LICENSE_INFO_START)-1)) {
+		dev_err(svc->dev, "%s : %s not present\n", LICENSE_INFO_CONF_PATH, LICENSE_INFO_START);
+		ret = -EINVAL;
+		goto err_licenseinfo;
 	}
 
-	dev_dbg(dev,"%s file is present and intact\n",licenseinfo_file);
+	/* Check the filecount string and get the value */
+	ptr = (char *)licenseinfo->data + sizeof(LICENSE_INFO_START);
+	token = strsep(&ptr, " ");
+	if (!token || !*token || strncmp(token, FILE_COUNT_STRING, sizeof(FILE_COUNT_STRING))) {
+		dev_err(svc->dev, "%s: %s string not present\n", LICENSE_INFO_CONF_PATH, FILE_COUNT_STRING);
+		ret = -EINVAL;
+		goto err_licenseinfo;
+	}
+
+	token = strsep(&ptr, "\n");
+	if (!token || !*token) {
+		dev_err(svc->dev, "%s file count not valid\n", LICENSE_INFO_CONF_PATH);
+		ret = -EINVAL;
+		goto err_licenseinfo;
+	}
+
+	ret = kstrtoint(token, 0, &file_count);
+	if (ret || file_count <= 0 || file_count > MAX_NUM_OF_LICENSES)  {
+		dev_err(svc->dev, "%s file count is invalid %d\n", LICENSE_INFO_CONF_PATH, file_count);
+		ret = -EINVAL;
+		goto err_licenseinfo;
+	}
+
+	dev_dbg(dev,"%s file is present with %d license file names\n",
+			LICENSE_INFO_CONF_PATH, file_count);
 
 	/* Reset the License data length */
 	svc->license_buf_len = 0;
+	svc->license_files->num_of_file = 0;
 
-	start_ptr = end_ptr = (char *)licenseinfo->data + sizeof(LICENSE_INFO_INI_START);
+	while (((token = strsep(&ptr, " ")) != NULL) && (files_accounted < file_count)) {
+		/* Increment the accounted file count */
+		files_accounted++;
 
-	for (i = sizeof(LICENSE_INFO_INI_START); i < (licenseinfo->size - sizeof(LICENSE_INFO_INI_END)); i++) {
-		/* check for newline / line feed */
-		if(*end_ptr == NEW_LINE_FEED) {
-			memcpy(lic_filename, start_ptr, end_ptr - start_ptr);
-			/* Add NULL at end of the string */
-			lic_filename[end_ptr - start_ptr] = '\0';
-
-			dev_dbg(dev,"License file: %s\n",lic_filename);
-
-			ret = request_firmware(&license, lic_filename, dev);
-			if(ret || !license->data || !license->size) {
-				dev_err(svc->dev,"%s file is not present\n",lic_filename);
-				/* if ret is zero, then call release_firmware */
-				if (!ret)
-					release_firmware(license);
-				end_ptr++;
-				start_ptr=end_ptr;
-				continue;
-			}
-
-			/* Copy license data in TLV format at license_buf. Each
-			 * license data size are 4 bytes aligned */
-			lic_size_aligned = ALIGN(license->size, 4);
-
-			if (svc->license_buf_len + lic_size_aligned + HEADER_SIZE > LICENSE_BUF_MAX) {
-				dev_err(svc->dev, "License files exceeded the MAX %d Bytes\n",
-						LICENSE_BUF_MAX);
-				release_firmware(license);
-				release_firmware(licenseinfo);
-				return -ENOMEM;
-			}
-
-			buf = svc->license_buf + svc->license_buf_len;
-
-			magic = LICENSE_MAGIC;
-
-			memcpy(buf, magic, MAGIC_SIZE);
-			memcpy(buf + MAGIC_SIZE,
-					(void *)&license->size, TLV_LENGTH_SIZE);
-			memcpy(buf + HEADER_SIZE,
-					license->data, license->size);
-
-			svc->license_buf_len = svc->license_buf_len + lic_size_aligned + HEADER_SIZE;
-
-			start_ptr = end_ptr + 1;
-
-			release_firmware(license);
+		/* Check file string is present */
+		if (!*token || strncmp(token, FILE_STRING, sizeof(FILE_STRING))) {
+			dev_err(svc->dev, "%s: File name syntax is wrong\n", LICENSE_INFO_CONF_PATH);
+			token = strsep(&ptr, "\n");
+			continue;
 		}
-		end_ptr++;
+
+		/* Get the file name */
+		token = strsep(&ptr, "\n");
+		if (!token || !*token) {
+			dev_err(svc->dev, "%s: File name is wrong\n",LICENSE_INFO_CONF_PATH);
+			continue;
+		}
+
+		dev_dbg(dev,"License file: %s\n",token);
+
+		ret = request_firmware(&license, token, dev);
+		if(ret || !license->data || !license->size) {
+			dev_err(svc->dev,"%s file is not present\n", token);
+			/* if ret is zero, then call release_firmware */
+			if (!ret)
+				release_firmware(license);
+			continue;
+		}
+
+		/* Copy license data in TLV format at license_buf. Each
+		 * license data size are 4 bytes aligned */
+		lic_size_aligned = ALIGN(license->size, 4);
+
+		if (svc->license_buf_len + lic_size_aligned + HEADER_SIZE > LICENSE_BUF_MAX) {
+			dev_err(svc->dev, "License files exceeded the MAX %d Bytes\n",
+						LICENSE_BUF_MAX);
+			svc->license_files->num_of_file = 0;
+			ret = -ENOMEM;
+			release_firmware(license);
+			goto err_licenseinfo;
+		}
+
+		/* Take a copy license file names */
+		memcpy(svc->license_files->file_name[svc->license_files->num_of_file],
+				token, FILE_NAME_MAX);
+		svc->license_files->num_of_file = svc->license_files->num_of_file + 1;
+
+		buf = svc->license_buf + svc->license_buf_len;
+
+		magic = LICENSE_MAGIC;
+
+		memcpy(buf, magic, MAGIC_SIZE);
+		memcpy(buf + MAGIC_SIZE,
+				(void *)&license->size, TLV_LENGTH_SIZE);
+		memcpy(buf + HEADER_SIZE,
+				license->data, license->size);
+
+		svc->license_buf_len = svc->license_buf_len + lic_size_aligned + HEADER_SIZE;
+
+		release_firmware(license);
 	}
 
 	/* set license_buffer is valid */
@@ -236,9 +266,10 @@ static int lm_get_license_in_tlv(struct lm_svc_ctx *svc, bool rescan) {
 		svc->license_buf_valid = true;
 	}
 
+err_licenseinfo:
 	release_firmware(licenseinfo);
 
-	return 0;
+	return ret;
 }
 
 static int lm_get_license_buffer(struct lm_svc_ctx *svc, bool rescan) {
@@ -748,21 +779,22 @@ static int license_manager_probe(struct platform_device *pdev)
 			goto free_lm_svc;
 		}
 
-		ret = of_property_read_string(node, "licenseinfo-path", &licenseinfo_file);
-		if (ret || licenseinfo_file == NULL || strlen(licenseinfo_file) == 0) {
-			dev_err(dev, "Licenseinfo-path is not present or not valid\n");
-			ret = -EINVAL;
+		svc->soc_bounded = of_property_read_bool(node, "soc-bounded");
+
+		svc->license_files = kzalloc(sizeof(struct lm_files), GFP_KERNEL);
+		if (!svc->license_files) {
+			dev_err(dev, "Failed to allocate memory for license file names\n");
+			ret = -ENOMEM;
 			goto free_lm_lic_buf;
 		}
 
-		svc->soc_bounded = of_property_read_bool(node, "soc-bounded");
 	}
 
 	/* Create IOCTL for userspace */
 	ret = lm_ioctl_init(svc);
 	if (ret) {
 		dev_err(dev, "Failed to create IOCTL\n");
-		goto free_lm_lic_buf;
+		goto free_lm_lic_names;
 	}
 
 	svc->lm_svc_hdl = kzalloc(sizeof(struct qmi_handle), GFP_KERNEL);
@@ -820,6 +852,9 @@ free_lm_svc_handle:
 	kfree(svc->lm_svc_hdl);
 deinit_ioctl:
 	lm_ioctl_free();
+free_lm_lic_names:
+	if(svc->license_files)
+		kfree(svc->license_files);
 free_lm_lic_buf:
 	if(svc->license_buf)
 		dma_free_coherent(dev, LICENSE_BUF_MAX, svc->license_buf, svc->license_dma_addr);
@@ -855,6 +890,10 @@ static int license_manager_remove(struct platform_device *pdev)
 
 	if (svc->license_buf)
 		dma_free_coherent(dev, LICENSE_BUF_MAX, svc->license_buf, svc->license_dma_addr);
+
+	if(svc->license_files)
+		kfree(svc->license_files);
+
 	kfree(svc->lm_svc_hdl);
 	kfree(svc);
 

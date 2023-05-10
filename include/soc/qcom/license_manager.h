@@ -35,7 +35,6 @@
 
 #define QMI_LM_MAX_CHIPINFO_ID_LEN_V01 32
 #define QMI_LM_MAX_FEATURE_LIST_V01 10
-#define QMI_LM_MAX_LICENSE_SIZE_V01 10240
 
 #define CLIENT_MAX 		6
 #define FEATURE_LIST_MAX 	100
@@ -54,6 +53,11 @@ struct qmi_lm_feature_list_resp_msg_v01 {
 };
 #define QMI_LM_FEATURE_LIST_RESP_MSG_V01_MAX_MSG_LEN 7
 
+struct lm_files {
+	int num_of_file;
+	char file_name[MAX_NUM_OF_LICENSES][FILE_NAME_MAX];
+};
+
 struct lm_svc_ctx {
 	struct device *dev;
 	struct qmi_handle *lm_svc_hdl;
@@ -62,6 +66,7 @@ struct lm_svc_ctx {
 	bool license_feature;
 	bool license_buf_valid;
 	void *license_buf;
+	struct lm_files *license_files;
 	dma_addr_t license_dma_addr;
 	size_t license_buf_len;
 	bool soc_bounded;
