@@ -77,6 +77,7 @@ struct qca_uni_ss_phy {
 	unsigned int host;
 	struct clk *pipe_clk;
 	struct clk *phy_cfg_ahb_clk;
+	struct clk *phy_ahb_clk;
 };
 
 struct qf_read {
@@ -124,6 +125,7 @@ static int qca_uni_ss_phy_init(struct phy *x)
 	usleep_range(1, 5);
 	/* deassert SS PHY POR reset */
 	reset_control_deassert(phy->por_rst);
+	clk_prepare_enable(phy->phy_ahb_clk);
 	clk_prepare_enable(phy->phy_cfg_ahb_clk);
 	clk_prepare_enable(phy->pipe_clk);
 	phy_autoload();
@@ -192,8 +194,14 @@ static int qca_uni_ss_get_resources(struct platform_device *pdev,
 		phy->phy_cfg_ahb_clk = devm_clk_get(phy->dev,
 					"phy_cfg_ahb_clk");
 		if (IS_ERR(phy->phy_cfg_ahb_clk)) {
-			dev_err(phy->dev, "can not get phy ahb clock\n");
+			dev_err(phy->dev, "can not get phy cfg ahb clock\n");
 			return PTR_ERR(phy->phy_cfg_ahb_clk);
+		}
+
+		phy->phy_ahb_clk = devm_clk_get_optional(phy->dev, "phy_ahb_clk");
+		if (IS_ERR(phy->phy_ahb_clk)) {
+			dev_err(phy->dev, "cannot get phy ahb clock");
+			return PTR_ERR(phy->phy_ahb_clk);
 		}
 	} else {
 		if (of_property_read_u32(np, "qca,host", &phy->host)) {
