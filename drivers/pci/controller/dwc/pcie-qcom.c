@@ -171,6 +171,8 @@
 /* RATEADAPT_VAL = 256 / ((266M / 240M) - 1) = 2363 > Max Value 1023*/
 #define SYSTEM_NOC_PCIE_RATEADAPT_VAL_MAX	0x3FF
 
+#define SYSTEM_NOC_PCIE_RATEADAPT_BYPASS	0x1
+
 #define DEVICE_TYPE_RC				0x4
 
 #define PARF_INT_ALL_STATUS			0x224
@@ -1698,8 +1700,11 @@ static int qcom_pcie_post_init_2_9_0_5018(struct qcom_pcie *pcie)
 		&& (pcie->num_lanes == 1))
 		rate_adapter_val = SYSTEM_NOC_PCIE_RATEADAPT_VAL;
 
-	if (of_device_is_compatible(pci->dev->of_node, "qti,pcie-ipq5332"))
+	if (of_device_is_compatible(pci->dev->of_node, "qti,pcie-ipq5332")) {
 		max_speed = SPEED_GEN3;
+		if (pcie->num_lanes == 2)
+			rate_adapter_val = SYSTEM_NOC_PCIE_RATEADAPT_BYPASS;
+	}
 
 	val = readl(pcie->parf + PCIE20_PARF_PHY_CTRL);
 	val &= ~BIT(0);
