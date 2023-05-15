@@ -2035,6 +2035,12 @@ static int __init sec_key_init(struct device *dev)
 		return err;
 	}
 
+	if (props->aes_v2) {
+		err = sysfs_create_group(sec_kobj, &sec_key_aesv2_attr_grp);
+		if (err)
+			pr_debug("TZ AES v2 sysfs creation failed with error %d\n",err);
+	}
+
 	dma_buf_size = PAGE_SIZE * (1 << get_order(KEY_SIZE));
 	buf_key = dma_alloc_coherent(dev, dma_buf_size,
 					&dma_key, GFP_KERNEL);
@@ -2119,6 +2125,8 @@ static int __init sec_key_init(struct device *dev)
 		}
 
 		sysfs_remove_group(sec_kobj, &sec_key_attr_grp);
+		if (props->aes_v2)
+			sysfs_remove_group(sec_kobj, &sec_key_aesv2_attr_grp);
 		kobject_put(sec_kobj);
 		sec_kobj = NULL;
 
@@ -3846,6 +3854,12 @@ static int __init qtiapp_init(struct device *dev)
 			if (err) {
 				kobject_put(qtiapp_aes_kobj);
 			}
+
+			if (props->aes_v2) {
+				err = sysfs_create_group(qtiapp_aes_kobj, &qtiapp_aesv2_attr_grp);
+				if (err)
+					pr_debug("TZapp AES v2 sysfs creation failed with error %d\n",err);
+			}
 		}
 
 	}
@@ -4209,6 +4223,8 @@ static int __exit qseecom_remove(struct platform_device *pdev)
 		}
 
 		sysfs_remove_group(qtiapp_aes_kobj, &qtiapp_aes_attr_grp);
+		if (props->aes_v2)
+			sysfs_remove_group(qtiapp_aes_kobj, &qtiapp_aesv2_attr_grp);
 		kobject_put(qtiapp_aes_kobj);
 
 	}

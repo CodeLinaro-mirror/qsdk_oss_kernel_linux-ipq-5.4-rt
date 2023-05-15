@@ -926,16 +926,20 @@ static struct attribute *sec_key_attrs[] = {
 	&dev_attr_key_blob.attr,
 	&dev_attr_seal.attr,
 	&dev_attr_unseal.attr,
-	&dev_attr_aes_encrypt.attr,
-	&dev_attr_aes_decrypt.attr,
-	&dev_attr_aes_ivdata.attr,
-	&dev_attr_aes_type.attr,
-	&dev_attr_aes_mode.attr,
+	NULL,
+};
+
+static struct attribute *sec_key_aesv2_attrs[] = {
 	&dev_attr_derive_aes_key.attr,
 	&dev_attr_clear_key.attr,
 	&dev_attr_context_data.attr,
 	&dev_attr_source_data.attr,
 	&dev_attr_bindings_data.attr,
+	&dev_attr_aes_encrypt.attr,
+	&dev_attr_aes_decrypt.attr,
+	&dev_attr_aes_ivdata.attr,
+	&dev_attr_aes_type.attr,
+	&dev_attr_aes_mode.attr,
 	NULL,
 };
 
@@ -949,13 +953,17 @@ static struct attribute *rsa_sec_key_attrs[] = {
 };
 
 static struct attribute *qtiapp_aes_attrs[] = {
-	&dev_attr_derive_key_aes.attr,
-	&dev_attr_clear_key_qtiapp.attr,
 	&dev_attr_encrypt_aes.attr,
 	&dev_attr_decrypt_aes.attr,
 	&dev_attr_ivdata_aes.attr,
 	&dev_attr_type_aes.attr,
 	&dev_attr_mode_aes.attr,
+	NULL,
+};
+
+static struct attribute *qtiapp_aesv2_attrs[] = {
+	&dev_attr_derive_key_aes.attr,
+	&dev_attr_clear_key_qtiapp.attr,
 	&dev_attr_context_data_aes.attr,
 	&dev_attr_source_data_aes.attr,
 	&dev_attr_bindings_data_aes.attr,
@@ -991,6 +999,10 @@ static struct attribute_group rsa_sec_key_attr_grp = {
 	.attrs = rsa_sec_key_attrs,
 };
 
+static struct attribute_group sec_key_aesv2_attr_grp = {
+	.attrs = sec_key_aesv2_attrs,
+};
+
 static struct attribute_group qtiapp_aes_attr_grp = {
 	.attrs = qtiapp_aes_attrs,
 };
@@ -1000,6 +1012,9 @@ static struct attribute_group qtiapp_rsa_attr_grp = {
 };
 static struct attribute_group qtiapp_fuse_write_attr_grp = {
 	.attrs = qtiapp_fuse_write_attrs,
+};
+static struct attribute_group qtiapp_aesv2_attr_grp = {
+	.attrs = qtiapp_aesv2_attrs,
 };
 
 
