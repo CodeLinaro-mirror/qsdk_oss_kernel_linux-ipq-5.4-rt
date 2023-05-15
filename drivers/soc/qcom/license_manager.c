@@ -101,6 +101,116 @@ struct qmi_elem_info qmi_lm_feature_list_req_msg_v01_ei[] = {
 					   feature_list),
 	},
 	{
+		.data_type      = QMI_OPT_FLAG,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x11,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   file_result_valid),
+	},
+	{
+		.data_type      = QMI_DATA_LEN,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x11,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   file_result_len),
+	},
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = QMI_LM_MAX_LICENSE_FILES_V01,
+		.elem_size      = sizeof(u32),
+		.array_type       = VAR_LEN_ARRAY,
+		.tlv_type       = 0x11,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   file_result),
+	},
+	{
+		.data_type      = QMI_OPT_FLAG,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x12,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   lic_common_error_valid),
+	},
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u32),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x12,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   lic_common_error),
+	},
+	{
+		.data_type      = QMI_OPT_FLAG,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x13,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   oem_id_valid),
+	},
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u32),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x13,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   oem_id),
+	},
+	{
+		.data_type      = QMI_OPT_FLAG,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x14,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   jtag_id_valid),
+	},
+	{
+		.data_type      = QMI_UNSIGNED_4_BYTE,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u32),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x14,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   jtag_id),
+	},
+	{
+		.data_type      = QMI_OPT_FLAG,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u8),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x15,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   serial_number_valid),
+	},
+	{
+		.data_type      = QMI_UNSIGNED_8_BYTE,
+		.elem_len       = 1,
+		.elem_size      = sizeof(u64),
+		.array_type       = NO_ARRAY,
+		.tlv_type       = 0x15,
+		.offset         = offsetof(struct
+					   qmi_lm_feature_list_req_msg_v01,
+					   serial_number),
+	},
+	{
 		.data_type      = QMI_EOTI,
 		.array_type       = NO_ARRAY,
 		.tlv_type       = QMI_COMMON_TLV_TYPE,
@@ -184,7 +294,7 @@ static int lm_get_license_in_tlv(struct lm_svc_ctx *svc, bool rescan) {
 	}
 
 	ret = kstrtoint(token, 0, &file_count);
-	if (ret || file_count <= 0 || file_count > MAX_NUM_OF_LICENSES)  {
+	if (ret || file_count <= 0 || file_count > QMI_LM_MAX_LICENSE_FILES_V01)  {
 		dev_err(svc->dev, "%s file count is invalid %d\n", LICENSE_INFO_CONF_PATH, file_count);
 		ret = -EINVAL;
 		goto err_licenseinfo;
@@ -638,6 +748,42 @@ static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 
 	}
 
+	/* Copy license file status */
+	if (!req->file_result_valid) {
+		licensed_features->file_result_len = 0;
+	} else {
+		licensed_features->file_result_len = req->file_result_len;
+		if(licensed_features->file_result_len > QMI_LM_MAX_LICENSE_FILES_V01) {
+			pr_err("file_result larger than QMI_LM_MAX_LICENSE_FILES_V01"
+					"%d, so assiging it to max \n",
+					QMI_LM_MAX_LICENSE_FILES_V01);
+			licensed_features->file_result_len = QMI_LM_MAX_LICENSE_FILES_V01;
+		}
+		for(i=0; i<licensed_features->file_result_len; i++)
+			licensed_features->file_result[i] = req->file_result[i];
+	}
+
+	/* Copy common error, OEM ID, JTAG ID and Serial Number */
+	if (!req->lic_common_error_valid)
+		licensed_features->lic_common_error = 0;
+	else
+		licensed_features->lic_common_error = req->lic_common_error;
+
+	if (!req->oem_id_valid)
+		licensed_features->oem_id = 0;
+	else
+		licensed_features->oem_id = req->oem_id;
+
+	if (!req->jtag_id_valid)
+		licensed_features->jtag_id = 0;
+	else
+		licensed_features->jtag_id = req->jtag_id;
+
+	if (!req->serial_number_valid)
+		licensed_features->serial_number = 0;
+	else
+		licensed_features->serial_number = req->serial_number;
+
 	if (!list_empty(&lm_svc->clients_feature_list)) {
 		list_for_each_entry_safe(itr, tmp, &lm_svc->clients_feature_list,
 								node) {
@@ -692,9 +838,40 @@ static ssize_t show_licensed_features(struct kobject *k,
 						max_buf_len-len,
 						" %d\n",itr->list[i]);
 			}
+
+			if(itr->file_result_len == 0) {
+				len += scnprintf(buf+len, max_buf_len-len,
+					"\nNo license file status\n");
+			} else {
+				len += scnprintf(buf+len, max_buf_len-len,
+					"\n%d license file status received\n",
+					itr->file_result_len);
+				for(i=0; i < itr->file_result_len; i++) {
+					if (lm_svc->license_files->num_of_file &&
+						i < lm_svc->license_files->num_of_file)
+						len += scnprintf(buf+len, max_buf_len-len,
+							" %s : %u\n",lm_svc->license_files->file_name[i],
+							itr->file_result[i]);
+					else
+						len += scnprintf(buf+len, max_buf_len-len,
+							" Invalid status : %u\n",
+							itr->file_result[i]);
+				}
+			}
+
+			len += scnprintf(buf+len, max_buf_len-len,
+					"License common error: %u\n",
+					itr->lic_common_error);
+
 			len += scnprintf(buf+len, max_buf_len-len,
 					"\nAdditional Info: 0x%08x\n",
 					itr->reserved);
+
+			if (itr->jtag_id || itr->oem_id || itr->serial_number)
+				len += scnprintf(buf+len, max_buf_len-len,
+					"JTAG ID: 0x%x\nOEM ID: 0x%x\n"
+					"Serial Number: 0x%llx\n", itr->jtag_id,
+					itr->oem_id, itr->serial_number);
 		}
 	} else
 		len += scnprintf(buf+len, max_buf_len-len,
@@ -724,18 +901,16 @@ static ssize_t store_license_rescan(struct kobject *k, struct kobj_attribute *at
 static struct kobj_attribute lm_license_rescan_attr =
 	__ATTR(license_rescan, 0200, NULL, store_license_rescan);
 
-static void lm_qmi_svc_disconnect_cb(struct qmi_handle *qmi,
-	unsigned int node, unsigned int port)
+static void lm_qmi_svc_bye_cb(struct qmi_handle *qmi, unsigned int node)
 {
-	struct client_info *itr, *tmp;
+	struct feature_info *itr, *tmp;
 
-	if (!list_empty(&lm_svc->clients_connected)) {
-		list_for_each_entry_safe(itr, tmp, &lm_svc->clients_connected,
+	/* Clear feature list based on node ID */
+	if (!list_empty(&lm_svc->clients_feature_list)) {
+		list_for_each_entry_safe(itr, tmp, &lm_svc->clients_feature_list,
 								node) {
-			if (itr->sq_node == node && itr->sq_port == port) {
-				pr_info("Received LM QMI client disconnect "
-					"from node:0x%x port:%d\n",
-					node, port);
+			if (itr->sq_node == node) {
+				pr_debug("Received LM QMI Bye from node: 0x%x \n", node);
 				list_del(&itr->node);
 				kfree(itr);
 			}
@@ -744,7 +919,7 @@ static void lm_qmi_svc_disconnect_cb(struct qmi_handle *qmi,
 }
 
 static struct qmi_ops lm_server_ops = {
-	.del_client = lm_qmi_svc_disconnect_cb,
+	.bye = lm_qmi_svc_bye_cb,
 };
 static struct qmi_msg_handler lm_req_handlers[] = {
 	{
@@ -819,7 +994,6 @@ static int license_manager_probe(struct platform_device *pdev)
 		goto release_lm_svc_handle;
 	}
 
-	INIT_LIST_HEAD(&svc->clients_connected);
 	INIT_LIST_HEAD(&svc->clients_feature_list);
 
 	svc->dev = dev;
@@ -868,18 +1042,10 @@ static int license_manager_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct lm_svc_ctx *svc = lm_svc;
-	struct client_info *itr, *tmp;
 	struct feature_info *iter, *temp;
 
 	qmi_handle_release(svc->lm_svc_hdl);
 
-	if (!list_empty(&svc->clients_connected)) {
-		list_for_each_entry_safe(itr, tmp, &svc->clients_connected,
-								node) {
-			list_del(&itr->node);
-			kfree(itr);
-		}
-	}
 	if (!list_empty(&svc->clients_feature_list)) {
 		list_for_each_entry_safe(iter, temp, &svc->clients_feature_list,
 								node) {
