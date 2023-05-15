@@ -36,6 +36,7 @@
 #define HLOS_PANIC			0x47
 #define VFSM_RESET			0x68
 #define TME_L_FATAL_ERROR		0x49
+#define TME_L_WDT_BITE_FATAL_ERROR	0x69
 
 #define RESET_REASON_MSG_MAX_LEN	100
 
@@ -179,6 +180,10 @@ static int restart_reason_logging(struct platform_device *pdev)
 		case TME_L_FATAL_ERROR:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
 						"%s", "TME-L Fatal Error");
+			break;
+		case TME_L_WDT_BITE_FATAL_ERROR:
+			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
+						"%s", "TME-L WDT Bite occurred");
 			break;
 		default:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
