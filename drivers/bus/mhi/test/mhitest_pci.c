@@ -676,7 +676,7 @@ int mhitest_pci_register_mhi(struct mhitest_platform *mplat)
 
 
 	mhi_ctrl->iova_start = (dma_addr_t)start;
-	mhi_ctrl->iova_stop = (dma_addr_t)(start + size);
+	mhi_ctrl->iova_stop = (dma_addr_t)(start + size - 1);
 
 	MHITEST_VERB("iova_start:%x iova_stop:%x\n",
 			(unsigned int)mhi_ctrl->iova_start,
