@@ -127,6 +127,7 @@ static int restart_reason_logging(struct platform_device *pdev)
 	void __iomem *imem_base;
 	char reset_reason_msg[RESET_REASON_MSG_MAX_LEN];
 
+	memset(reset_reason_msg, 0, sizeof(reset_reason_msg));
 	imem_np = of_find_compatible_node(NULL, NULL,
 				  "qcom,msm-imem-restart-reason-buf-addr");
 	if (!imem_np) {
@@ -147,51 +148,47 @@ static int restart_reason_logging(struct platform_device *pdev)
 	switch(reset_reason) {
 		case NON_SECURE_WATCHDOG:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "Non-Secure Watchdog");
+						"%s", "Non-Secure Watchdog ");
 			break;
 		case AHB_TIMEOUT:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "AHB Timeout");
+						"%s", "AHB Timeout ");
 			break;
 		case NOC_ERROR:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "NOC Error");
+						"%s", "NOC Error ");
 			break;
 		case SYSTEM_RESET_OR_REBOOT:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "System reset or reboot");
+						"%s", "System reset or reboot ");
 			break;
 		case POWER_ON_RESET:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "Power on Reset");
+						"%s", "Power on Reset ");
 			break;
 		case SECURE_WATCHDOG:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "Secure Watchdog");
+						"%s", "Secure Watchdog ");
 			break;
 		case HLOS_PANIC:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "HLOS Panic");
+						"%s", "HLOS Panic ");
 			break;
 		case VFSM_RESET:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "VFSM Reset");
+						"%s", "VFSM Reset ");
 			break;
 		case TME_L_FATAL_ERROR:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "TME-L Fatal Error");
+						"%s", "TME-L Fatal Error ");
 			break;
 		case TME_L_WDT_BITE_FATAL_ERROR:
 			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "TME-L WDT Bite occurred");
-			break;
-		default:
-			scnprintf(reset_reason_msg, RESET_REASON_MSG_MAX_LEN,
-						"%s", "Invalid");
+						"%s", "TME-L WDT Bite occurred ");
 			break;
 	}
 
-	dev_info(&pdev->dev, "reset_reason : %s [0x%X]\n", reset_reason_msg,
+	dev_info(&pdev->dev, "reset_reason : %s[0x%X]\n", reset_reason_msg,
 		reset_reason);
 	return 0;
 }
