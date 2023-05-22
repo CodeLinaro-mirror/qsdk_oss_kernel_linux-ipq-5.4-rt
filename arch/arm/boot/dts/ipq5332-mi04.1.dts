@@ -8,3 +8,9 @@
 
 #include <arm64/qcom/ipq5332-mi04.1.dts>
 
+/ {
+	chosen {
+		stdout-path = "serial0";
+		bootargs-append = " clk_ignore_unused vmalloc=1G";
+	};
+};
