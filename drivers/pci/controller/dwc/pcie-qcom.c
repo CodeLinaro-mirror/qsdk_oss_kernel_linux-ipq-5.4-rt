@@ -165,6 +165,12 @@
 /* RATEADAPT_VAL = 256 / ((342M / 240M) - 1) */
 #define AGGR_NOC_PCIE_1LANE_RATEADAPT_VAL	0x200
 
+/*RATEADAPT_VAL = 256 / ((266M / 200M) - 1) = 775 */
+#define SYSTEM_NOC_PCIE_RATEADAPT_VAL		0x307
+
+/* RATEADAPT_VAL = 256 / ((266M / 240M) - 1) = 2363 > Max Value 1023*/
+#define SYSTEM_NOC_PCIE_RATEADAPT_VAL_MAX	0x3FF
+
 #define DEVICE_TYPE_RC				0x4
 
 #define PARF_INT_ALL_STATUS			0x224
@@ -297,6 +303,7 @@ struct qcom_pcie {
 	void __iomem *parf;			/* DT parf */
 	void __iomem *elbi;			/* DT elbi */
 	void __iomem *aggr_noc;
+	void __iomem *system_noc;
 	union qcom_pcie_resources res;
 	struct phy *phy;
 	struct gpio_desc *reset;
@@ -1685,6 +1692,11 @@ static int qcom_pcie_post_init_2_9_0_5018(struct qcom_pcie *pcie)
 	u32 val;
 	struct dw_pcie *pci = pcie->pci;
 	u32 max_speed = SPEED_GEN2;
+	u32 rate_adapter_val = SYSTEM_NOC_PCIE_RATEADAPT_VAL_MAX;
+
+	if (of_device_is_compatible(pci->dev->of_node, "qcom,pcie-ipq5018")
+		&& (pcie->num_lanes == 1))
+		rate_adapter_val = SYSTEM_NOC_PCIE_RATEADAPT_VAL;
 
 	if (of_device_is_compatible(pci->dev->of_node, "qti,pcie-ipq5332"))
 		max_speed = SPEED_GEN3;
@@ -1714,6 +1726,9 @@ static int qcom_pcie_post_init_2_9_0_5018(struct qcom_pcie *pcie)
 		writel(val | pcie->axi_wr_addr_halt,
 			pcie->parf + PCIE20_PARF_AXI_MSTR_WR_ADDR_HALT_V2);
 	}
+
+	if (pcie->system_noc != NULL && !IS_ERR(pcie->system_noc))
+		writel(rate_adapter_val, pcie->system_noc);
 
 	writel(BUS_MASTER_EN, pci->dbi_base + PCIE20_COMMAND_STATUS);
 
@@ -2739,6 +2754,15 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 		pcie->aggr_noc = devm_ioremap_resource(dev, res);
 		if (IS_ERR(pcie->aggr_noc)) {
 			ret = PTR_ERR(pcie->aggr_noc);
+			goto err_pm_runtime_put;
+		}
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "system_noc");
+	if (res != NULL) {
+		pcie->system_noc = devm_ioremap_resource(dev, res);
+		if (IS_ERR(pcie->system_noc)) {
+			ret = PTR_ERR(pcie->system_noc);
 			goto err_pm_runtime_put;
 		}
 	}
