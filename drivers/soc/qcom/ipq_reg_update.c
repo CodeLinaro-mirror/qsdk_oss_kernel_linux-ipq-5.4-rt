@@ -24,14 +24,38 @@
 #define MEM_NOC_XM_APP0_QOSGEN_MAINCTL_LOW 0x6088
 #define MEM_NOC_XM_APP0_QOSGEN_REGUL0CTL_LOW 0x60C0
 #define MEM_NOC_XM_APP0_QOSGEN_REGUL0BW_LOW 0x60C8
-#define MAINCTL_LOW_VAL 0x70
-#define REGUL0CTL_LOW_VAL 0x7703
-#define REGUL0BW_LOW_VAL 0x3FF0FFF
+
 /* UBI Control Offsets */
 #define UBI_C1_GDS_CTRL_REQ 0x4
 #define UBI_C2_GDS_CTRL_REQ 0x8
 #define UBI_C3_GDS_CTRL_REQ 0xC
 #define UBI32_CORE_GDS_COLLAPSE_EN_SW 0x1 << 28
+
+struct memnoc_config {
+	u32 mainctl_low;
+	u32 regul0ctl_low;
+	u32 regul0bw_low;
+};
+
+static const struct memnoc_config ipq9574_memnoc_config = {
+	.mainctl_low = 0x70,
+	.regul0ctl_low = 0x7703,
+	.regul0bw_low = 0x03FF0FFF,
+};
+
+static const struct memnoc_config ipq5332_memnoc_config = {
+	.mainctl_low = 0x30,
+	.regul0ctl_low = 0x3303,
+	.regul0bw_low = 0x1000FFF,
+};
+
+static const struct of_device_id reg_update_dt_match[] = {
+	{ .compatible = "ipq9574,reg_update", .data = &ipq9574_memnoc_config, },
+	{ .compatible = "ipq5332,reg_update", .data = &ipq5332_memnoc_config, },
+	{ },
+};
+
+MODULE_DEVICE_TABLE(of, reg_update_dt_match);
 
 static int reg_update_probe(struct platform_device *pdev)
 {
@@ -42,16 +66,26 @@ static int reg_update_probe(struct platform_device *pdev)
 	struct clk *nssnoc_nss_csr_clk;
 	int ret;
 	struct device_node *np = (&pdev->dev)->of_node;
+	const struct memnoc_config *config;
+
+	config = (struct memnoc_config *)(of_device_get_match_data(&pdev->dev));
+	if (!config)
+		return -EINVAL;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "memnoc");
 	if(res) {
 		base = devm_ioremap_resource(&pdev->dev, res);
 		if(IS_ERR(base))
 			return PTR_ERR(base);
-		writel(MAINCTL_LOW_VAL, base + MEM_NOC_XM_APP0_QOSGEN_MAINCTL_LOW);
-		writel(REGUL0CTL_LOW_VAL, base + MEM_NOC_XM_APP0_QOSGEN_REGUL0CTL_LOW);
-		writel(REGUL0BW_LOW_VAL, base + MEM_NOC_XM_APP0_QOSGEN_REGUL0BW_LOW);
+
+		writel(config->mainctl_low,
+			base + MEM_NOC_XM_APP0_QOSGEN_MAINCTL_LOW);
+		writel(config->regul0ctl_low,
+			base + MEM_NOC_XM_APP0_QOSGEN_REGUL0CTL_LOW);
+		writel(config->regul0bw_low,
+			base + MEM_NOC_XM_APP0_QOSGEN_REGUL0BW_LOW);
 	}
+
 	if (!of_property_read_bool(np, "ubi_core_enable")) {
 		/* Enabling NSS CSR clocks to access the UBI Power collapse registers */
 		nss_csr_clk = devm_clk_get(&pdev->dev, "nss-csr-clk");
@@ -96,13 +130,6 @@ err_out:
 	return (ret);
 
 }
-
-static const struct of_device_id reg_update_dt_match[] = {
-	{ .compatible = "ipq,reg_update", },
-	{ },
-};
-
-MODULE_DEVICE_TABLE(of, reg_update_dt_match);
 
 static struct platform_driver reg_update_driver = {
 	.driver = {

@@ -195,6 +195,13 @@
 		dma-ranges;
 		compatible = "simple-bus";
 
+		reg_update: reg_update@400000 {
+			compatible = "ipq5332,reg_update";
+			reg = <0x00400000 0x6148>;
+			reg-names = "memnoc";
+			status = "ok";
+		};
+
 		eud@78000 {
 			compatible = "qcom,msm-eud";
 			reg = <0x78000 0x1000>,

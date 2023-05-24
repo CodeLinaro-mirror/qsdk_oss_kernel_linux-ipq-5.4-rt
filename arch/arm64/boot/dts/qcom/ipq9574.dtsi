@@ -219,7 +219,7 @@
 		compatible = "simple-bus";
 
 		reg_update: reg_update@400000 {
-			compatible = "ipq,reg_update";
+			compatible = "ipq9574,reg_update";
 			reg = <0x00400000 0x6148>,<0x39D00020 0x10>;
 			reg-names = "memnoc","ubicore";
 			clocks = <&nsscc NSS_CC_NSS_CSR_CLK>,
