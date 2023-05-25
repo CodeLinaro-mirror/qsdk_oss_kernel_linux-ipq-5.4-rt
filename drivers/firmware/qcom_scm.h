@@ -307,6 +307,8 @@ extern int __qti_scm_register_log_buf(struct device *dev,
 extern int __qti_scm_tls_hardening(struct device *dev, uint32_t req_addr,
 				   uint32_t req_size, uint32_t resp_addr,
 				   uint32_t resp_size, u32 cmd_id);
+extern int __qti_scm_get_ipq5332_fuse_list(struct device *dev, u32 svc_id,
+				u32 cmd_id, struct fuse_payload *, size_t size);
 extern int __qti_scm_aes(struct device *dev, uint32_t req_addr,
 			 uint32_t req_size, u32 cmd_id);
 

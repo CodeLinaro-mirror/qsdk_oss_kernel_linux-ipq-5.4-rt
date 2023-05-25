@@ -22,6 +22,14 @@
 #define QTI_TZ_QSEE_LOG_ENCR_ID		0x1
 #define QTI_TZ_LOG_NO_UPDATE		-6
 #define QTI_TRYBIT     			BIT(12)
+
+#define MAX_FUSE_ADDR_SIZE		0x8
+struct fuse_payload {
+	uint32_t fuse_addr;
+	uint32_t lsb_val;
+	uint32_t msb_val;
+};
+
 enum qseecom_qceos_cmd_id {
 	QSEOS_APP_START_COMMAND	= 0x01,
 	QSEOS_APP_SHUTDOWN_COMMAND,
@@ -163,6 +171,7 @@ struct fuse_blow {
 #define QCOM_SCM_PERM_RW (QCOM_SCM_PERM_READ | QCOM_SCM_PERM_WRITE)
 #define QCOM_SCM_PERM_RWX (QCOM_SCM_PERM_RW | QCOM_SCM_PERM_EXEC)
 
+#define QTI_SCM_OWM_FUSE_CMD_ID		0x22
 #define QTI_SCM_SVC_FUSE		0x8
 #define QTI_KERNEL_AUTH_CMD		0x15
 #define TZ_BLOW_FUSE_SECDAT             0x20
@@ -248,6 +257,8 @@ extern int qti_scm_tls_hardening(uint32_t req_addr, uint32_t req_size,
 				 uint32_t resp_addr, uint32_t resp_size,
 				 u32 cmd_id);
 extern int qti_scm_aes(uint32_t req_addr, uint32_t req_size, u32 cmd_id);
+extern int qti_scm_get_ipq5332_fuse_list(u32 svc_id, u32 cmd_id,
+					struct fuse_payload *fuse, size_t size);
 extern int qti_scm_aes_clear_key_handle(uint32_t key_handle, u32 cmd_id);
 extern int qti_scm_dload(u32 svc_id, u32 cmd_id, void *cmd_buf);
 extern int qti_scm_sdi(u32 svc_id, u32 cmd_id);
