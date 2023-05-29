@@ -166,6 +166,16 @@ struct smp2p_log {
 } smp2pintr[SMP2PLOG_SIZE];
 unsigned int smp2pintrindex;
 
+struct qcom_smp2p *g_smp2p;
+void qcom_clear_smp2p_last_value(void)
+{
+	struct smp2p_entry *entry;
+
+	list_for_each_entry(entry, &g_smp2p->inbound, node)
+		entry->last_value = 0x0;
+}
+EXPORT_SYMBOL(qcom_clear_smp2p_last_value);
+
 static void qcom_smp2p_kick(struct qcom_smp2p *smp2p)
 {
 	/* Make sure any updated data is written before the kick */
@@ -490,6 +500,7 @@ static int qcom_smp2p_probe(struct platform_device *pdev)
 	if (!smp2p)
 		return -ENOMEM;
 
+	g_smp2p = smp2p;
 	smp2p->dev = &pdev->dev;
 	INIT_LIST_HEAD(&smp2p->inbound);
 	INIT_LIST_HEAD(&smp2p->outbound);

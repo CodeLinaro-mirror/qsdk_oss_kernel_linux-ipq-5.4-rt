@@ -13,4 +13,5 @@ phys_addr_t qcom_smem_virt_to_phys(void *p);
 
 void smem_panic_handler(void);
 
+void qcom_clear_smp2p_last_value(void);
 #endif
