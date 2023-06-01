@@ -926,7 +926,7 @@ static struct qmi_msg_handler lm_req_handlers[] = {
 		.type = QMI_REQUEST,
 		.msg_id = QMI_LM_FEATURE_LIST_REQ_V01,
 		.ei = qmi_lm_feature_list_req_msg_v01_ei,
-		.decoded_size = QMI_LM_FEATURE_LIST_REQ_MSG_V01_MAX_MSG_LEN,
+		.decoded_size = sizeof(struct qmi_lm_feature_list_req_msg_v01),
 		.fn = qmi_handle_feature_list_req,
 	},
 	{}
