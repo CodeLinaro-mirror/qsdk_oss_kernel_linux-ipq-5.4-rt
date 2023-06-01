@@ -8,13 +8,7 @@
 
 /dts-v1/;
 
-#ifdef __IPQ_MEM_PROFILE_512_MB__
-#include "ipq5332-512MB-memory.dtsi"
-#else
-#include "ipq5332-default-memory.dtsi"
-#endif
-
-#include "ipq5332.dtsi"
+#include "ipq5332-mi01.2.dts"
 
 / {
 	#address-cells = <0x2>;
@@ -23,117 +17,18 @@
 	compatible = "qcom,ipq5332-ap-mi01.9", "qcom,ipq5332";
 	interrupt-parent = <&intc>;
 
-	aliases {
-		serial0 = &blsp1_uart0;
-		serial1 = &blsp1_uart1;
-		ethernet0 = "/soc/dp1";
-		ethernet1 = "/soc/dp2";
-	};
-
-	chosen {
-		stdout-path = "serial0";
-	};
-
 	soc {
 		pinctrl@1000000 {
-			serial_0_pins: serial0-pinmux {
-				pins = "gpio18", "gpio19";
-				function = "blsp0_uart0";
-				drive-strength = <8>;
-				bias-pull-up;
-			};
-
-			serial_1_pins: serial1-pinmux {
-				pins = "gpio33", "gpio34", "gpio35", "gpio36";
-				function = "blsp1_uart2";
-				drive-strength = <8>;
-				bias-pull-up;
-			};
-
-			i2c_1_pins: i2c-1-pinmux {
-				pins = "gpio29", "gpio30";
-				function = "blsp1_i2c0";
-				drive-strength = <8>;
-				bias-pull-up;
-			};
+			/delete-node/ leds_pins;
 		};
 
-		serial@78af000 {
-			pinctrl-0 = <&serial_0_pins>;
-			pinctrl-names = "default";
-			status = "ok";
-		};
-
-		serial@78b0000 {
-			pinctrl-0 = <&serial_1_pins>;
-			pinctrl-names = "default";
-			status = "disabled";
-		};
-
-		i2c_1: i2c@78b6000 {
-			status = "ok";
-			pinctrl-0 = <&i2c_1_pins>;
-			pinctrl-names = "default";
-		};
-
-		dma@7984000 {
-			status = "ok";
-		};
-
-		nand@79b0000 {
-			pinctrl-0 = <&qspi_nand_pins>;
-			pinctrl-names = "default";
-			status = "ok";
-		};
-
-		usb3@8A00000 {
-			status = "ok";
-			qcom,select-utmi-as-pipe-clk;
-			dwc3@8A00000 {
-				/delete-property/ #phy-cells;
-				/delete-property/ phys;
-				/delete-property/ phy-names;
-			};
-		};
-
-		hs_m31phy@7b000 {
-			status = "ok";
-		};
-
-		phy_x2@4b1000 {
-			status = "ok";
-		};
-
-		pcie@18000000 {
-			status = "ok";
-			pcie1_rp {
-				reg = <0 0 0 0 0>;
-
-				qcom,mhi@1 {
-					reg = <0 0 0 0 0>;
-					qti,disable-rddm-prealloc;
-					qti,rddm-seg-len = <0x1000>;
-				};
-			};
-		};
-
-		phy@4b0000 {
-			status = "ok";
-		};
-
-		pcie@20000000 {
-			status = "ok";
-			pcie0_rp {
-				reg = <0 0 0 0 0>;
-
-				qcom,mhi@2 {
-					reg = <0 0 0 0 0>;
-					qti,disable-rddm-prealloc;
-					qti,rddm-seg-len = <0x1000>;
-				};
-			};
-		};
+		/delete-node/ leds;
 	};
+};
+
+
+&wifi0 {
+	status = "disabled";
 };
 
 /* Disable IPQ5332 integrated radio's reserved memory */
