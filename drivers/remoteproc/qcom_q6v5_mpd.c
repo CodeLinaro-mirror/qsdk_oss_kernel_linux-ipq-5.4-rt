@@ -346,6 +346,7 @@ struct wcss_data {
 	bool q6_reg_base_protected;
 	bool reset_dbg_reg;
 	u8 bootargs_version;
+	bool clear_smp2p_last_value;
 };
 
 struct wcss_clk {
@@ -1567,6 +1568,9 @@ static int q6_wcss_start(struct rproc *rproc)
 		return -EINVAL;
 
 	qcom_q6v5_prepare(&wcss->q6);
+
+	if (desc->clear_smp2p_last_value)
+		qcom_clear_smp2p_last_value();
 
 	if (desc->q6_clk_set_rate)
 		desc->q6_clk_set_rate(wcss);
@@ -3950,6 +3954,7 @@ static const struct wcss_data q6_ipq5332_res_init = {
 	.pasid = RPD_SWID,
 	.q6_reg_base_protected = true,
 	.bootargs_version = VERSION2,
+	.clear_smp2p_last_value = true,
 };
 
 static const struct wcss_data q6_ipq5018_res_init = {
