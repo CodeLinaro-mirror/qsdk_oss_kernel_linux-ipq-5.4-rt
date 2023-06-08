@@ -68,7 +68,7 @@
 
 		tzapp: tzapp@49B00000 {
 			no-map;
-		#if !defined(__IPQ_MEM_PROFILE_512_MB__) || !defined(__IPQ_MEM_PROFILE_256_MB__)
+		#if !defined(__IPQ_MEM_PROFILE_512_MB__) && !defined(__IPQ_MEM_PROFILE_256_MB__)
 			reg = <0x0 0x49B00000 0x0 0x00600000>;
 		#endif
 		};
