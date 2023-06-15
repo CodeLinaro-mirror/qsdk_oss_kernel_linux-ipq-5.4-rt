@@ -604,7 +604,7 @@
 				q6_wcss_pd2: remoteproc_pd2 {
 					compatible = "qcom,ipq5332-wcss-pcie-mpd";
 					firmware = "IPQ5332/q6_fw2.mdt";
-					iu_firmware = "IPQ5332/iu_fw.mdt";
+					iu_firmware = "qcn6432/iu_fw.mdt";
 					qcom,halt-regs = <&tcsr_q6_block 0xa000 0x18 0x0>;
 					interrupts-extended = <&wcss_smp2p_in 16 0>,
 							<&wcss_smp2p_in 17 0>,
