@@ -455,12 +455,11 @@ static void *lm_get_ecdsa_buffer(dma_addr_t *dma_addr, dma_addr_t nonce_dma_addr
 
 	/* Copy ECDSA magic and length */
 	magic = ECDSA_MAGIC;
-	ecdsa_consumed = ALIGN(ecdsa_consumed, 4);
 	memcpy(ecdsa_buf, magic, MAGIC_SIZE);
 	memcpy(ecdsa_buf + MAGIC_SIZE, (void *)&ecdsa_consumed, TLV_LENGTH_SIZE);
 
 	/* Copy License meta data at end of ECDSA TLV */
-	lic_buf = ecdsa_buf + HEADER_SIZE + ecdsa_consumed;
+	lic_buf = ecdsa_buf + HEADER_SIZE + ALIGN(ecdsa_consumed, 4);
 	/* Magic */
 	magic = LICENSE_META_DATA_MAGIC;
 	memcpy(lic_buf, magic, MAGIC_SIZE);
