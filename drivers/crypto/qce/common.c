@@ -256,8 +256,7 @@ go_proc:
 	return 0;
 }
 
-static int qce_setup_regs_ahash_dma(struct crypto_async_request *async_req,
-				u32 totallen, u32 offset)
+static int qce_setup_regs_ahash_dma(struct crypto_async_request *async_req)
 {
 	struct ahash_request *req = ahash_request_cast(async_req);
 	struct crypto_ahash *ahash = __crypto_ahash_cast(async_req->tfm);
@@ -288,7 +287,7 @@ static int qce_setup_regs_ahash_dma(struct crypto_async_request *async_req,
 		qce_clear_array_dma(qce, REG_AUTH_KEY0, 16);
 		qce_clear_array_dma(qce, REG_AUTH_BYTECNT0, 4);
 
-		auth_cfg = qce_auth_cfg(rctx->flags, rctx->authklen);
+		auth_cfg = qce_auth_cfg(rctx->flags, rctx->authklen, digestsize);
 	}
 
 	if (IS_SHA_HMAC(rctx->flags) || IS_CMAC(rctx->flags)) {
@@ -316,7 +315,7 @@ static int qce_setup_regs_ahash_dma(struct crypto_async_request *async_req,
 		qce_write_array_dma(qce, REG_AUTH_BYTECNT0,
 				(u32 *)rctx->byte_count, 2);
 
-	auth_cfg = qce_auth_cfg(rctx->flags, 0);
+	auth_cfg = qce_auth_cfg(rctx->flags, 0, digestsize);
 
 	if (rctx->last_blk)
 		auth_cfg |= BIT(AUTH_LAST_SHIFT);
@@ -534,8 +533,7 @@ static int qce_setup_regs_skcipher(struct crypto_async_request *async_req)
 	return 0;
 }
 
-static int qce_setup_regs_ablkcipher_dma(struct crypto_async_request *async_req,
-		u32 totallen, u32 offset)
+static int qce_setup_regs_ablkcipher_dma(struct crypto_async_request *async_req)
 {
 	struct skcipher_request *req = skcipher_request_cast(async_req);
 	struct qce_cipher_reqctx *rctx = skcipher_request_ctx(req);
@@ -601,7 +599,7 @@ static int qce_setup_regs_ablkcipher_dma(struct crypto_async_request *async_req,
 
 	qce_write_reg_dma(qce, REG_ENCR_SEG_CFG, encr_cfg, 1);
 	qce_write_reg_dma(qce, REG_ENCR_SEG_SIZE, rctx->cryptlen, 1);
-	qce_write_reg_dma(qce, REG_ENCR_SEG_START, (offset & 0xffff), 1);
+	qce_write_reg_dma(qce, REG_ENCR_SEG_START, 0, 1);
 
 	if (IS_CTR(flags)) {
 		qce_write_reg_dma(qce, REG_CNTR_MASK, ~0, 1);
@@ -610,7 +608,7 @@ static int qce_setup_regs_ablkcipher_dma(struct crypto_async_request *async_req,
 		qce_write_reg_dma(qce, REG_CNTR_MASK2, ~0, 1);
 	}
 
-	qce_write_reg_dma(qce, REG_SEG_SIZE, totallen, 1);
+	qce_write_reg_dma(qce, REG_SEG_SIZE, rctx->cryptlen, 1);
 
 	/* get little endianness */
 	config = qce_config_reg(qce, 1);
@@ -834,17 +832,16 @@ int qce_start(struct crypto_async_request *async_req, u32 type)
 	}
 }
 
-int qce_start_dma(struct crypto_async_request *async_req, u32 type, u32 totallen,
-		u32 offset)
+int qce_start_dma(struct crypto_async_request *async_req, u32 type)
 {
 	switch (type) {
 #ifdef CONFIG_CRYPTO_DEV_QCE_SKCIPHER
 		case CRYPTO_ALG_TYPE_ABLKCIPHER:
-			return qce_setup_regs_ablkcipher_dma(async_req, totallen, offset);
+			return qce_setup_regs_ablkcipher_dma(async_req);
 #endif
 #ifdef CONFIG_CRYPTO_DEV_QCE_SHA
 		case CRYPTO_ALG_TYPE_AHASH:
-			return qce_setup_regs_ahash_dma(async_req, totallen, offset);
+			return qce_setup_regs_ahash_dma(async_req);
 #endif
 		default:
 			return -EINVAL;
@@ -872,6 +869,8 @@ int qce_check_status(struct qce_device *qce, u32 *status)
 	 */
 	if (*status & STATUS_ERRORS || !(*status & BIT(OPERATION_DONE_SHIFT)))
 		ret = -ENXIO;
+	else if (*status & BIT(MAC_FAILED_SHIFT))
+		ret = -EBADMSG;
 
 	return ret;
 }
