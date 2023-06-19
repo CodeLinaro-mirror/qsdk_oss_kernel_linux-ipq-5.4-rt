@@ -332,8 +332,13 @@ struct qcom_pcie {
 
 #define to_qcom_pcie(x)		dev_get_drvdata((x)->dev)
 
-#define MAX_RC_NUM	3
-static struct qcom_pcie *pcie_dev_arr[MAX_RC_NUM];
+struct qcom_pcie_info{
+	struct qcom_pcie *pcie;
+	struct list_head node;
+};
+
+LIST_HEAD(qcom_pcie_list);
+
 extern struct pci_ops dw_pcie_ops;
 struct gpio_desc *mdm2ap_e911;
 
@@ -2351,23 +2356,26 @@ static const struct dw_pcie_ops qti_dw_pcie_ops = {
 
 int pcie_rescan(void)
 {
-	int i, ret;
+	int ret;
 	struct pcie_port *pp;
 	struct qcom_pcie *pcie;
+	struct qcom_pcie_info *pcie_info, *tmp;
 
-	for (i = 0; i < MAX_RC_NUM; i++) {
-		pcie = pcie_dev_arr[i];
+	if (!list_empty(&qcom_pcie_list)) {
+		list_for_each_entry_safe(pcie_info, tmp, &qcom_pcie_list, node) {
+			pcie = pcie_info->pcie;
 		/* reset and enumerate the pcie devices */
-		if (pcie) {
-			pr_notice("---> Initializing %d\n", i);
-			if (pcie->enumerated)
-				continue;
+			if (pcie) {
+				pr_notice("---> Initializing %d\n", pcie->rc_idx);
+				if (pcie->enumerated)
+					continue;
 
-			pp = &(pcie->pci)->pp;
-			ret = pci_create_scan_root_bus(pp);
-			if (!ret)
-				pcie->enumerated = true;
-			pr_notice(" ... done<---\n");
+				pp = &(pcie->pci)->pp;
+				ret = pci_create_scan_root_bus(pp);
+				if (!ret)
+					pcie->enumerated = true;
+				pr_notice(" ... done<---\n");
+			}
 		}
 	}
 	return 0;
@@ -2375,32 +2383,30 @@ int pcie_rescan(void)
 
 void pcie_remove_bus(void)
 {
-	int i;
 	struct pcie_port *pp;
 	struct qcom_pcie *pcie;
-#ifdef CONFIG_IPQ_APSS_5018
-	for (i = 0; i < 1; i++) {
-#else
-	for (i = MAX_RC_NUM-1; i >= 0; i--) {
-#endif
-		pcie = pcie_dev_arr[i];
+	struct qcom_pcie_info *pcie_info, *tmp;
 
-		if (pcie) {
-			pr_notice("---> Removing %d\n", i);
-			if (!pcie->enumerated)
-				continue;
+	if (!list_empty(&qcom_pcie_list)) {
+		list_for_each_entry_safe_reverse(pcie_info, tmp, &qcom_pcie_list, node) {
+			pcie = pcie_info->pcie;
+			if (pcie) {
+				pr_notice("---> Removing %d\n", pcie->rc_idx);
+				if (!pcie->enumerated)
+					continue;
 
-			pp = &(pcie->pci)->pp;
-			pci_stop_root_bus(pp->root_bus);
-			pci_remove_root_bus(pp->root_bus);
+				pp = &(pcie->pci)->pp;
+				pci_stop_root_bus(pp->root_bus);
+				pci_remove_root_bus(pp->root_bus);
 
-			qcom_ep_reset_assert(pcie);
-			phy_power_off(pcie->phy);
+				qcom_ep_reset_assert(pcie);
+				phy_power_off(pcie->phy);
 
-			pcie->ops->deinit(pcie);
-			pp->root_bus = NULL;
-			pcie->enumerated = false;
-			pr_notice(" ... done<---\n");
+				pcie->ops->deinit(pcie);
+				pp->root_bus = NULL;
+				pcie->enumerated = false;
+				pr_notice(" ... done<---\n");
+			}
 		}
 	}
 }
@@ -2446,28 +2452,31 @@ static void pcie_slot_remove(int val)
 {
 	struct pcie_port *pp;
 	struct qcom_pcie *pcie;
+	struct qcom_pcie_info *pcie_info, *tmp;
 
 	pci_lock_rescan_remove();
 
-	if ((val >= 0) && (val < MAX_RC_NUM)) {
-		pcie = pcie_dev_arr[val];
-		if (pcie) {
-			if (!pcie->enumerated) {
-				pr_notice("\nPCIe: RC%d already removed", val);
-			}
-			else {
-				pr_notice("---> Removing %d", val);
-				pp = &(pcie->pci)->pp;
-				pci_stop_root_bus(pp->root_bus);
-				pci_remove_root_bus(pp->root_bus);
+	if (!list_empty(&qcom_pcie_list)) {
+		list_for_each_entry_safe(pcie_info, tmp, &qcom_pcie_list, node) {
+			pcie = pcie_info->pcie;
+			if (pcie && (pcie->rc_idx == val)) {
+				if (!pcie->enumerated) {
+					pr_notice("\nPCIe: RC%d already removed\n", val);
+				}
+				else {
+					pr_notice("---> Removing %d\n", val);
+					pp = &(pcie->pci)->pp;
+					pci_stop_root_bus(pp->root_bus);
+					pci_remove_root_bus(pp->root_bus);
 
-				qcom_ep_reset_assert(pcie);
-				phy_power_off(pcie->phy);
+					qcom_ep_reset_assert(pcie);
+					phy_power_off(pcie->phy);
 
-				pcie->ops->deinit(pcie);
-				pp->root_bus = NULL;
-				pcie->enumerated = false;
-				pr_notice(" ... done<---\n");
+					pcie->ops->deinit(pcie);
+					pp->root_bus = NULL;
+					pcie->enumerated = false;
+					pr_notice(" ... done<---\n");
+				}
 			}
 		}
 	}
@@ -2478,26 +2487,27 @@ static void pcie_slot_rescan(int val)
 {
 	struct pcie_port *pp;
 	struct qcom_pcie *pcie;
+	struct qcom_pcie_info *pcie_info, *tmp;
 	int ret;
 
 	pci_lock_rescan_remove();
 
-	if ((val >= 0) && (val < MAX_RC_NUM)) {
-		pcie = pcie_dev_arr[val];
-		if (pcie) {
-			if (pcie->enumerated) {
-				pr_notice("PCIe: RC%d already enumerated", val);
-			} else {
-				pp = &(pcie->pci)->pp;
-				ret = pci_create_scan_root_bus(pp);
-				if (!ret)
-					pcie->enumerated = true;
+	if (!list_empty(&qcom_pcie_list)) {
+		list_for_each_entry_safe(pcie_info, tmp, &qcom_pcie_list, node) {
+			pcie = pcie_info->pcie;
+			if (pcie && (pcie->rc_idx == val)) {
+				if (pcie->enumerated) {
+					pr_notice("PCIe: RC%d already enumerated\n", val);
+				} else {
+					pp = &(pcie->pci)->pp;
+					ret = pci_create_scan_root_bus(pp);
+					if (!ret)
+						pcie->enumerated = true;
+				}
 			}
 		}
 	}
 	pci_unlock_rescan_remove();
-
-
 }
 
 static ssize_t slot_rescan_store(struct bus_type *bus, const char *buf,
@@ -2598,6 +2608,7 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 	struct dw_pcie *pci;
 	struct qcom_pcie *pcie;
 	struct qcom_pcie_of_data *data;
+	struct qcom_pcie_info *pcie_info;
 	int soc_version_major;
 	int ret;
 	u32 link_retries_count = 0;
@@ -2930,7 +2941,14 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 	}
 
 	pcie->rc_idx = rc_idx;
-	pcie_dev_arr[rc_idx++] = pcie;
+	rc_idx++;
+
+	/* Add qcom_pcie pointer to the list */
+	pcie_info = kzalloc(sizeof(struct qcom_pcie_info), GFP_KERNEL);
+	if (pcie_info) {
+		pcie_info->pcie = pcie;
+		list_add_tail(&pcie_info->node, &qcom_pcie_list);
+	}
 
 	return 0;
 
