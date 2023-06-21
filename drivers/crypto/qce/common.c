@@ -857,9 +857,6 @@ int qce_check_status(struct qce_device *qce, u32 *status)
 
 	*status = qce_read(qce, REG_STATUS);
 
-	/* Unlock the crypto pipe here */
-	if (qce->qce_cmd_desc_enable)
-		qce_unlock_reg_dma(qce);
 
 	/*
 	 * Don't use result dump status. The operation may not be complete.

@@ -80,6 +80,10 @@ static void qce_skcipher_done(void *data)
 		dev_dbg(qce->dev, "skcipher dma termination error (%d)\n",
 			error);
 
+	/* Unlock the crypto pipe here */
+	if (qce->qce_cmd_desc_enable)
+		qce_unlock_reg_dma(qce);
+
 	memcpy(rctx->iv, result_buf->encr_cntr_iv, rctx->ivsize);
 	qce->async_req_done(tmpl->qce, error);
 }
