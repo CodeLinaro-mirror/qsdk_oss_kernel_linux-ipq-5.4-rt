@@ -636,7 +636,7 @@ const struct nla_policy nl80211_policy[NUM_NL80211_ATTR] = {
 	[NL80211_ATTR_EHT_PUNCTURE_BITMAP] = { .type = NLA_U32 },
 	[NL80211_ATTR_CONTROL_PORT_NO_PREAUTH] = { .type = NLA_FLAG },
 	[NL80211_ATTR_MLD_MAC] = { .type = NLA_EXACT_LEN_WARN, .len = ETH_ALEN },
-	[NL80211_ATTR_MLD_REFERENCE] = { .type = NLA_U32 },
+	[NL80211_ATTR_MLD_REFERENCE] = { .type = NLA_BINARY, .len = IFNAMSIZ-1 },
 	[NL80211_ATTR_MLD_LINK_MACS] = { .type = NLA_NESTED },
 	[NL80211_ATTR_MLD_LINK_IDS] = { .type = NLA_NESTED },
 	[NL80211_ATTR_RECONFIG] = { .type = NLA_FLAG },
@@ -3685,7 +3685,7 @@ static int nl80211_new_interface(struct sk_buff *skb, struct genl_info *info)
 	if (info->attrs[NL80211_ATTR_MLD_REFERENCE]) {
 		if (wiphy_ext_feature_isset(&rdev->wiphy, NL80211_EXT_FEATURE_MLO))
 			params.mld_reference =
-				nla_get_u32(info->attrs[NL80211_ATTR_MLD_REFERENCE]);
+				nla_data(info->attrs[NL80211_ATTR_MLD_REFERENCE]);
 		else
 			return -ENOTSUPP;
 	}
