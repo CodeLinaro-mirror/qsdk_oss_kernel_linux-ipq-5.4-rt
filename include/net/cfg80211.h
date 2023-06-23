@@ -605,7 +605,7 @@ struct vif_params {
 	const u8 *vht_mumimo_groups;
 	const u8 *vht_mumimo_follow_addr;
 	u8 mld_macaddr[ETH_ALEN];
-	u32 mld_reference;
+	char *mld_reference;
 };
 
 /**
