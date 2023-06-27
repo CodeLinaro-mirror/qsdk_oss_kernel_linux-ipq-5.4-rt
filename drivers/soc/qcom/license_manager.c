@@ -786,7 +786,7 @@ static void qmi_handle_feature_list_req(struct qmi_handle *handle,
 	if (!list_empty(&lm_svc->clients_feature_list)) {
 		list_for_each_entry_safe(itr, tmp, &lm_svc->clients_feature_list,
 								node) {
-			if (itr->sq_node == sq->sq_node && itr->sq_port == sq->sq_port) {
+			if (itr->sq_node == sq->sq_node) {
 				list_del(&itr->node);
 				kfree(itr);
 			}
