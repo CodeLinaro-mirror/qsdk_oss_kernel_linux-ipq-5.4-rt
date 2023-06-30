@@ -412,6 +412,7 @@
 				<&gcc GCC_BLSP1_AHB_CLK>;
 			clock-names = "core", "iface";
 			status = "disabled";
+			tx-watermark = <0>;
 		};
 
 		spi_0: spi@78b5000 {
