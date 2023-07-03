@@ -1738,6 +1738,13 @@ void mhi_debug_reg_dump(struct mhi_controller *mhi_cntrl)
 		 TO_MHI_EXEC_STR(mhi_cntrl->ee));
 
 	state = mhi_get_mhi_state(mhi_cntrl);
+
+	if (!mhi_cntrl->bhi) {
+		dev_err(&mhi_cntrl->mhi_dev->dev,
+			"BHI not initialized, failed to dump debug registers\n");
+		return;
+	}
+
 	ee = mhi_get_exec_env(mhi_cntrl);
 
 	dev_info(&mhi_cntrl->mhi_dev->dev,

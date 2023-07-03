@@ -26,9 +26,12 @@
 
 #define WDOG_TIMEOUT	30
 #define MHI_PANIC_TIMER_STEP	1000
-
 volatile int mhi_panic_timeout;
 volatile int force_graceful = 0;
+
+static int ap2mdm_gpio, mdm2ap_gpio;
+
+#define	SDX55	0x0306
 
 bool mhi_ssr_negotiate;
 
@@ -1103,24 +1106,53 @@ static int mhi_panic_handler(struct notifier_block *this,
 			     unsigned long event, void *ptr)
 {
 	int mdmreboot = 0, i;
-	struct mhi_controller *mhi_cntrl;
-	mhi_cntrl = container_of(this, struct mhi_controller, mhi_panic_notifier);
+	struct gpio_desc *ap2mdm = NULL, *mdm2ap = NULL;
+	struct mhi_controller *mhi_cntrl = container_of(this, struct mhi_controller, mhi_panic_notifier);
+	struct pci_dev *pci_dev = container_of(mhi_cntrl->cntrl_dev, struct pci_dev, dev);
 
+	if (SDX55 == pci_dev->device) {
+		ap2mdm = gpio_to_desc(ap2mdm_gpio);
+		if (IS_ERR(ap2mdm))
+			return PTR_ERR(ap2mdm);
+
+		mdm2ap = gpio_to_desc(mdm2ap_gpio);
+		if (IS_ERR(mdm2ap))
+			return PTR_ERR(mdm2ap);
+
+		/*
+		 * ap2mdm_status is set to 0 to indicate the SDX
+		 * that IPQ has crashed. Now the SDX has to take
+		 * dump.
+		 */
+		gpiod_set_value(ap2mdm, 0);
+	}
 	if (mhi_panic_timeout) {
 		if (mhi_panic_timeout > WDOG_TIMEOUT)
 			writel(0, wdt);
 
 		for (i = 0; i < mhi_panic_timeout; i++) {
-
-			if (!mdmreboot && mhi_cntrl->ee == MHI_EE_RDDM) {
+			/*
+			 * Waiting for the mdm2ap status to be 0
+			 * which indicates that SDX is rebooting and entering
+			 * the crashdump path.
+			 */
+			if (!mdmreboot && (((SDX55 == pci_dev->device) && !gpiod_get_value(mdm2ap))
+				|| ((SDX55 != pci_dev->device) && mhi_cntrl->ee == MHI_EE_RDDM))) {
 				MHI_LOG("MDM is rebooting and entering the crashdump path\n");
 				mdmreboot = 1;
 			}
 
-			if (mdmreboot && mhi_cntrl->ee == MHI_EE_AMSS) {
+			/*
+			 * Waiting for the mdm2ap status to be 1
+			 * which indicates that SDX has completed crashdump
+			 * collection and booted successfully.
+			 */
+			if (mdmreboot && (((SDX55 == pci_dev->device) && gpiod_get_value(mdm2ap))
+				|| ((SDX55 != pci_dev->device) && mhi_cntrl->ee == MHI_EE_AMSS))) {
 				MHI_LOG("MDM has completed crashdump collection and booted successfully\n");
 				break;
 			}
+
 
 			mdelay(MHI_PANIC_TIMER_STEP);
 		}
@@ -1223,6 +1255,15 @@ int mhi_pci_probe(struct pci_dev *pci_dev,
 	mhi_ssr_negotiate = of_property_read_bool(mhi_cntrl->of_node, "mhi,ssr-negotiate");
 
 	if (mhi_ssr_negotiate) {
+		if (SDX55 == pci_dev->device) {
+			ap2mdm_gpio = of_get_named_gpio(mhi_cntrl->of_node, "ap2mdm-gpio", 0);
+			if (ap2mdm_gpio < 0)
+				pr_err("AP2MDM GPIO not configured\n");
+
+			mdm2ap_gpio = of_get_named_gpio(mhi_cntrl->of_node, "mdm2ap-gpio", 0);
+			if (mdm2ap_gpio < 0)
+				pr_err("MDM2AP GPIO not configured\n");
+		}
 		mhi_cntrl->mhi_panic_notifier.notifier_call = mhi_panic_handler;
 
 		global_mhi_panic_notifier = &(mhi_cntrl->mhi_panic_notifier);
@@ -1270,7 +1311,10 @@ error_init_pci:
 void mhi_pci_device_removed(struct pci_dev *pci_dev)
 {
 	struct mhi_controller *mhi_cntrl;
-	bool graceful = 1;
+	struct gpio_desc *mdm2ap;
+	bool graceful;
+
+	graceful = SDX55 == pci_dev->device ? 0 : 1;
 
 	mhi_cntrl = dev_get_drvdata(&pci_dev->dev);
 
@@ -1302,6 +1346,13 @@ void mhi_pci_device_removed(struct pci_dev *pci_dev)
 #endif
 
 		if (mhi_ssr_negotiate) {
+			if (SDX55 == pci_dev->device) {
+				mdm2ap = gpio_to_desc(mdm2ap_gpio);
+				if (IS_ERR(mdm2ap))
+					MHI_ERR("Unable to acquire mdm2ap_gpio");
+
+				graceful = gpiod_get_value(mdm2ap);
+			}
 			if(force_graceful)
 				graceful = 1;
 		}

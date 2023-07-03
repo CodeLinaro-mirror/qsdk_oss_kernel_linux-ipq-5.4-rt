@@ -50,10 +50,21 @@
 
 #define PHY_AUTOLOAD_PERIOD	35
 
-#define PCIE_USB_COMBO_PHY_CFG_RX_AFE_2	0x7C4
+#define PCIE_USB_COMBO_PHY_CFG_RX_AFE_2		0x7C4
+#define PCIE_USB_COMBO_PHY_CFG_RX_DLF_DEMUX_2	0x7E8
+#define PCIE_USB_COMBO_PHY_CFG_MISC1		0x214
+
 #define APB_REG_UPHY_RX_RESCAL_CODE	(16 << 8)
 #define APB_REG_UPHY_RX_AFE_CAP1	(7 << 4)
 #define APB_REG_UPHY_RX_AFE_RES1	(6 << 0)
+
+#define APB_REG_UPHY_RXD_BIT_WIDTH	(2 << 0)
+#define APB_REG_UPHY_RX_PLOOP_GAIN	(4 << 4)
+#define APB_REG_UPHY_RX_DLF_RATE	(1 << 8)
+#define APB_UPHY_RX_PLOOP_EN		(1 << 12)
+#define APB_REG_UPHY_RX_CDR_EN		(1 << 13)
+
+#define APB_REG_FLOOP_GAIN		(3 << 0)
 
 struct qca_uni_ss_phy {
 	struct phy phy;
@@ -66,6 +77,7 @@ struct qca_uni_ss_phy {
 	unsigned int host;
 	struct clk *pipe_clk;
 	struct clk *phy_cfg_ahb_clk;
+	struct clk *phy_ahb_clk;
 };
 
 struct qf_read {
@@ -113,6 +125,7 @@ static int qca_uni_ss_phy_init(struct phy *x)
 	usleep_range(1, 5);
 	/* deassert SS PHY POR reset */
 	reset_control_deassert(phy->por_rst);
+	clk_prepare_enable(phy->phy_ahb_clk);
 	clk_prepare_enable(phy->phy_cfg_ahb_clk);
 	clk_prepare_enable(phy->pipe_clk);
 	phy_autoload();
@@ -122,6 +135,16 @@ static int qca_uni_ss_phy_init(struct phy *x)
 		APB_REG_UPHY_RX_AFE_CAP1 |
 		APB_REG_UPHY_RX_AFE_RES1,
 		phy->base + PCIE_USB_COMBO_PHY_CFG_RX_AFE_2);
+
+		writel(APB_REG_UPHY_RXD_BIT_WIDTH |
+		APB_REG_UPHY_RX_PLOOP_GAIN |
+		APB_REG_UPHY_RX_DLF_RATE |
+		APB_UPHY_RX_PLOOP_EN |
+		APB_REG_UPHY_RX_CDR_EN,
+		phy->base + PCIE_USB_COMBO_PHY_CFG_RX_DLF_DEMUX_2);
+
+		writel(APB_REG_FLOOP_GAIN,
+			phy->base + PCIE_USB_COMBO_PHY_CFG_MISC1);
 		return 0;
 	}
 
@@ -171,8 +194,14 @@ static int qca_uni_ss_get_resources(struct platform_device *pdev,
 		phy->phy_cfg_ahb_clk = devm_clk_get(phy->dev,
 					"phy_cfg_ahb_clk");
 		if (IS_ERR(phy->phy_cfg_ahb_clk)) {
-			dev_err(phy->dev, "can not get phy ahb clock\n");
+			dev_err(phy->dev, "can not get phy cfg ahb clock\n");
 			return PTR_ERR(phy->phy_cfg_ahb_clk);
+		}
+
+		phy->phy_ahb_clk = devm_clk_get_optional(phy->dev, "phy_ahb_clk");
+		if (IS_ERR(phy->phy_ahb_clk)) {
+			dev_err(phy->dev, "cannot get phy ahb clock");
+			return PTR_ERR(phy->phy_ahb_clk);
 		}
 	} else {
 		if (of_property_read_u32(np, "qca,host", &phy->host)) {

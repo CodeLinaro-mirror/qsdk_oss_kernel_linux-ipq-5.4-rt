@@ -90,6 +90,7 @@ dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi01.2-qcn9160-c1.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi01.3.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi01.4.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi01.6.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi01.9.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi03.1.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-mi04.1.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= ipq5332-db-mi01.1.dtb

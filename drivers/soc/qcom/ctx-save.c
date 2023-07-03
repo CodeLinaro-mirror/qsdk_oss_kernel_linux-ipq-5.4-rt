@@ -201,7 +201,7 @@ static int mini_dump_open(struct inode *inode, struct file *file) {
 
 		if (cur_node->va != INVALID) {
 			segment = (struct dump_segment *)
-				kmalloc(sizeof(struct dump_segment), GFP_KERNEL);
+				kmalloc(sizeof(struct dump_segment), GFP_ATOMIC);
 			if (!segment) {
 				pr_err("\nMinidump: Unable to allocate memory for dump segment");
 				return -ENOMEM;
@@ -766,7 +766,7 @@ int minidump_traverse_metadata_list(const char *name, const unsigned long
 			minidump_meta_info.cur_modinfo_offset = cur_node->modinfo_offset;
 #ifdef CONFIG_QCA_MINIDUMP_DEBUG
 		if (name != NULL) {
-			cur_node->name = kstrndup(name, strlen(name), GFP_KERNEL);
+			cur_node->name = kstrndup(name, strlen(name), GFP_ATOMIC);
 		}
 #endif
 		} else {
@@ -777,7 +777,7 @@ int minidump_traverse_metadata_list(const char *name, const unsigned long
 				*/
 				cur_node->modinfo_offset = minidump_meta_info.cur_modinfo_offset;
 #ifdef CONFIG_QCA_MINIDUMP_DEBUG
-				cur_node->name = kstrndup(name, strlen(name), GFP_KERNEL);
+				cur_node->name = kstrndup(name, strlen(name), GFP_ATOMIC);
 #endif
 			}
 		}

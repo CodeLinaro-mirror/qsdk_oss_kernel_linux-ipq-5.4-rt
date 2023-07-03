@@ -1164,6 +1164,46 @@ int __qti_scm_get_ecdsa_blob(struct device *dev, u32 svc_id, u32 cmd_id,
 
 	return ret ? : res.a1;
 }
+/**
+ * __qti_scm_get_ipq5332_fuse_list() - Get OEM Fuse parameter from TME-L
+ *
+ * @svc_id: SCM service id
+ * @cmd_id: SCM command id
+ * @fuse: QFPROM CORR addresses
+ * @size: size of fuse structure
+ *
+ * This function can be used to get the OEM Fuse parameters from TME-L.
+ */
+int __qti_scm_get_ipq5332_fuse_list(struct device *dev, u32 svc_id,
+		u32 cmd_id, struct fuse_payload *fuse, size_t size)
+{
+	int ret;
+	dma_addr_t dma_fuse;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+
+	dma_fuse = dma_map_single(dev, fuse, size, DMA_FROM_DEVICE);
+	ret = dma_mapping_error(dev, dma_fuse);
+	if (ret != 0) {
+		pr_err("DMA Mapping Error : %d\n", ret);
+		return -EINVAL;
+	}
+	desc.args[0] = dma_fuse;
+	desc.args[1] = size;
+
+	desc.arginfo = SCM_ARGS(2, QCOM_SCM_RW, QCOM_SCM_VAL);
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, svc_id, cmd_id,
+			&desc, &res);
+
+	if(res.a1 != 0) {
+		pr_err("%s : Response error code is : %#x\n", __func__,
+				(unsigned int)res.a1);
+	}
+
+	dma_unmap_single(dev, dma_fuse, size, DMA_FROM_DEVICE);
+
+	return ret ? : res.a1;
+}
 
 /**
  * __qti_scm_get_device_attestation_ephimeral_key() - Get M3 public ephimeral key from TME-L

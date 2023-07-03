@@ -25,6 +25,7 @@
 
 	aliases {
 		serial0 = &blsp1_uart0;
+		serial1 = &blsp1_uart1;
 		ethernet0 = "/soc/dp1";
 		ethernet1 = "/soc/dp2";
 	};

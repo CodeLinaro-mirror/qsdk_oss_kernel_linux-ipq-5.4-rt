@@ -3,7 +3,7 @@
  * IPQ9574 SoC device tree source
  *
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -1552,6 +1552,7 @@
 			clock-names = "crypto_clk", "crypto_nocclk",
 			"crypto_ppeclk";
 			clock-frequency = /bits/ 64 <600000000 600000000 300000000>;
+			qcom,inline-enabled;
 			status = "ok";
 			interrupts = <GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH>,
 				   <GIC_SPI 386 IRQ_TYPE_LEVEL_HIGH>,

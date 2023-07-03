@@ -3065,13 +3065,23 @@ static int wcss_ahb_pcie_pd_load(struct rproc *rproc, const struct firmware *fw)
 			wcss_rpd->state != WCSS_RESTARTING) {
 		/* Boot rootpd rproc*/
 		ret = rproc_boot(rpd_rproc);
-		if ((ret || wcss->state == WCSS_NORMAL) && wcss->is_fw_shared)
+		if (ret || (wcss->state == WCSS_NORMAL && wcss->is_fw_shared))
 			return ret;
 	}
 
 	if (wcss->need_mem_protection) {
-		pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
-		pasid = (pd_asid << 8) | UPD_SWID;
+		const struct wcss_data *desc =
+				of_device_get_match_data(wcss->dev);
+
+		if (!desc)
+			return -EINVAL;
+
+		pasid = desc->pasid;
+		if (!pasid) {
+			/* Dynamically compute pasid */
+			pd_asid = qcom_get_pd_asid(wcss->dev->of_node);
+			pasid = (pd_asid << 8) | UPD_SWID;
+		}
 
 		return wcss->mdt_load_sec(wcss->dev, fw, rproc->firmware,
 				     pasid, wcss->mem_region,

@@ -6,3 +6,9 @@
  */
 #include <arm64/qcom/ipq9574-al03-c2.dts>
 
+/ {
+        chosen {
+                stdout-path = "serial0";
+                bootargs-append = " clk_ignore_unused vmalloc=1G";
+        };
+};

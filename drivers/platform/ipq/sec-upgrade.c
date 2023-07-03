@@ -485,6 +485,66 @@ static struct device_attribute sec_attr =
 struct kobject *sec_kobj;
 
 static ssize_t
+store_list_ipq5322_fuse(struct device *dev, struct device_attribute *attr,
+	      const char *buf, size_t count)
+{
+	int ret = 0;
+	int index, next = 0;
+	unsigned long value;
+	unsigned long base_addr = 0xA00E8;
+	struct fuse_payload *fuse = NULL;
+
+	ret = kstrtoul(buf, 0, &value);
+	if (ret < 0)
+		return ret;
+
+	if (value != 1) {
+		pr_err("%s : Invalid input\n", __func__);
+		return -EINVAL;
+	}
+
+	fuse = kzalloc((sizeof(struct fuse_payload) * MAX_FUSE_ADDR_SIZE),
+			GFP_KERNEL);
+	if (fuse == NULL) {
+		return -ENOMEM;
+	}
+
+	fuse[0].fuse_addr = 0xA00D0;
+	for (index = 1; index < MAX_FUSE_ADDR_SIZE; index++) {
+		fuse[index].fuse_addr = base_addr + next;
+		next += 0x8;
+	}
+	ret = qti_scm_get_ipq5332_fuse_list(QTI_SCM_SVC_FUSE,
+			QTI_SCM_OWM_FUSE_CMD_ID, fuse,
+			sizeof(struct fuse_payload ) * MAX_FUSE_ADDR_SIZE);
+	if (ret) {
+		pr_err("SCM Call failed..SCM Call return value = %d\n", ret);
+		goto fuse_alloc_err;
+	}
+
+	pr_info("Fuse Name\tAddress\t\tValue\n");
+	pr_info("------------------------------------------------\n");
+
+	pr_info("TME_AUTH_EN\t0x%08X\t0x%08X\n", fuse[0].fuse_addr,
+			fuse[0].lsb_val & 0x41);
+	pr_info("TME_OEM_ID\t0x%08X\t0x%08X\n", fuse[0].fuse_addr,
+			fuse[0].lsb_val & 0xFFFF0000);
+	pr_info("TME_PRODUCT_ID\t0x%08X\t0x%08X\n", fuse[0].fuse_addr + 0x4,
+			fuse[0].msb_val & 0xFFFF);
+
+	for (index = 1; index < MAX_FUSE_ADDR_SIZE; index++) {
+		pr_info("TME_MRC_HASH\t0x%08X\t0x%08X\n",
+				fuse[index].fuse_addr, fuse[index].lsb_val);
+		pr_info("TME_MRC_HASH\t0x%08X\t0x%08X\n",
+				fuse[index].fuse_addr + 0x4, fuse[index].msb_val);
+	}
+
+fuse_alloc_err:
+	kfree(fuse);
+	return count;
+}
+
+static ssize_t
 store_sec_dat(struct device *dev, struct device_attribute *attr,
 	      const char *buf, size_t count)
 {
@@ -585,6 +645,9 @@ out:
 
 static struct device_attribute sec_dat_attr =
 	__ATTR(sec_dat, 0200, NULL, store_sec_dat);
+
+static struct device_attribute list_ipq5322_fuse_attr =
+	__ATTR(list_ipq5322_fuse, 0200, NULL, store_list_ipq5322_fuse);
 
 /*
  * Do not change the order of attributes.
@@ -771,6 +834,12 @@ static int qfprom_probe(struct platform_device *pdev)
 	if (err) {
 		pr_err("%s: device_create_file(%s)=%d\n",
 			__func__, sec_dat_attr.attr.name, err);
+	}
+
+	err = device_create_file(&device_qfprom, &list_ipq5322_fuse_attr);
+	if (err) {
+		pr_err("%s: device_create_file(%s)=%d\n",
+			__func__, list_ipq5322_fuse_attr.attr.name, err);
 	}
 	return qfprom_create_files(ARRAY_SIZE(qfprom_attrs), sw_bitmap);
 }

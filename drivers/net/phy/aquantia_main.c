@@ -874,7 +874,7 @@ static int aqr107_suspend(struct phy_device *phydev)
 
 	err = phy_set_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
 				MDIO_CTRL1_LPOWER);
-	usleep_range(10000,20000);
+	mdelay(50);
 
 	return err;
 }
@@ -885,7 +885,7 @@ static int aqr107_resume(struct phy_device *phydev)
 
 	err = phy_clear_bits_mmd(phydev, MDIO_MMD_VEND1, MDIO_CTRL1,
 				  MDIO_CTRL1_LPOWER);
-	usleep_range(10000,20000);
+	mdelay(50);
 
 	return err;
 }
