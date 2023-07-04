@@ -532,6 +532,11 @@ static void crashdump_init(struct rproc *rproc,
 
 	release_firmware(fw);
 	do_elf_ramdump(handle, segs, index);
+
+	for (index = 0; index < num_segs; index++) {
+		if (segs[index].v_address)
+			iounmap(segs[index].v_address);
+	}
 put_node:
 	of_node_put(np);
 free_device:
