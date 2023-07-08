@@ -4094,13 +4094,15 @@ bool dev_fast_xmit_qdisc(struct sk_buff *skb, struct net_device *top_qdisc_dev, 
 	qdisc_pkt_len_init(skb);
 #ifdef CONFIG_NET_CLS_ACT
 	skb->tc_at_ingress = 0;
-# ifdef CONFIG_NET_EGRESS
+#ifdef CONFIG_NET_EGRESS
 	if (static_branch_unlikely(&egress_needed_key)) {
 		skb = sch_handle_egress(skb, &rc, top_qdisc_dev);
-		if (!skb)
-			goto out;
+		if (!skb) {
+			rcu_read_unlock_bh();
+			return true;
+		}
 	}
-# endif
+#endif
 #endif
 	/* If device/qdisc don't need skb->dst, release it right now while
 	 * its hot in this cpu cache.
@@ -4118,7 +4120,6 @@ bool dev_fast_xmit_qdisc(struct sk_buff *skb, struct net_device *top_qdisc_dev, 
 	skb->fast_qdisc = 1;
 	rc = __dev_xmit_skb_qdisc(skb, q, top_qdisc_dev, txq);
 
-out:
 	rcu_read_unlock_bh();
 	return true;
 }
