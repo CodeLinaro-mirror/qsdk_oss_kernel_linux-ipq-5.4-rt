@@ -37,6 +37,7 @@
 		};
 
 		dp6 {
+			/delete-property/qcom,link-poll;
 			qcom,phy-mdio-addr = <30>;
 		};
 		mdio@90000 {
