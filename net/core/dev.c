@@ -1709,7 +1709,7 @@ static int call_netdevice_notifiers_mtu(unsigned long val,
 	return call_netdevice_notifiers_info(val, &info.info);
 }
 
-static bool fast_tc_filter = false;
+bool fast_tc_filter = false;
 EXPORT_SYMBOL_GPL(fast_tc_filter);
 
 #ifdef CONFIG_NET_INGRESS
