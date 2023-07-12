@@ -303,6 +303,12 @@
 			};
 		};
 
+		nss-macsec0 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <12>;
+			mdiobus = <&mdio>;
+		};
+
 		/* EDMA host driver configuration for the board */
 		edma@3ab00000 {
 			qcom,txdesc-ring-start = <4>;		/* Tx desc ring start ID */
