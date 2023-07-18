@@ -562,11 +562,11 @@
 				port_scheduler_resource {
 					port@0 {
 						port_id = <0>;
-						ucast_queue = <0 43>;
-						mcast_queue = <256 262>;
-						l0sp = <0 6>;
-						l0cdrr = <0 27>;
-						l0edrr = <0 27>;
+						ucast_queue = <0 63>;
+						mcast_queue = <256 263>;
+						l0sp = <0 0>;
+						l0cdrr = <0 7>;
+						l0edrr = <0 7>;
 						l1cdrr = <0 0>;
 						l1edrr = <0 0>;
 					};
@@ -591,23 +591,22 @@
 						l1edrr = <25 26>;
 					};
 					reserved {
-						ucast_queue = <44 203>;
-						mcast_queue = <263 271>;
-						l0sp = <7 50>;
-						l0cdrr = <28 107>;
-						l0edrr = <28 107>;
+						ucast_queue = <64 203>;
+						mcast_queue = <264 271>;
+						l0sp = <1 50>;
+						l0cdrr = <8 107>;
+						l0edrr = <8 107>;
 						l1cdrr = <1 22>;
 						l1edrr = <1 22>;
 					};
 				};
-
 				port_scheduler_config {
 					port@0 {
 						port_id = <0>;
 						l1scheduler {
 							group@0 {
 								/* L0 SP */
-								sp = <0 1 2 3 4 5 6>;
+								sp = <0>;
 								/* cpri cdrr epri edrr */
 								cfg = <0 0 0 0>;
 							};
@@ -616,67 +615,53 @@
 							group@0 {
 								/* unicast queue */
 								ucast_queue = <0>;
-								ucast_loop_pri = <4>;
+								ucast_loop_pri = <8>;
 								/* multicast queue */
 								mcast_queue = <256>;
 								/* sp cpri cdrr epri edrr */
 								cfg = <0 0 0 0 0>;
 							};
 							group@1 {
-								ucast_queue = <4>;
-								ucast_loop_pri = <4>;
+								ucast_queue = <8>;
+								ucast_loop_pri = <8>;
+								mcast_queue = <257>;
 								cfg = <0 0 0 0 0>;
 							};
 							group@2 {
-								ucast_queue = <8>;
-								ucast_loop_pri = <4>;
-								mcast_queue = <257>;
-								cfg = <1 0 4 0 4>;
+								ucast_queue = <16>;
+								ucast_loop_pri = <8>;
+								mcast_queue = <258>;
+								cfg = <0 0 0 0 0>;
 							};
 							group@3 {
-								ucast_queue = <12>;
-								ucast_loop_pri = <4>;
-								cfg = <1 0 4 0 4>;
+								ucast_queue = <24>;
+								ucast_loop_pri = <8>;
+								mcast_queue = <259>;
+								cfg = <0 0 0 0 0>;
 							};
 							group@4 {
-								ucast_queue = <16>;
-								ucast_loop_pri = <4>;
-								mcast_queue = <258>;
-								cfg = <2 0 8 0 8>;
+								ucast_queue = <32>;
+								ucast_loop_pri = <8>;
+								mcast_queue = <260>;
+								cfg = <0 0 0 0 0>;
 							};
 							group@5 {
-								ucast_queue = <20>;
-								ucast_loop_pri = <4>;
-								cfg = <2 0 8 0 8>;
+								ucast_queue = <40>;
+								ucast_loop_pri = <8>;
+								mcast_queue = <261>;
+								cfg = <0 0 0 0 0>;
 							};
 							group@6 {
-								ucast_queue = <24>;
-								ucast_loop_pri = <4>;
-								mcast_queue = <259>;
-								cfg = <3 0 12 0 12>;
+								ucast_queue = <48>;
+								ucast_loop_pri = <8>;
+								mcast_queue = <262>;
+								cfg = <0 0 0 0 0>;
 							};
 							group@7 {
-								ucast_queue = <28>;
-								ucast_loop_pri = <4>;
-								cfg = <3 0 12 0 12>;
-							};
-							group@8 {
-								ucast_queue = <32>;
-								ucast_loop_pri = <4>;
-								mcast_queue = <260>;
-								cfg = <4 0 16 0 16>;
-							};
-							group@9 {
-								ucast_queue = <36>;
-								ucast_loop_pri = <4>;
-								mcast_queue = <261>;
-								cfg = <5 0 20 0 20>;
-							};
-							group@10 {
-								ucast_queue = <40>;
-								ucast_loop_pri = <4>;
-								mcast_queue = <262>;
-								cfg = <6 0 24 0 24>;
+								ucast_queue = <56>;
+								ucast_loop_pri = <8>;
+								mcast_queue = <263>;
+								cfg = <0 0 0 0 0>;
 							};
 						};
 					};
