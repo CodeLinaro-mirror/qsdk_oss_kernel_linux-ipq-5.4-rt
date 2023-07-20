@@ -53,6 +53,7 @@
 		};
 
 		dp5 {
+			/delete-property/qcom,link-poll;
 			qcom,phy-mdio-addr = <30>;
 		};
 
