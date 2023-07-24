@@ -197,36 +197,48 @@ static void req_crypt_dtr(struct dm_target *ti)
 
 static int qcom_set_ice_context(char **argv)
 {
-	int ret;
-	uint8_t *data_context = NULL, *salt_context = NULL;
+	uint8_t *hex_data_context = NULL, *hex_salt_context = NULL;
+	uint32_t hex_salt_len = 0, hex_data_len = 0;
 	uint32_t seedtype = 0;
+	char *buf = NULL;
+	int i, ret;
 
-	data_context = kmalloc(DATA_COTEXT_LEN, GFP_KERNEL);
-	if (!data_context) {
+	hex_data_context  = kmalloc(DATA_COTEXT_LEN, GFP_KERNEL);
+	if (!hex_data_context) {
 		DMERR("%s: no memory allocated\n", __func__);
 		return -ENOMEM;
 	}
 
-	if (!strcmp(argv[2], "oemseed"))
+	if (!strcmp(argv[2], "oemseed")) {
 		seedtype = 1;
+		buf = argv[5];
+		hex_data_len = strlen(argv[5]) / 2;
+		for (i = 0; i < hex_data_len; i++) {
+			sscanf(buf, "%2hhx", &hex_data_context[i]);
+			buf += 2;
+		}
+	}
 
 	if (ice_settings->algo_mode == ICE_CRYPTO_ALGO_MODE_AES_XTS &&
 			seedtype == 1) {
-		salt_context = kmalloc(SALT_COTEXT_LEN, GFP_KERNEL);
-		if (!salt_context) {
+		hex_salt_context = kmalloc(SALT_COTEXT_LEN, GFP_KERNEL);
+		if (!hex_salt_context) {
 			DMERR("%s: no memory allocated\n", __func__);
 			return -ENOMEM;
 		}
-		memcpy(salt_context, argv[6], SALT_COTEXT_LEN);
+
+		buf = argv[6];
+		hex_salt_len = strlen(argv[6]) / 2;
+		for (i = 0; i < hex_salt_len; i++) {
+			sscanf(buf, "%2hhx", &hex_salt_context[i]);
+			buf += 2;
+		}
+		buf = NULL;
 	}
 
-	if (seedtype == 1)
-		memcpy(data_context, argv[5], DATA_COTEXT_LEN);
-
 	ret = qcom_context_sec_ice(seedtype, ice_settings->key_size,
-			ice_settings->algo_mode, data_context, DATA_COTEXT_LEN,
-			salt_context, SALT_COTEXT_LEN);
-
+			ice_settings->algo_mode, hex_data_context, hex_data_len,
+			hex_salt_context, hex_salt_len);
 	if (ret)
 		DMERR("%s: ice context configuration fail\n", __func__);
 
