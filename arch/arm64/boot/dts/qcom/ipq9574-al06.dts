@@ -8,7 +8,7 @@
 
 /dts-v1/;
 
-#include "ipq9574-al02-c4.dts"
+#include "ipq9574-al02-c6.dts"
 
 / {
 	#address-cells = <0x2>;
