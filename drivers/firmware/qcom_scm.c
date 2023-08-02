@@ -1041,11 +1041,19 @@ EXPORT_SYMBOL(qti_scm_tcsr_reg_write);
 /*
  * qti_config_sec_ice() - Configure ICE block securely
  */
-int qti_config_sec_ice(void *buf, int size)
+int qcom_config_sec_ice(void *buf, int size)
 {
-	return __qti_config_ice_sec(__scm->dev, buf, size);
+	return __qcom_config_ice_sec(__scm->dev, buf, size);
 }
-EXPORT_SYMBOL(qti_config_sec_ice);
+EXPORT_SYMBOL(qcom_config_sec_ice);
+
+int qcom_context_sec_ice(u32 type, u8 key_size, u8 algo_mode, u8 *data_ctxt,
+		u32 data_ctxt_len, u8 *salt_ctxt, u32 salt_ctxt_len)
+{
+	return __qcom_context_ice_sec(__scm->dev, type, key_size, algo_mode,
+		 data_ctxt, data_ctxt_len, salt_ctxt, salt_ctxt_len);
+}
+EXPORT_SYMBOL(qcom_context_sec_ice);
 
 /*
  * qti_scm_pshold() - TZ performs the PSHOLD operation

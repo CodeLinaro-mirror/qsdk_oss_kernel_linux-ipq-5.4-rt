@@ -273,7 +273,9 @@ extern int qti_sec_crypt(void *buf, int size);
 extern int qti_qcekey_release_xpu_prot(void);
 extern int qti_seccrypt_clearkey(void);
 extern int qti_scm_set_resettype(u32 reset_type);
-extern int qti_config_sec_ice(void *buf, int size);
+extern int qcom_config_sec_ice(void *buf, int size);
+extern int qcom_context_sec_ice(u32 type, u8 key_size, u8 algo_mode,
+	u8 *data_ctxt, u32 data_ctxt_len, u8 *salt_ctxt, u32 salt_ctxt_len);
 extern int qti_scm_pshold(void);
 extern int qti_scm_extwdt(u32 svc_id, u32 cmd_id, unsigned int regaddr,
 			   unsigned int val);
