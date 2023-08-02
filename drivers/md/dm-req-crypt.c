@@ -195,15 +195,61 @@ static void req_crypt_dtr(struct dm_target *ti)
 	cd = NULL;
 }
 
-static int qcom_set_ice_config(char **argv)
+static int qcom_set_ice_context(char **argv)
 {
 	int ret;
+	uint8_t *data_context = NULL, *salt_context = NULL;
+	uint32_t seedtype = 0;
+
+	data_context = kmalloc(DATA_COTEXT_LEN, GFP_KERNEL);
+	if (!data_context) {
+		DMERR("%s: no memory allocated\n", __func__);
+		return -ENOMEM;
+	}
+
+	if (!strcmp(argv[2], "oemseed"))
+		seedtype = 1;
+
+	if (ice_settings->algo_mode == ICE_CRYPTO_ALGO_MODE_AES_XTS &&
+			seedtype == 1) {
+		salt_context = kmalloc(SALT_COTEXT_LEN, GFP_KERNEL);
+		if (!salt_context) {
+			DMERR("%s: no memory allocated\n", __func__);
+			return -ENOMEM;
+		}
+		memcpy(salt_context, argv[6], SALT_COTEXT_LEN);
+	}
+
+	if (seedtype == 1)
+		memcpy(data_context, argv[5], DATA_COTEXT_LEN);
+
+	ret = qcom_context_sec_ice(seedtype, ice_settings->key_size,
+			ice_settings->algo_mode, data_context, DATA_COTEXT_LEN,
+			salt_context, SALT_COTEXT_LEN);
+
+	if (ret)
+		DMERR("%s: ice context configuration fail\n", __func__);
+
+	return ret;
+}
+
+static int qcom_set_ice_config(char **argv)
+{
 	struct ice_config_sec *ice;
+	int ret;
 
 	ice = kmalloc(sizeof(struct ice_config_sec), GFP_KERNEL);
 	if (!ice) {
 		DMERR("%s: no memory allocated\n", __func__);
 		return -ENOMEM;
+	}
+
+	if (!strcmp(argv[2], "oemseed")) {
+		ret = qcom_set_ice_context(argv);
+		if (ret){
+			DMERR("%s: ice configuration fail\n", __func__);
+			return ret;
+		}
 	}
 
 	/* update the ice config structure to send tz */
@@ -212,7 +258,7 @@ static int qcom_set_ice_config(char **argv)
 	ice->algo_mode = ice_settings->algo_mode;
 	ice->key_mode = ice_settings->key_mode;
 
-	ret = qti_config_sec_ice(ice, sizeof(struct ice_config_sec));
+	ret = qcom_config_sec_ice(ice, sizeof(struct ice_config_sec));
 
 	if (ret)
 		DMERR("%s: ice configuration fail\n", __func__);
@@ -234,10 +280,10 @@ static int req_crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 
 	DMDEBUG("dm-req-crypt Constructor.\n");
 
-	if (argc < 5) {
+	if (argc < 5 ||  (argc < 6 && !strcmp(argv[2], "oemseed"))) {
 		DMERR(" %s Not enough args\n", __func__);
-		err = DM_REQ_CRYPT_ERROR;
-		goto ctr_exit;
+		ti->error = "Not enough args";
+		return -EINVAL;
 	}
 
 	cd = kzalloc(sizeof(*cd), GFP_KERNEL);

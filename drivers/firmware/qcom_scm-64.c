@@ -14,6 +14,8 @@
 
 #include "qcom_scm.h"
 
+#define ICE_CRYPTO_ALGO_MODE_AES_XTS    0x3
+
 #define QCOM_SCM_FNID(s, c) ((((s) & 0xFF) << 8) | ((c) & 0xFF))
 
 #define QCOM_SCM_ARGS_IMPL(num, a, b, c, d, e, f, g, h, i, j, ...) (\
@@ -758,7 +760,7 @@ int __qti_sec_upgrade_auth_meta_data(struct device *dev, unsigned int scm_cmd_id
 	return ret ? : res.a1;
 }
 
-int __qti_config_ice_sec(struct device *dev, void *conf_buf, int size)
+int __qcom_config_ice_sec(struct device *dev, void *conf_buf, int size)
 {
 	int ret;
 	struct arm_smccc_res res;
@@ -782,6 +784,66 @@ int __qti_config_ice_sec(struct device *dev, void *conf_buf, int size)
 
 	dma_unmap_single(dev, conf_phys, size, DMA_TO_DEVICE);
 	return ret ? : res.a1;
+}
+
+int __qcom_context_ice_sec(struct device *dev, u32 type, u8 key_size,
+			u8 algo_mode, u8 *data_ctxt, u32 data_ctxt_len,
+			u8 *salt_ctxt, u32 salt_ctxt_len)
+{
+	int ret;
+	struct arm_smccc_res res;
+	struct qcom_scm_desc desc = {0};
+	void *data_ctxbuf = NULL, *salt_ctxbuf = NULL;
+	dma_addr_t data_context_phy, salt_context_phy = 0;
+
+	data_ctxbuf = dma_alloc_coherent(dev, data_ctxt_len,
+				&data_context_phy, GFP_KERNEL);
+	if (!data_ctxbuf)
+		return -ENOMEM;
+
+	if (algo_mode == ICE_CRYPTO_ALGO_MODE_AES_XTS && salt_ctxt != NULL) {
+		salt_ctxbuf = dma_alloc_coherent(dev, salt_ctxt_len,
+				&salt_context_phy, GFP_KERNEL);
+		if (!salt_ctxbuf) {
+			ret = -ENOMEM;
+			goto dma_unmap_data_ctxbuf;
+		}
+
+		memcpy(salt_ctxbuf, salt_ctxt, salt_ctxt_len);
+	}
+	if (data_ctxt != NULL) {
+		memcpy(data_ctxbuf, data_ctxt, data_ctxt_len);
+	}
+	else {
+		ret = -EINVAL;
+		goto dma_unmap_data_ctxbuf;
+	}
+	desc.arginfo = QCOM_SCM_ARGS(7, QTI_SCM_PARAM_VAL, QTI_SCM_PARAM_VAL,
+		QTI_SCM_PARAM_VAL, QTI_SCM_PARAM_BUF_RO, QTI_SCM_PARAM_VAL,
+		QTI_SCM_PARAM_BUF_RO, QTI_SCM_PARAM_VAL);
+
+	desc.args[0] = type;
+	desc.args[1] = key_size;
+	desc.args[2] = algo_mode;
+	desc.args[3] = data_context_phy;
+	desc.args[4] = data_ctxt_len;
+	desc.args[5] = salt_context_phy;
+	desc.args[6] = salt_ctxt_len;
+
+	ret = qcom_scm_call(dev, ARM_SMCCC_OWNER_SIP, QTI_SVC_ICE,
+					QTI_SCM_ICE_CONTEXT_CMD, &desc, &res);
+
+	if (algo_mode == ICE_CRYPTO_ALGO_MODE_AES_XTS && salt_ctxt != NULL) {
+		memzero_explicit(salt_ctxt, salt_ctxt_len);
+		dma_free_coherent(dev, salt_ctxt_len,
+					salt_ctxbuf, salt_context_phy);
+	}
+
+dma_unmap_data_ctxbuf:
+	memzero_explicit(data_ctxbuf, data_ctxt_len);
+	dma_free_coherent(dev, data_ctxt_len, data_ctxbuf, data_context_phy);
+	return ret ? : res.a1;
+
 }
 
 int __qti_fuseipq_scm_call(struct device *dev, u32 svc_id, u32 cmd_id,

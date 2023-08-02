@@ -63,6 +63,7 @@ extern void __qcom_scm_init(void);
 #define QTI_SCM_PARAM_VAL		0x0
 #define QTI_SVC_ICE			23
 #define QTI_SCM_ICE_CMD		0x1
+#define QTI_SCM_ICE_CONTEXT_CMD		0x3
 
 extern bool __qcom_scm_pas_supported(struct device *dev, u32 peripheral);
 extern int  __qcom_scm_pas_init_image(struct device *dev, u32 peripheral,
@@ -75,7 +76,10 @@ extern int  __qcom_scm_pas_auth_and_reset(struct device *dev, u32 peripheral,
 		u32 debug, u32 reset_cmd_id);
 extern int  __qcom_scm_pas_shutdown(struct device *dev, u32 peripheral);
 extern int  __qcom_scm_pas_mss_reset(struct device *dev, bool reset);
-extern int  __qti_config_ice_sec(struct device *dev, void *confBuf, int size);
+extern int  __qcom_config_ice_sec(struct device *dev, void *confBuf, int size);
+extern int  __qcom_context_ice_sec(struct device *dev, u32 type, u8 key_size,
+		u8 algo_mode, u8 *data_ctxt, u32 data_ctxt_len,
+		u8 *salt_ctxt, u32 salt_ctxt_len);
 /* common error codes */
 #define QCOM_SCM_V2_EBUSY	-12
 #define QCOM_SCM_ENOMEM		-5
