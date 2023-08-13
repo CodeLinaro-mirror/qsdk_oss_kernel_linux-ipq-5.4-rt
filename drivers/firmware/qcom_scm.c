@@ -810,6 +810,18 @@ int qti_scm_get_device_provision_response(u32 svc_id, u32 cmd_id, void *provreq_
 }
 EXPORT_SYMBOL(qti_scm_get_device_provision_response);
 
+int qti_scm_derive_and_share_key(u32 svc_id, u32 cmd_id, uint32_t key_len,
+			uint8_t *sw_context, u32 sw_context_len,
+			uint8_t *derived_key, u32 derived_key_len)
+{
+	int ret;
+	ret = __qti_scm_derive_and_share_key(__scm->dev, svc_id, cmd_id,
+			key_len, sw_context, sw_context_len, derived_key,
+			derived_key_len);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(qti_scm_derive_and_share_key);
+
 int qti_scm_wcss_boot(u32 svc_id, u32 cmd_id, void *cmd_buf)
 {
 	int ret;

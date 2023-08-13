@@ -2039,6 +2039,58 @@ dma_unmap_req_buf:
 
 }
 
+int __qti_scm_derive_and_share_key(struct device *dev, u32 svc_id, u32 cmd_id,
+		u32 key_len, uint8_t *sw_context, u32 sw_context_len,
+		uint8_t *derived_key, uint32_t derived_key_len)
+{
+	dma_addr_t dma_sw_context_buf;
+	dma_addr_t dma_derived_key_buf;
+	struct scm_desc desc = {0};
+	char *sw_context_buf = NULL, *derived_key_buf = NULL;
+	int ret = -ENOMEM;
+
+	sw_context_buf = dma_alloc_coherent(dev, PAGE_SIZE,
+					    &dma_sw_context_buf, GFP_KERNEL);
+	if (sw_context_buf == NULL) {
+		pr_err("DMA Allocation failed for sw_context_buf\n");
+		return ret;
+	}
+	memcpy(sw_context_buf, sw_context, sw_context_len);
+
+	derived_key_buf = dma_alloc_coherent(dev, PAGE_SIZE,
+					     &dma_derived_key_buf, GFP_KERNEL);
+	if (derived_key_buf == NULL) {
+		pr_err("DMA Allocation failed for derived_key_buf\n");
+		goto dma_unmap_sw_context_buf;
+	}
+
+	if (is_scm_armv8()) {
+		desc.args[0] = key_len;
+		desc.args[1] = dma_sw_context_buf;
+		desc.args[2] = sw_context_len;
+		desc.args[3] = dma_derived_key_buf;
+		desc.args[4] = derived_key_len;
+
+		desc.arginfo = SCM_ARGS(5, QCOM_SCM_VAL, QCOM_SCM_RO,
+				QCOM_SCM_VAL, QCOM_SCM_RW, QCOM_SCM_VAL);
+		ret = qti_scm_call2(dev, SCM_SIP_FNID(svc_id, cmd_id), &desc);
+		if(!ret)
+			ret = le32_to_cpu(desc.ret[0]);
+	} else {
+		ret = -EINVAL;
+	}
+
+	memcpy(derived_key, derived_key_buf, derived_key_len);
+	dma_free_coherent(dev, PAGE_SIZE, derived_key_buf,
+			  dma_derived_key_buf);
+
+dma_unmap_sw_context_buf:
+	dma_free_coherent(dev, PAGE_SIZE, sw_context_buf,
+			  dma_sw_context_buf);
+
+	return ret;
+}
+
 /**
  * __qti_scm_get_smmustate () - Get SMMU state
  * @svc_id: SCM service id

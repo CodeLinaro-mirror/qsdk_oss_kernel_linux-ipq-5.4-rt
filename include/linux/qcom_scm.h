@@ -180,6 +180,9 @@ struct fuse_blow {
 #define FUSEPROV_INVALID_HASH           0x09
 #define FUSEPROV_SECDAT_LOCK_BLOWN      0xB
 
+#define QTI_SCM_DERIVE_KEY		0xA
+#define QTI_SCM_DERIVE_KEY_PARAM_ID	0xD
+
 #define SCM_SVC_EXTWDT         0x5
 #define SCM_CMD_EXTWDT         0x2
 
@@ -305,6 +308,14 @@ extern int qti_scm_get_device_provision_response(u32 svc_id, u32 cmd_id,
 extern int __qti_scm_get_device_provision_response(struct device *dev, u32 svc_id,
 		u32 cmd_id, void *provreq_buf, u32 provreq_buf_len,
 		void *provresp_buf, u32 provresp_buf_len, u32 *prov_resp_size);
+extern int qti_scm_derive_and_share_key(u32 svc_id, u32 cmd_id,
+			uint32_t key_len, uint8_t *sw_context,
+			u32 sw_context_len, uint8_t *derived_key,
+			u32 derived_key_len);
+extern int __qti_scm_derive_and_share_key(struct device *dev, u32 svc_id, u32 cmd_id,
+			uint32_t key_len, uint8_t *sw_context,
+			u32 sw_context_len, uint8_t *derived_key,
+			u32 derived_key_len);
 extern int qti_scm_get_ecdsa_blob(u32 svc_id, u32 cmd_id, dma_addr_t nonce_buf,
 		u32 nonce_buf_len, dma_addr_t ecdsa_buf, u32 ecdsa_buf_len,
 		u32 *ecdsa_consumed_len);

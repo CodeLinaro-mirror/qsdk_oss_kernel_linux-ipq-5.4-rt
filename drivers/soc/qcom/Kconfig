@@ -309,6 +309,12 @@ config QTI_CTXT_SAVE
 	  TZ for crashdump collection, also it provides a TLV buffer for
 	  storing user specific buffer info into crashdump.
 
+config QTI_HW_KEY
+	def_bool n
+	depends on QCOM_SCM
+	help
+	  This driver requests HW Key and stores in kernel keyring.
+
 config QTI_APSS_ACC
 	bool "QTI APSS Application Clock Controller"
 	depends on ARM64 && QCOM_SCM
