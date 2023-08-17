@@ -264,13 +264,13 @@ below: (qseecom_props function = AES_SEC_KEY aes_v2 = true)
 Below are sample inputs:
 
 Context data is 64 byte which can be fed as below:
-(1) echo "34613132613738396434316363323738656166343132363635613831643530313461313261373839643431636332373865616634313236363561383164353031" > ./sys/sec_key/context_data
+(1) echo -n "34613132613738396434316363323738656166343132363635613831643530313461313261373839643431636332373865616634313236363561383164353031" > ./sys/sec_key/context_data
 
 source_data can be either 1 (OEM product seed) or 2 (CRBK)
 (2) echo 1 > ./sys/sec_key/source_data
 
 bindings data has device and software state bindings for key:
-(3) echo 2 > ./sys/sec_key/bindings_data
+(3) echo 32 > ./sys/sec_key/bindings_data
 
 To derive the key with given inputs:
 (4) cat /sys/sec_key/derive_aes_key > key_handle.txt
@@ -289,7 +289,10 @@ To clear a derived key:
 eg: echo 31 > /sys/sec_key/clear_key
 
 Giving the required aes256 parameters:
+aes_type can be either 1 (OEM product seed) or 2 (CRBK)
 (6) echo 1 > ./sys/sec_key/aes_type
+
+aes_mode can be either 0 (ECB) or 1 (CBC)
 (7) echo 1 > ./sys/sec_key/aes_mode
 (8) echo -n -e \\x69\\x01\\x50\\x05\\x26\\x35\\x27\\x2c\\xf4\\xe0\\x19\\x1c\\xa9\\x74\\x36\\x45 > /sys/sec_key/aes_ivdata
 
