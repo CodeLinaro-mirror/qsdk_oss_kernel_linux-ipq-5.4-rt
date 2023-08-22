@@ -714,6 +714,7 @@
 				mhi,chan = "IP_HW0";
 				mhi,interface-name = "rmnet_mhi";
 				mhi,mru = <0x4000>;
+				mhi,enable-rate-control;
 				mhi,chain-skb;
 			};
 

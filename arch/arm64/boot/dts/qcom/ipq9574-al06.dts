@@ -8,7 +8,7 @@
 
 /dts-v1/;
 
-#include "ipq9574-al02-c4.dts"
+#include "ipq9574-al02-c6.dts"
 
 / {
 	#address-cells = <0x2>;
@@ -17,4 +17,286 @@
 	compatible = "qcom,ipq9574-ap-al06", "qcom,ipq9574-al06", "qcom,ipq9574";
 	interrupt-parent = <&intc>;
 
+	soc {
+		pinctrl@1000000 {
+			sfp_pins: sfp_pinmux {
+				sfp_rx {
+					pins = "gpio46";
+					function = "rx1";
+					bias-disable;
+				};
+			};
+		};
+
+		dp1 {
+			reg = <0x3a500000 0x4000>;
+			qcom,mactype = <1>;
+			qcom,phy-mdio-addr = <1>;
+		};
+
+		dp2 {
+			reg = <0x3a504000 0x4000>;
+			qcom,mactype = <1>;
+			qcom,phy-mdio-addr = <2>;
+		};
+
+		dp3 {
+			reg = <0x3a508000 0x4000>;
+			qcom,mactype = <1>;
+			qcom,phy-mdio-addr = <3>;
+		};
+
+		dp4 {
+			reg = <0x3a50c000 0x4000>;
+			qcom,mactype = <1>;
+			qcom,phy-mdio-addr = <4>;
+		};
+
+		dp5 {
+			/delete-property/qcom,link-poll;
+			qcom,phy-mdio-addr = <30>;
+		};
+
+		mdio:mdio@90000 {
+			/*gpio60 for manhattan reset*/
+			phy-reset-gpio = <&tlmm 60 0>;
+			phyaddr_fixup = <0xC90F018>;
+			uniphyaddr_fixup = <0xC90F014>;
+			mdio_clk_fixup; /* MDIO clock sequence fix up flag */
+
+			phy0: ethernet-phy@0 {
+				reg = <1>;
+				fixup;
+			};
+			phy1: ethernet-phy@1 {
+				reg = <2>;
+				fixup;
+			};
+			phy2: ethernet-phy@2 {
+				reg = <3>;
+				fixup;
+			};
+			phy3: ethernet-phy@3 {
+				reg = <4>;
+				fixup;
+			};
+			phy4: ethernet-phy@4 {
+				reg = <30>;
+				/delete-property/ compatible;
+			};
+		};
+
+		ess-instance {
+			num_devices = <0x1>;
+			ess-switch@3a000000 {
+				pinctrl-0 = <&sfp_pins>;
+				pinctrl-names = "default";
+				switch_mac_mode = <0x15>; /* mac mode for uniphy instance0*/
+				switch_mac_mode1 = <0xe>; /* mac mode for uniphy instance1*/
+				qcom,port_phyinfo {
+					port@0 {
+						phy_address = <1>;
+					};
+					port@1 {
+						phy_address = <2>;
+					};
+					port@2 {
+						phy_address = <3>;
+					};
+					port@3 {
+						phy_address = <4>;
+					};
+					port@4 {
+						port_id = <5>;
+						phy_address = <30>;
+						media-type = "sfp"; /* fiber mode */
+					};
+				};
+
+				led_source@0 {
+					source = <0>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@3 {
+					source = <3>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@6 {
+					source = <6>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+				led_source@9 {
+					source = <9>;
+					mode = "normal";
+					speed = "all";
+					blink_en = "enable";
+					active = "high";
+				};
+			};
+		};
+
+		nss-macsec0 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x1>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec1 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x2>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec2 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x3>;
+			mdiobus = <&mdio>;
+		};
+		nss-macsec3 {
+			compatible = "qcom,nss-macsec";
+			phy_addr = <0x4>;
+			mdiobus = <&mdio>;
+		};
+
+		nss0: nss@40000000 {
+			npu-supply = <&dummy_reg>;
+			mx-supply = <&dummy_reg>;
+		};
+
+		rpm-glink {
+			status = "disabled";
+		};
+
+		apc_rail: apc-gpio-regulator {
+			compatible = "regulator-gpio";
+			regulator-name = "vdd-apc";
+			regulator-type = "voltage";
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-min-microvolt = <850000>;
+			regulator-max-microvolt = <925000>;
+			regulator-ramp-delay = <250>; /* 20ms */
+			gpios = <&tlmm 57 GPIO_ACTIVE_HIGH>;
+			gpios-states = <0x1>;
+			states = <850000 0>, <925000 1>;
+		};
+
+		cx_rail: cx-gpio-regulator {
+			compatible = "regulator-gpio";
+			regulator-name = "vdd-cx";
+			regulator-type = "voltage";
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <863000>;
+			regulator-ramp-delay = <250>; /* 20ms */
+			gpios = <&tlmm 47 GPIO_ACTIVE_HIGH>;
+			gpios-states = <0x1>;
+			states = <800000 0>, <863000 1>;
+		};
+
+		mx_rail: mx-gpio-regulator {
+			compatible = "regulator-gpio";
+			regulator-name = "vdd-mx";
+			regulator-type = "voltage";
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-min-microvolt = <850000>;
+			regulator-max-microvolt = <925000>;
+			regulator-ramp-delay = <250>; /* 20ms */
+			gpios = <&tlmm 45 GPIO_ACTIVE_HIGH>;
+			gpios-states = <0x1>;
+			states = <850000 0>, <925000 1>;
+		};
+
+		qcom,gpio-regulator {
+			compatible = "qcom,ipq9574-gpio-regulator";
+			reg = <0xa4000 0x1000>;
+			reg-names = "fuse_base";
+			apc-supply = <&apc_rail>;
+			cx-supply = <&cx_rail>;
+			mx-supply = <&mx_rail>;
+			/* AL01 RDP's scaled voltage can only support upto CPU Freq
+			 * 1.8 GHz. But SKUs like IPQ9574/IPQ9570 supports 2.2GHz of
+			 * CPU freq. So, if we do scaling on AL01 + IPQ9574/IPQ9570,
+			 * then voltage becomes insufficient when CPU operates at 2.2GHz.
+			 * Below quirk disables the voltage scaling if AL01 has
+			 * IPQ9574/IPQ9570
+			 */
+			skip-voltage-scaling-turboL1-sku-quirk;
+		};
+	};
+};
+
+&CPU0 {
+	cpu0-supply = <&dummy_reg_cpu>;
+};
+
+&CPU1 {
+	cpu-supply = <&dummy_reg_cpu>;
+};
+
+&CPU2 {
+	cpu-supply = <&dummy_reg_cpu>;
+};
+
+&CPU3 {
+	cpu-supply = <&dummy_reg_cpu>;
+};
+
+&cpus {
+	cpu_opp_table: cpu_opp_table {
+		/delete-node/ opp-0;
+		opp-936000000 {
+		      opp-microvolt = <1075000>;
+		};
+		opp-1104000000 {
+		       opp-microvolt = <1075000>;
+		};
+		opp-1200000000 {
+		       opp-microvolt = <1075000>;
+		};
+		opp-1416000000 {
+		       opp-microvolt = <1075000>;
+		};
+		opp-1488000000 {
+		       opp-microvolt = <1075000>;
+		};
+		opp-1608000000 {
+		       opp-microvolt = <1075000>;
+		};
+		opp-1800000000 {
+		       opp-microvolt = <1075000>;
+		};
+		opp-2208000000 {
+			opp-microvolt = <1075000>;
+		};
+	};
+};
+
+&apc_apm {
+	status = "disabled";
+};
+
+&apc_cpr {
+	status = "disabled";
+};
+
+&npu_cpr {
+	status = "disabled";
+};
+
+&wifi6 {
+	board_id = <0x1e>;
+};
+
+&wifi7 {
+	board_id = <0x15>;
 };

@@ -1091,12 +1091,6 @@ void __cfg80211_disconnected(struct net_device *dev, const u8 *ie,
 		    wdev->iftype != NL80211_IFTYPE_P2P_CLIENT))
 		return;
 
-	if (link_id >= 0 && link_id <= NL80211_MLD_MAX_NUM_LINKS) {
-		/* MLO Link Downgrade */
-		nl80211_send_disconnected(rdev, dev, reason, ie,
-					  ie_len, from_ap, link_id);
-		return;
-	}
 
 	if (wdev->current_bss) {
 		cfg80211_unhold_bss(wdev->current_bss);
@@ -1109,8 +1103,11 @@ void __cfg80211_disconnected(struct net_device *dev, const u8 *ie,
 	kzfree(wdev->connect_keys);
 	wdev->connect_keys = NULL;
 
+	if (link_id < 0 || link_id > NL80211_MLD_MAX_NUM_LINKS)
+		link_id = NL80211_MLO_INVALID_LINK_ID;
+
 	nl80211_send_disconnected(rdev, dev, reason, ie, ie_len, from_ap,
-				  NL80211_MLO_INVALID_LINK_ID);
+				  link_id);
 
 	/* stop critical protocol if supported */
 	if (rdev->ops->crit_proto_stop && rdev->crit_proto_nlportid) {

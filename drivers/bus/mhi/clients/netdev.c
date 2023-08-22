@@ -86,8 +86,6 @@ struct mhi_netbuf {
 		      enum dma_data_direction dir);
 };
 
-extern bool mhi_rate_control;
-
 static struct mhi_driver mhi_netdev_driver;
 static void mhi_netdev_create_debugfs(struct mhi_netdev *mhi_netdev);
 static u32 napi_poll_weight = NAPI_POLL_WEIGHT;
@@ -951,6 +949,9 @@ static int mhi_netdev_probe(struct mhi_device *mhi_dev,
 	mhi_netdev->order = __ilog2_u32(mhi_netdev->mru / PAGE_SIZE);
 	if ((PAGE_SIZE << mhi_netdev->order) < mhi_netdev->mru)
 		return -EINVAL;
+
+	mhi_rate_control = of_property_read_bool(of_node,
+						 "mhi,enable-rate-control");
 
 	/* check if this device shared by a parent device */
 	phandle = of_parse_phandle(of_node, "mhi,rsc-parent", 0);

@@ -164,6 +164,7 @@
 			qcom,mactype = <1>;
 			local-mac-address = [000000000000];
 			phy-mode = "sgmii";
+			qcom,ppe-offload-disabled = <1>;
 		};
 
 		mdio:mdio@90000 {
