@@ -1245,7 +1245,6 @@ static int qcom_ice_config_start(struct platform_device *pdev,
 		struct ice_data_setting *setting, bool async)
 {
 	struct ice_crypto_setting *crypto_data;
-	union map_info *info;
 
 	if (!pdev || !req || !setting) {
 		pr_err("%s: Invalid params passed\n", __func__);
@@ -1273,14 +1272,8 @@ static int qcom_ice_config_start(struct platform_device *pdev,
 	 * based request, check BIO_DONT_FREE flag
 	 */
 	if (bio_flagged(req->bio, BIO_INLINECRYPT)) {
-		info = dm_get_rq_mapinfo(req);
-		if (!info) {
-			pr_debug("%s info not available in request\n",
-				 __func__);
-			return 0;
-		}
 
-		crypto_data = (struct ice_crypto_setting *)info->ptr;
+		crypto_data = ice_settings;
 		if (!crypto_data) {
 			pr_err("%s crypto_data not available in request\n",
 				 __func__);
