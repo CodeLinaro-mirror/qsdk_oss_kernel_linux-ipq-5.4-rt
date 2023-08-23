@@ -146,18 +146,18 @@ static int inlinecrypt_class_ctr(struct dm_target *ti, struct inlinecrypt_class 
 	unsigned long long tmpll;
 	char dummy;
 
-	if (sscanf(argv[1], "%llu%c", &tmpll, &dummy) != 1 || tmpll != (sector_t)tmpll) {
+	if (sscanf(argv[5], "%llu%c", &tmpll, &dummy) != 1 || tmpll != (sector_t)tmpll) {
 		ti->error = "Invalid device sector";
 		return -EINVAL;
 	}
 	c->start = tmpll;
 
-	if (sscanf(argv[2], "%u%c", &c->inlinecrypt, &dummy) != 1) {
+	if (sscanf(argv[5], "%u%c", &c->inlinecrypt, &dummy) != 1) {
 		ti->error = "Invalid inlinecrypt";
 		return -EINVAL;
 	}
 
-	ret = dm_get_device(ti, argv[0], dm_table_get_mode(ti->table), &c->dev);
+	ret = dm_get_device(ti, argv[3], dm_table_get_mode(ti->table), &c->dev);
 	if (ret) {
 		ti->error = "Device lookup failed";
 		return ret;
@@ -179,8 +179,8 @@ static int inlinecrypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	struct inlinecrypt_c *dc;
 	int ret;
 
-	if (argc != 3 && argc != 6 && argc != 9) {
-		ti->error = "Requires exactly 3, 6 or 9 arguments";
+	if (argc != 7) {
+		ti->error = "Requires exactly 6 arguments";
 		return -EINVAL;
 	}
 
@@ -202,31 +202,14 @@ static int inlinecrypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	if (ret)
 		goto bad;
 
-	if (argc == 3) {
-		ret = inlinecrypt_class_ctr(ti, &dc->write, argv);
-		if (ret)
-			goto bad;
-		ret = inlinecrypt_class_ctr(ti, &dc->flush, argv);
-		if (ret)
-			goto bad;
-		goto out;
-	}
-
-	ret = inlinecrypt_class_ctr(ti, &dc->write, argv + 3);
-	if (ret)
-		goto bad;
-	if (argc == 6) {
-		ret = inlinecrypt_class_ctr(ti, &dc->flush, argv + 3);
-		if (ret)
-			goto bad;
-		goto out;
-	}
-
-	ret = inlinecrypt_class_ctr(ti, &dc->flush, argv + 6);
+	ret = inlinecrypt_class_ctr(ti, &dc->write, argv);
 	if (ret)
 		goto bad;
 
-out:
+	ret = inlinecrypt_class_ctr(ti, &dc->flush, argv);
+	if (ret)
+		goto bad;
+
 	dc->kinlinecryptd_wq = alloc_workqueue("kinlinecryptd", WQ_MEM_RECLAIM, 0);
 	if (!dc->kinlinecryptd_wq) {
 		ret = -EINVAL;
