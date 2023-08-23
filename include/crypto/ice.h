@@ -41,6 +41,7 @@ struct ice_crypto_setting {
 	short				key_index;
 
 };
+extern struct ice_crypto_setting *ice_settings;
 
 struct ice_data_setting {
 	struct ice_crypto_setting	crypto_data;

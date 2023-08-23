@@ -27,7 +27,7 @@ Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 #define MAX_MSM_ICE_KEY_LUT_SIZE 32
 #define DM_REQ_CRYPT_ERROR -1
 
-static struct ice_crypto_setting *ice_settings;
+struct ice_crypto_setting *ice_settings;
 
 struct inlinecrypt_class {
 	struct dm_dev *dev;
@@ -157,16 +157,13 @@ static int inlinecrypt_class_ctr(struct dm_target *ti, struct inlinecrypt_class 
 	unsigned long long tmpll;
 	char dummy;
 
-	if (sscanf(argv[5], "%llu%c", &tmpll, &dummy) != 1 || tmpll != (sector_t)tmpll) {
+	if (sscanf(argv[4], "%llu%c", &tmpll, &dummy) != 1 || tmpll != (sector_t)tmpll) {
 		ti->error = "Invalid device sector";
 		return -EINVAL;
 	}
 	c->start = tmpll;
 
-	if (sscanf(argv[5], "%u%c", &c->inlinecrypt, &dummy) != 1) {
-		ti->error = "Invalid inlinecrypt";
-		return -EINVAL;
-	}
+	c->inlinecrypt = 0;
 
 	ret = dm_get_device(ti, argv[3], dm_table_get_mode(ti->table), &c->dev);
 	if (ret) {
@@ -274,8 +271,8 @@ static int inlinecrypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	struct inlinecrypt_c *dc;
 	int ret;
 
-	if (argc != 7) {
-		ti->error = "Requires exactly 6 arguments";
+	if (argc > 7) {
+		ti->error = "Requires less than 7 arguments";
 		return -EINVAL;
 	}
 
@@ -441,6 +438,10 @@ static int inlinecrypt_map(struct dm_target *ti, struct bio *bio)
 	}
 	inlinecrypted->class = c;
 	bio_set_dev(bio, c->dev->bdev);
+
+	/* Set BIO_INLINECRYPT Flag for each bio */
+	bio->bi_flags |= 1 << BIO_INLINECRYPT;
+
 	if (bio_sectors(bio))
 		bio->bi_iter.bi_sector = c->start + dm_target_offset(ti, bio->bi_iter.bi_sector);
 
