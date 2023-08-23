@@ -1,0 +1,396 @@
+/*
+ * Copyright (C) 2005-2007 Red Hat GmbH
+ *
+ * A target that delays reads and/or writes and can send
+ * them to different devices.
+ *
+ * This file is released under the GPL.
+ */
+
+/*
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+*/
+
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/blkdev.h>
+#include <linux/bio.h>
+#include <linux/slab.h>
+
+#include <linux/device-mapper.h>
+
+#define DM_MSG_PREFIX "inline-crypt"
+
+struct inlinecrypt_class {
+	struct dm_dev *dev;
+	sector_t start;
+	unsigned inlinecrypt;
+	unsigned ops;
+};
+
+struct inlinecrypt_c {
+	struct timer_list inlinecrypt_timer;
+	struct mutex timer_lock;
+	struct workqueue_struct *kinlinecryptd_wq;
+	struct work_struct flush_expired_bios;
+	struct list_head inlinecrypted_bios;
+	atomic_t may_inlinecrypt;
+
+	struct inlinecrypt_class read;
+	struct inlinecrypt_class write;
+	struct inlinecrypt_class flush;
+
+	int argc;
+};
+
+struct dm_inlinecrypt_info {
+	struct inlinecrypt_c *context;
+	struct inlinecrypt_class *class;
+	struct list_head list;
+	unsigned long expires;
+};
+
+static DEFINE_MUTEX(inlinecrypted_bios_lock);
+
+static void handle_inlinecrypted_timer(struct timer_list *t)
+{
+	struct inlinecrypt_c *dc = from_timer(dc, t, inlinecrypt_timer);
+
+	queue_work(dc->kinlinecryptd_wq, &dc->flush_expired_bios);
+}
+
+static void queue_timeout(struct inlinecrypt_c *dc, unsigned long expires)
+{
+	mutex_lock(&dc->timer_lock);
+
+	if (!timer_pending(&dc->inlinecrypt_timer) || expires < dc->inlinecrypt_timer.expires)
+		mod_timer(&dc->inlinecrypt_timer, expires);
+
+	mutex_unlock(&dc->timer_lock);
+}
+
+static void flush_bios(struct bio *bio)
+{
+	struct bio *n;
+
+	while (bio) {
+		n = bio->bi_next;
+		bio->bi_next = NULL;
+		generic_make_request(bio);
+		bio = n;
+	}
+}
+
+static struct bio *flush_inlinecrypted_bios(struct inlinecrypt_c *dc, int flush_all)
+{
+	struct dm_inlinecrypt_info *inlinecrypted, *next;
+	unsigned long next_expires = 0;
+	unsigned long start_timer = 0;
+	struct bio_list flush_bios = { };
+
+	mutex_lock(&inlinecrypted_bios_lock);
+	list_for_each_entry_safe(inlinecrypted, next, &dc->inlinecrypted_bios, list) {
+		if (flush_all || time_after_eq(jiffies, inlinecrypted->expires)) {
+			struct bio *bio = dm_bio_from_per_bio_data(inlinecrypted,
+						sizeof(struct dm_inlinecrypt_info));
+			list_del(&inlinecrypted->list);
+			bio_list_add(&flush_bios, bio);
+			inlinecrypted->class->ops--;
+			continue;
+		}
+
+		if (!start_timer) {
+			start_timer = 1;
+			next_expires = inlinecrypted->expires;
+		} else
+			next_expires = min(next_expires, inlinecrypted->expires);
+	}
+	mutex_unlock(&inlinecrypted_bios_lock);
+
+	if (start_timer)
+		queue_timeout(dc, next_expires);
+
+	return bio_list_get(&flush_bios);
+}
+
+static void flush_expired_bios(struct work_struct *work)
+{
+	struct inlinecrypt_c *dc;
+
+	dc = container_of(work, struct inlinecrypt_c, flush_expired_bios);
+	flush_bios(flush_inlinecrypted_bios(dc, 0));
+}
+
+static void inlinecrypt_dtr(struct dm_target *ti)
+{
+	struct inlinecrypt_c *dc = ti->private;
+
+	if (dc->kinlinecryptd_wq)
+		destroy_workqueue(dc->kinlinecryptd_wq);
+
+	if (dc->read.dev)
+		dm_put_device(ti, dc->read.dev);
+	if (dc->write.dev)
+		dm_put_device(ti, dc->write.dev);
+	if (dc->flush.dev)
+		dm_put_device(ti, dc->flush.dev);
+
+	mutex_destroy(&dc->timer_lock);
+
+	kfree(dc);
+}
+
+static int inlinecrypt_class_ctr(struct dm_target *ti, struct inlinecrypt_class *c, char **argv)
+{
+	int ret;
+	unsigned long long tmpll;
+	char dummy;
+
+	if (sscanf(argv[1], "%llu%c", &tmpll, &dummy) != 1 || tmpll != (sector_t)tmpll) {
+		ti->error = "Invalid device sector";
+		return -EINVAL;
+	}
+	c->start = tmpll;
+
+	if (sscanf(argv[2], "%u%c", &c->inlinecrypt, &dummy) != 1) {
+		ti->error = "Invalid inlinecrypt";
+		return -EINVAL;
+	}
+
+	ret = dm_get_device(ti, argv[0], dm_table_get_mode(ti->table), &c->dev);
+	if (ret) {
+		ti->error = "Device lookup failed";
+		return ret;
+	}
+
+	return 0;
+}
+
+/*
+ * Mapping parameters:
+ *    <device> <offset> <inlinecrypt> [<write_device> <write_offset> <write_inlinecrypt>]
+ *
+ * With separate write parameters, the first set is only used for reads.
+ * Offsets are specified in sectors.
+ * Delays are specified in milliseconds.
+ */
+static int inlinecrypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+{
+	struct inlinecrypt_c *dc;
+	int ret;
+
+	if (argc != 3 && argc != 6 && argc != 9) {
+		ti->error = "Requires exactly 3, 6 or 9 arguments";
+		return -EINVAL;
+	}
+
+	dc = kzalloc(sizeof(*dc), GFP_KERNEL);
+	if (!dc) {
+		ti->error = "Cannot allocate context";
+		return -ENOMEM;
+	}
+
+	ti->private = dc;
+	timer_setup(&dc->inlinecrypt_timer, handle_inlinecrypted_timer, 0);
+	INIT_WORK(&dc->flush_expired_bios, flush_expired_bios);
+	INIT_LIST_HEAD(&dc->inlinecrypted_bios);
+	mutex_init(&dc->timer_lock);
+	atomic_set(&dc->may_inlinecrypt, 1);
+	dc->argc = argc;
+
+	ret = inlinecrypt_class_ctr(ti, &dc->read, argv);
+	if (ret)
+		goto bad;
+
+	if (argc == 3) {
+		ret = inlinecrypt_class_ctr(ti, &dc->write, argv);
+		if (ret)
+			goto bad;
+		ret = inlinecrypt_class_ctr(ti, &dc->flush, argv);
+		if (ret)
+			goto bad;
+		goto out;
+	}
+
+	ret = inlinecrypt_class_ctr(ti, &dc->write, argv + 3);
+	if (ret)
+		goto bad;
+	if (argc == 6) {
+		ret = inlinecrypt_class_ctr(ti, &dc->flush, argv + 3);
+		if (ret)
+			goto bad;
+		goto out;
+	}
+
+	ret = inlinecrypt_class_ctr(ti, &dc->flush, argv + 6);
+	if (ret)
+		goto bad;
+
+out:
+	dc->kinlinecryptd_wq = alloc_workqueue("kinlinecryptd", WQ_MEM_RECLAIM, 0);
+	if (!dc->kinlinecryptd_wq) {
+		ret = -EINVAL;
+		DMERR("Couldn't start kinlinecryptd");
+		goto bad;
+	}
+
+	ti->num_flush_bios = 1;
+	ti->num_discard_bios = 1;
+	ti->per_io_data_size = sizeof(struct dm_inlinecrypt_info);
+	return 0;
+
+bad:
+	inlinecrypt_dtr(ti);
+	return ret;
+}
+
+static int inlinecrypt_bio(struct inlinecrypt_c *dc, struct inlinecrypt_class *c, struct bio *bio)
+{
+	struct dm_inlinecrypt_info *inlinecrypted;
+	unsigned long expires = 0;
+
+	if (!c->inlinecrypt || !atomic_read(&dc->may_inlinecrypt))
+		return DM_MAPIO_REMAPPED;
+
+	inlinecrypted = dm_per_bio_data(bio, sizeof(struct dm_inlinecrypt_info));
+
+	inlinecrypted->context = dc;
+	inlinecrypted->expires = expires = jiffies + msecs_to_jiffies(c->inlinecrypt);
+
+	mutex_lock(&inlinecrypted_bios_lock);
+	c->ops++;
+	list_add_tail(&inlinecrypted->list, &dc->inlinecrypted_bios);
+	mutex_unlock(&inlinecrypted_bios_lock);
+
+	queue_timeout(dc, expires);
+
+	return DM_MAPIO_SUBMITTED;
+}
+
+static void inlinecrypt_presuspend(struct dm_target *ti)
+{
+	struct inlinecrypt_c *dc = ti->private;
+
+	atomic_set(&dc->may_inlinecrypt, 0);
+	del_timer_sync(&dc->inlinecrypt_timer);
+	flush_bios(flush_inlinecrypted_bios(dc, 1));
+}
+
+static void inlinecrypt_resume(struct dm_target *ti)
+{
+	struct inlinecrypt_c *dc = ti->private;
+
+	atomic_set(&dc->may_inlinecrypt, 1);
+}
+
+static int inlinecrypt_map(struct dm_target *ti, struct bio *bio)
+{
+	struct inlinecrypt_c *dc = ti->private;
+	struct inlinecrypt_class *c;
+	struct dm_inlinecrypt_info *inlinecrypted = dm_per_bio_data(bio, sizeof(struct dm_inlinecrypt_info));
+
+	if (bio_data_dir(bio) == WRITE) {
+		if (unlikely(bio->bi_opf & REQ_PREFLUSH))
+			c = &dc->flush;
+		else
+			c = &dc->write;
+	} else {
+		c = &dc->read;
+	}
+	inlinecrypted->class = c;
+	bio_set_dev(bio, c->dev->bdev);
+	if (bio_sectors(bio))
+		bio->bi_iter.bi_sector = c->start + dm_target_offset(ti, bio->bi_iter.bi_sector);
+
+	return inlinecrypt_bio(dc, c, bio);
+}
+
+#define DMEMIT_DELAY_CLASS(c) \
+	DMEMIT("%s %llu %u", (c)->dev->name, (unsigned long long)(c)->start, (c)->inlinecrypt)
+
+static void inlinecrypt_status(struct dm_target *ti, status_type_t type,
+			 unsigned status_flags, char *result, unsigned maxlen)
+{
+	struct inlinecrypt_c *dc = ti->private;
+	int sz = 0;
+
+	switch (type) {
+	case STATUSTYPE_INFO:
+		DMEMIT("%u %u %u", dc->read.ops, dc->write.ops, dc->flush.ops);
+		break;
+
+	case STATUSTYPE_TABLE:
+		DMEMIT_DELAY_CLASS(&dc->read);
+		if (dc->argc >= 6) {
+			DMEMIT(" ");
+			DMEMIT_DELAY_CLASS(&dc->write);
+		}
+		if (dc->argc >= 9) {
+			DMEMIT(" ");
+			DMEMIT_DELAY_CLASS(&dc->flush);
+		}
+		break;
+	}
+}
+
+static int inlinecrypt_iterate_devices(struct dm_target *ti,
+				 iterate_devices_callout_fn fn, void *data)
+{
+	struct inlinecrypt_c *dc = ti->private;
+	int ret = 0;
+
+	ret = fn(ti, dc->read.dev, dc->read.start, ti->len, data);
+	if (ret)
+		goto out;
+	ret = fn(ti, dc->write.dev, dc->write.start, ti->len, data);
+	if (ret)
+		goto out;
+	ret = fn(ti, dc->flush.dev, dc->flush.start, ti->len, data);
+	if (ret)
+		goto out;
+
+out:
+	return ret;
+}
+
+static struct target_type inlinecrypt_target = {
+	.name	     = "inline-crypt",
+	.version     = {1, 2, 1},
+	.features    = DM_TARGET_PASSES_INTEGRITY,
+	.module      = THIS_MODULE,
+	.ctr	     = inlinecrypt_ctr,
+	.dtr	     = inlinecrypt_dtr,
+	.map	     = inlinecrypt_map,
+	.presuspend  = inlinecrypt_presuspend,
+	.resume	     = inlinecrypt_resume,
+	.status	     = inlinecrypt_status,
+	.iterate_devices = inlinecrypt_iterate_devices,
+};
+
+static int __init dm_inlinecrypt_init(void)
+{
+	int r;
+
+	r = dm_register_target(&inlinecrypt_target);
+	if (r < 0) {
+		DMERR("register failed %d", r);
+		goto bad_register;
+	}
+
+	return 0;
+
+bad_register:
+	return r;
+}
+
+static void __exit dm_inlinecrypt_exit(void)
+{
+	dm_unregister_target(&inlinecrypt_target);
+}
+
+/* Module hooks */
+module_init(dm_inlinecrypt_init);
+module_exit(dm_inlinecrypt_exit);
+
+MODULE_DESCRIPTION(DM_NAME " inline crypt");
+MODULE_LICENSE("GPL");
