@@ -192,6 +192,11 @@ static int qcom_set_ice_context(char **argv)
 		seedtype = 1;
 		buf = argv[5];
 		hex_data_len = strlen(argv[5]) / 2;
+		if (hex_data_len != DATA_COTEXT_LEN || strlen(argv[5]) % 2 != 0) {
+			DMERR("%s: Invalid data context length. Context length \
+				must be %d\n", __func__, DATA_COTEXT_LEN * 2);
+			return -EINVAL;
+		}
 		for (i = 0; i < hex_data_len; i++) {
 			sscanf(buf, "%2hhx", &hex_data_context[i]);
 			buf += 2;
@@ -208,6 +213,11 @@ static int qcom_set_ice_context(char **argv)
 
 		buf = argv[6];
 		hex_salt_len = strlen(argv[6]) / 2;
+		if (hex_salt_len != SALT_COTEXT_LEN || strlen(argv[6]) % 2 != 0) {
+			DMERR("%s: Invalid salt context length. Context length \
+				must be %d\n", __func__, SALT_COTEXT_LEN * 2);
+			return -EINVAL;
+		}
 		for (i = 0; i < hex_salt_len; i++) {
 			sscanf(buf, "%2hhx", &hex_salt_context[i]);
 			buf += 2;
