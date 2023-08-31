@@ -509,6 +509,14 @@ config MMC_SDHCI_MSM_ICE
 	  Select this if you have ICE supported for SDHCI on QTI chipset.
 	  If unsure, say N.
 
+config MMC_SDHCI_MSM_ICE_PER_PART_DUN
+	bool "Use Per Partition DUN"
+	depends on MMC_SDHCI_MSM_ICE
+	default n
+	help
+	  This enables the DUN to be configured using per partition sector offset.
+          If you are enabling ROOTFS encryption using AES XTS mode, then set y.
+
 config MMC_MXC
 	tristate "Freescale i.MX21/27/31 or MPC512x Multimedia Card support"
 	depends on ARCH_MXC || PPC_MPC512x

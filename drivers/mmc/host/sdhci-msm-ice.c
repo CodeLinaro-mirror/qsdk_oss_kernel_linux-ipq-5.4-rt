@@ -359,7 +359,11 @@ int sdhci_msm_ice_cfg(struct sdhci_host *host, struct mmc_request *mrq,
 			dun = req->__sector;
 		}
 #else
+#ifdef MMC_SDHCI_MSM_ICE_PER_PART_DUN
+		dun = (req->__sector - req->part->start_sect);
+#else
 		dun = req->__sector;
+#endif
 #endif
 		err = sdhci_msm_ice_get_cfg(msm_host, req, &bypass, &key_index);
 		if (err)
