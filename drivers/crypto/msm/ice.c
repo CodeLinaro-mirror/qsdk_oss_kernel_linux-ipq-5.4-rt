@@ -31,6 +31,8 @@
 #define QCOM_ICE_UFS		10
 #define QCOM_ICE_SDCC		20
 
+static struct ice_crypto_setting *ice_settings;
+
 struct ice_clk_info {
 	struct list_head list;
 	struct clk *clk;
@@ -78,6 +80,18 @@ struct ice_device {
 	ktime_t			ice_reset_start_time;
 	ktime_t			ice_reset_complete_time;
 };
+
+void ice_setting_init(struct ice_crypto_setting *settings)
+{
+	ice_settings = settings;
+}
+EXPORT_SYMBOL(ice_setting_init);
+
+void ice_setting_deinit(void)
+{
+	ice_settings = NULL;
+}
+EXPORT_SYMBOL(ice_setting_deinit);
 
 static int qti_ice_setting_config(struct request *req,
 		struct platform_device *pdev,
