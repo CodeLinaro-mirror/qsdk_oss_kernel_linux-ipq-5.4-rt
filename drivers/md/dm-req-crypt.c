@@ -191,6 +191,8 @@ static void req_crypt_dtr(struct dm_target *ti)
 		cd->dev = NULL;
 	}
 
+	ice_setting_deinit();
+
 	kfree(cd);
 	cd = NULL;
 }
@@ -413,6 +415,8 @@ static int req_crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		DMERR("%s: ice configuration fail\n", __func__);
 		goto ctr_exit;
 	}
+
+	ice_setting_init(ice_settings);
 
 	DMINFO("%s: Mapping block_device %s to dm-req-crypt ok!\n",
 		__func__, argv[3]);

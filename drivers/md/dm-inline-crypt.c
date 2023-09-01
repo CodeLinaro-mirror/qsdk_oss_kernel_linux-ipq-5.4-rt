@@ -27,7 +27,7 @@ Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 #define MAX_MSM_ICE_KEY_LUT_SIZE 32
 #define DM_REQ_CRYPT_ERROR -1
 
-struct ice_crypto_setting *ice_settings;
+static struct ice_crypto_setting *ice_settings;
 
 struct inlinecrypt_class {
 	struct dm_dev *dev;
@@ -64,6 +64,8 @@ static void inlinecrypt_dtr(struct dm_target *ti)
 
 	kfree(ice_settings);
 	ice_settings = NULL;
+
+	ice_setting_deinit();
 
 	kfree(dc);
 }
@@ -287,6 +289,8 @@ static int inlinecrypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		DMERR("%s: ice configuration fail\n", __func__);
 		goto bad;
 	}
+
+	ice_setting_init(ice_settings);
 
 	DMINFO("%s: Mapping block_device %s to dm-inline-crypt ok!\n",
 		__func__, argv[3]);
