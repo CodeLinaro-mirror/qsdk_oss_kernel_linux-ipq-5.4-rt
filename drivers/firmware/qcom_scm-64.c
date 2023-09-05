@@ -1514,20 +1514,22 @@ int __qti_scm_derive_and_share_key(struct device *dev, u32 svc_id, u32 cmd_id,
 		u32 key_len, uint8_t *sw_context, u32 sw_context_len,
 		uint8_t *derived_key, uint32_t derived_key_len)
 {
-	dma_addr_t dma_sw_context_buf;
+	dma_addr_t dma_sw_context_buf = 0;
 	dma_addr_t dma_derived_key_buf;
 	struct arm_smccc_res res;
 	struct qcom_scm_desc desc = {0};
 	char *sw_context_buf = NULL, *derived_key_buf = NULL;
 	int ret = -ENOMEM;
 
-	sw_context_buf = dma_alloc_coherent(dev, PAGE_SIZE,
-					    &dma_sw_context_buf, GFP_KERNEL);
-	if (sw_context_buf == NULL) {
-		pr_err("DMA Allocation failed for sw_context_buf\n");
-		return ret;
+	if (sw_context_len != 0) {
+		sw_context_buf = dma_alloc_coherent(dev, PAGE_SIZE,
+				&dma_sw_context_buf, GFP_KERNEL);
+		if (sw_context_buf == NULL) {
+			pr_err("DMA Allocation failed for sw_context_buf\n");
+			return ret;
+		}
+		memcpy(sw_context_buf, sw_context, sw_context_len);
 	}
-	memcpy(sw_context_buf, sw_context, sw_context_len);
 
 	derived_key_buf = dma_alloc_coherent(dev, PAGE_SIZE,
 					     &dma_derived_key_buf, GFP_KERNEL);
@@ -1549,7 +1551,7 @@ int __qti_scm_derive_and_share_key(struct device *dev, u32 svc_id, u32 cmd_id,
 			&desc, &res);
 
 	if(res.a1 != 0) {
-		pr_err("%s: Response error code is : %#x\n", __func__,
+		pr_err("%s: Response error code is : 0x%x\n", __func__,
 				(unsigned int)res.a1);
 	}
 
@@ -1558,8 +1560,10 @@ int __qti_scm_derive_and_share_key(struct device *dev, u32 svc_id, u32 cmd_id,
 			  dma_derived_key_buf);
 
 dma_unmap_sw_context_buf:
-	dma_free_coherent(dev, PAGE_SIZE, sw_context_buf,
-			  dma_sw_context_buf);
+	if (sw_context_len != 0) {
+		dma_free_coherent(dev, PAGE_SIZE, sw_context_buf,
+				  dma_sw_context_buf);
+	}
 
 	return ret ? : res.a1;
 }

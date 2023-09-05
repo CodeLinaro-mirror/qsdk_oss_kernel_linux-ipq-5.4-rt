@@ -82,8 +82,8 @@ static __init int tmel_hw_key_init(void)
 		return ret;
 	}
 
-	ret = hw_key_gen_store(context, context_len, KEYRING_TYPE,
-			       KEYRING_DESC_HW_KEY_CR, hw_key_cr, hw_key_cr_len);
+	ret = hw_key_gen_store(NULL, 0, KEYRING_TYPE, KEYRING_DESC_HW_KEY_CR,
+			       hw_key_cr, hw_key_cr_len);
 	if (ret) {
 		pr_err("%s: Failed to generate and store hw key for NULL context with error = 0x%x",
 		       __func__, ret);

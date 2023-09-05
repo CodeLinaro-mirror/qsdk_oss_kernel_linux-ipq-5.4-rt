@@ -310,7 +310,7 @@ config QTI_CTXT_SAVE
 	  storing user specific buffer info into crashdump.
 
 config QTI_HW_KEY
-	def_bool n
+	def_bool y
 	depends on QCOM_SCM
 	help
 	  This driver requests HW Key and stores in kernel keyring.
